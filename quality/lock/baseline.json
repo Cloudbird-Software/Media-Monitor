@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "specVersion": 1,
+  "entries": {
+    "tests/card-215-g060-tamper.test.ts": {
+      "sha256": "332df3ce031af04ef2ad26b83e567b501174714ed8a8047dd1f352bff230152e",
+      "card": "215"
+    },
+    "tests/smoke.test.ts": {
+      "sha256": "e1a38839a48406aa12731a61fcac6516986caab29c653ca5ed80bc5ff4d68a00",
+      "card": null
+    }
+  }
+}

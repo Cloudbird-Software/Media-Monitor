@@ -1,0 +1,33 @@
+name: dependabot-automerge
+on: pull_request_target
+
+permissions: {}
+
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Harden Runner (egress audit)
+        uses: step-security/harden-runner@05e31511f85b41b11d1cf0ef85d0992719546e2c # v2.21.0
+        with:
+          egress-policy: audit
+      # 用 App 身份合并：GITHUB_TOKEN 的合并不会触发下游 workflow（release 等），
+      # App 令牌会触发；且合并动作在审计日志中归属 cloudbrid-agent[bot]（App slug 实证，ADR-0021 命名统一）。
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app
+        with:
+          app-id: 4632704
+          private-key: ${{ secrets.AGENT_APP_SECRET }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+      - uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+        id: meta
+      - if: steps.meta.outputs.update-type != 'version-update:semver-major'
+        env:
+          PR: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+        run: gh pr merge --auto --squash "$PR"

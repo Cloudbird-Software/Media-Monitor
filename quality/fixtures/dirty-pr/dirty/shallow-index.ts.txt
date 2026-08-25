@@ -1,0 +1,4 @@
+// W5-C1 脏 PR fixture：浅模块样本（.github#224 AC-1 第二类）
+// 拷入 fixture 仓时去掉 .txt 后缀置于 src/shallow/index.ts——纯转发出口，
+// depthRatio=代码行/导出数≈0.33 < 下限，g020 arch-shallow-module 必拦。
+export { implOne, implTwo, implThree } from "./impl";

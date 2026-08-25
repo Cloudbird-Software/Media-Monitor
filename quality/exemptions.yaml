@@ -1,0 +1,7 @@
+# quality/exemptions.yaml —— 豁免审计清单（W5-C1 .github#224 / ADR-0070 决策 3）。
+# 每条豁免必须四字段齐全且 ref 可追溯（ADR-NNNN / .github#NN / #NN）——
+# g040-complexity 的 cx-exemption-unref 检查 + 豁免行数入棘轮指标（只升不降难）。
+# 形如：
+#   - { gate: g030-nav, path: "docs/legacy.md", ref: "ADR-0070", reason: "历史文档冻结存档" }
+version: 1
+exemptions: []

@@ -1,0 +1,166 @@
+# quality/contract.yaml —— 唯一阈值来源（宪法 §4A 铁律；ADR-0060 决策 1）
+#
+# 为什么单源：阈值散落在脚本/workflow 里时，改一个刻度要翻 N 个仓且无人能审计；
+# 集中到这里后，"当前舰队在用什么刻度"是一个可 grep 的文件。
+# 卡面 AC-1 断言：quality/** 与 Makefile 内不得出现硬编码数字阈值——脚本一律经
+# quality/lib/contract.sh 的 qc_get 读这里；测试注入用 GATE_TH_* 环境变量覆盖，
+# 不许为绕过本文件改脚本。
+#
+# 增改规则（C1 面，改动须引用 ADR）：
+#   - 新关卡（g020+）的阈值键落在 thresholds.<gate-id> 下，禁止写进脚本/workflow；
+#   - EARS 句型正则与模糊禁词表随本文件 version 版本化（ADR-0060 决策 3/4）：
+#     放宽（删句型/删禁词/调大刻度）必须开新 ADR，收紧走普通 C1 PR；
+#   - INV-08 阈值镜像校验预留：本文件经脚手架下发各产品仓后，下游仓镜像与
+#     本正本按 version + 内容哈希对账，不一致即 fail（尚未实现，实现时引用 INV-08）。
+#
+# 语法子集：quality/lib/gate_common.py 的零依赖解析器只支持——嵌套映射（2 空格
+# 缩进）、引号标量（单/双引号等价、不做转义展开；prettier 会统一成双引号）、
+# 行内 [a, b] 列表、整行 # 注释。要引入更复杂的 YAML 前先扩解析器并补测试
+# （fail-closed：解析不了的行直接报错，不静默跳过）。
+version: 1
+
+# 关卡注册表（关卡统一 CLI 契约 IFACE-04 / #127 §2：id/作用域/阻断性/责任角色）
+gates:
+  - { id: g010-spec-schema, scope: spec, blocking: true, owner: spec-author }
+  - { id: g020-arch, scope: code, blocking: true, owner: refactorer }
+  - { id: g030-nav, scope: code, blocking: true, owner: refactorer }
+  - { id: g040-complexity, scope: code, blocking: true, owner: implementer }
+  - { id: g050-fail-before, scope: test, blocking: true, owner: test-author }
+  - { id: g060-test-tamper, scope: test, blocking: true, owner: refactorer }
+  - { id: g900-ratchet, scope: repo, blocking: true, owner: hardener }
+
+thresholds:
+  g010:
+    spec:
+      # 结构断言（ADR-0060 决策 3）：H1 唯一、frontmatter 元数据块、AC 编号连续
+      required_meta_keys: ["taskId", "specVersion", "title", "irRef"]
+      task_id_pattern: "^[A-Z]+-[0-9]+$"
+      ir_pattern: "^IR-[0-9]+$"
+      ac_id_pattern: "^AC-[0-9]+$"
+      beh_id_pattern: "^(INV|BEH|IFACE|BUDGET|DECISION|ASSUMPTION)-[0-9]+$"
+      min_ac_clauses: 1
+      max_title_length: 80
+    ears:
+      # EARS 六句型正则（宪法 §9#1 署名：EARS 句法；ADR-0060 决策 3）。
+      # 键=句型 id，值=正则（中英等价形并列；英文关键词约定全大写）。
+      # 只应用于 BEH 条款；合法句式被拦（误报）时改写条款措辞，不放宽正则。
+      ears-when: "^(当|每当).{1,60}?(之)?时[，,].+$|^(WHEN|WHENEVER) .+ (THEN|SHALL) .+"
+      ears-while: "^(当|在).{1,60}?(期间|过程中|状态下)[，,]?.+$|^WHILE .+ (THEN|SHALL) .+"
+      ears-where: "^在.{1,60}?(中|下|内)[，,].+$|^WHERE .+ (THEN|SHALL) .+"
+      ears-if: "^(若|如果).{1,60}?(则|，)[，,]?.+$|^IF .+ THEN .+"
+      ears-ubiquitous: "^(系统|本系统|服务|关卡|工具)(必须|应当|应|须).+$|^THE [A-Z]+ SHALL .+"
+      ears-gwt: "^GIVEN .+ WHEN .+ THEN .+"
+    vague_terms:
+      # 模糊禁词表（ADR-0060 决策 4，版本化）：出现在 AC/BEH 条款即 fail；
+      # 唯一豁免=同条款显式绑定 BUDGET 编号（如「预算 BUDGET-1」），可 grep 复核。
+      - "合理"
+      - "适当"
+      - "尽可能"
+      - "尽量"
+      - "必要时"
+      - "酌情"
+      - "大概"
+      - "等等"
+    trace:
+      # UID 追溯闭合（ADR-0060 决策 5 / 宪法 §4E）：IR↔SPEC↔AC↔Card↔测试
+      budget_id_pattern: "BUDGET-[0-9]+"
+      test_id_pattern: "TEST-[0-9]+"
+      require_card_binding: true
+
+# ---- W2-C2：测试产物拓扑（.github#215 / ADR-0061）----
+# 读取面与 W2-C1 一致：quality/lib/lock/lib.sh 的 contract_value → quality/lib/
+# contract.sh 的 qc_get（阈值/配置唯一来源，GATE_TH_* 可覆盖，缺键 fail-closed）。
+# 值约定：列表型值写成"以 | 连接的单个 ERE/单词串"（qc_get 的列表输出以空格连接，
+# 而签名正则/命令含空格，故全部用标量表示）。
+g050-fail-before:
+  # 红复现运行器：g050 在测试 commit 的 worktree 上复跑新测试（worktree 置于
+  # reports/ 下——git/prettier/eslint 均忽略，且 node 模块解析向上命中仓根 node_modules）
+  runner-cmd: "npx vitest run"
+  # 验收测试路径前缀（test-author commit 判定：改动文件全部落在该前缀内）
+  test-paths: "tests/"
+  # 有效红签名（ERE；命中且无 collection 签名才算"断言失败"的红）
+  assert-signatures: "AssertionError|expected .+ to (be|equal|contain|match|have)"
+  # 无效红签名（ERE；任一命中判 exit 3——import/编译/收集错不算红，ADR-0061 决策 1）
+  collection-signatures: "Failed to resolve import|Cannot find module|ERR_MODULE_NOT_FOUND|does not provide an export named|SyntaxError|Transform failed|Failed to load config|No test suite found"
+g060-test-tamper:
+  # 锁定集 manifest（路径→sha256；创建走 bootstrap，之后只许 bot 提交）
+  lock-file: "quality/lock/baseline.json"
+  # owner 登录（ERE，| 连接；owner PR 改锁定路径放行，仍提示锁定集待更新）
+  owner-logins: "randypanding"
+  # bot 提交者模式（ERE，匹配 commit 的 "作者 <邮箱>" 串；manifest 变更只许 bot）
+  bot-patterns: '\[bot\]'
+  # Spec-Change trailer 回查的 spec PR 所在仓（trailer: "Spec-Change: <PR#>"）
+  spec-repo: "Cloudbird-Software/.github"
+
+# ---- W5-C1：整洁关卡组全量（.github#224 / ADR-0070）----
+# 读取面与既有关卡一致：阈值/配置全部在本文件，脚本经 tidy_scan.load_section 读取
+# （GATE_TH_<段名>_<键> 可覆盖——段/键连字符归一为下划线）。列表值一律 "|"-连接
+# 的路径前缀串。首启口径：ADR-0070 后果节——全量首启有误报潮，先冻结现状再分批
+# 收紧（收紧走普通 C1 PR，放宽须新 ADR）。
+g020-arch:
+  # 依赖架构：判定引擎=dependency-cruiser（宪法 §9#5 署名——判定轮子不自研），
+  # 规则在 .dependency-cruiser.cjs；本关卡只消费其 JSON 结果 + 本阈值。
+  depcruise-cmd: "npx depcruise src --output-type json"
+  max-depcruise-errors: 0
+  # 模块形状（ADR-0070 决策 1）：src-paths 下 index.ts 为模块入口。
+  # depthRatio=入口代码行/导出符号数（接口窄而实现深；纯转发模块≈1 即"浅模块"），
+  # 只对 ≥2 导出的入口执法（单导出=最小公共面，不受形状约束）。
+  src-paths: "src"
+  exports-max: 7
+  fanout-max: 12
+  depthratio-min: 2
+  # api-surface 变更声明（ADR-0070 决策 1）：改动下列前缀内文件而 commit 不带
+  # "Api-Surface: <摘要>" trailer → fail（无 GATE_BASE 的本地模式不适用）
+  api-surface-paths: "src/index.ts|.env.example"
+  api-surface-trailer: "Api-Surface"
+g030-nav:
+  # AI 导航容易度度量（ADR-0070 决策 2 / 宪法 §9#5：公共知识空白，自研；
+  # 方法署名 aider repo-map）。全部输出指标、超阈值 fail（卡 AC-2）。
+  scan-paths: "src|tests|quality"
+  # fixture/报告不进导航度量（fixture 是关卡自测语料，不是被导航的代码）
+  ignore-paths: "quality/fixtures|quality/reports"
+  # 1) 每目录文件数上限（防平铺——文件堆一个目录=无法定位）
+  max-files-per-dir: 12
+  # 2) repo-map 覆盖率：固定 token 预算内可装配符号比例（符号宇宙=TS 导出 +
+  #    py 顶层 def/class；token 价=(名+路径+开销)//4）
+  repomap-token-budget: 2000
+  min-repomap-coverage: 0.8
+  # 3) 引用图：从入口 BFS 的平均跳数/直径/环数
+  entry-file: "src/index.ts"
+  max-avg-hops: 2.5
+  max-graph-diameter: 5
+  max-import-cycles: 0
+  # 4) 文档-符号验真：这些 .md 反引号引用的符号必须存在于代码/make/npm 符号宇宙
+  doc-paths: "README.md|AGENTS.md|docs"
+  # 非代码专名白名单（"|"连接；仅限确实不是代码符号的词）
+  doc-symbol-ignore: ""
+  # 5) 词表 lint：版本化 glossary；文档散文中的缩写必须先入表
+  glossary-file: "quality/glossary.yaml"
+g040-complexity:
+  # 抗复杂度组（ADR-0070 决策 3）：对 AI 复杂化冲动的机器对手。
+  # 1) 认知复杂度（简化 Sonar 口径 + CodeScene 因素清单：嵌套/布尔组合/分支）
+  code-paths: "src|tests"
+  ignore-paths: "quality/fixtures|quality/reports"
+  max-cognitive-complexity: 15
+  # 2) 死通用性：零跨文件引用的导出（entry-paths=公共 API 面，按设计存在故豁免）
+  entry-paths: "src/index.ts"
+  # 3) Rule-of-Three：PR 新增导出符号的最小引用点（<3=过早抽象）
+  rule-of-three-min-refs: 3
+  # 5) 净增 LOC 预算：产品代码面（src/tests）；quality 自身膨胀由 org 的
+  #    "diff<400 行/PR" 纪律管，不重复计账
+  loc-budget-paths: "src|tests"
+  max-net-loc: 400
+  # 6) 抑制标记零增长（口径对齐 CI-Workflows suppression-gate：带 ADR/issue
+  #    引用的抑制走豁免通道，行数计入豁免指标——豁免行数本身只升不降难）
+  suppression-scan-paths: "src|tests"
+  # 7) 豁免审计：条目必须带可追溯 ref（ADR-NNNN / .github#NN / #NN）
+  exemptions-file: "quality/exemptions.yaml"
+g900-ratchet:
+  # 棘轮（ADR-0070 决策 4 / 卡 AC-3）：全仓指标只许变好。口径=只棘轮"坏量计数"
+  # （违规计数/最大认知复杂度/抑制与豁免总量——键清单在 ratchet_lib.RATCHET_KEYS）；
+  # 规模类指标（符号总数/平均跳数）随生长合理波动，由各关卡阈值执法、不入基线。
+  baseline-file: "quality/baseline.json"
+  # bot 提交者模式（ERE，匹配 "作者 <邮箱>"；与 g060 同口径）
+  bot-patterns: '\[bot\]'
+  # 放宽管制 trailer：bot 提交把基线改差时必须带（值=ADR-NNNN 或 #NN，人类批准形态）
+  loosen-trailer: "Ratchet-Loosen"

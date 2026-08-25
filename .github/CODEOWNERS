@@ -1,0 +1,14 @@
+# CODEOWNERS —— 一人公司策略说明：
+# 默认 owner 全局拥有。基建路径单列的意义：
+# 1) 若未来开启 require_code_owner_review，这些路径强制人审（automerge 场景保持关闭）
+# 2) 代码 review 工具（CodeRabbit 等）按 owner 路由通知
+# App（cloudbrid-agent）不在任何 owner 列表 = 永不满足 code owner 审查，天然被人把关
+
+* @randypanding
+
+# 基建：CI/门禁/治理（变更影响全组织，显式归属）
+/.github/ @randypanding
+/Makefile @randypanding
+/.dependency-cruiser.cjs @randypanding
+/zizmor.yml @randypanding
+/docs/ARCHITECTURE.md @randypanding

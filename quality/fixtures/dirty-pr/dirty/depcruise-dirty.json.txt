@@ -1,0 +1,10 @@
+{
+  "summary": { "error": 1, "warn": 0, "info": 0, "totalCruised": 8, "totalDependencies": 10, "optionsUsed": {} },
+  "violations": [
+    {
+      "from": "src/shallow/index.ts",
+      "to": "src/infrastructure/db.ts",
+      "rule": { "name": "domain-not-import-infra", "severity": "error", "comment": "领域层不得依赖基础设施层" }
+    }
+  ]
+}

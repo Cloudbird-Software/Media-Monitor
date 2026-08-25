@@ -1,0 +1,5 @@
+// W5-C1 脏 PR fixture：平铺目录样本模板（.github#224 AC-1 第五类）
+// 测试脚本把 __N__ 替换为 1..13 后拷入 fixture 仓 src/flat/f<N>.ts——13 个文件
+// 塞一个目录超过 max-files-per-dir，g030 nav-flat-directory 必拦。
+const flat__N__ = __N__;
+void flat__N__;

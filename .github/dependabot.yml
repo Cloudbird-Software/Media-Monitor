@@ -1,0 +1,23 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly }
+    groups:
+      actions:
+        patterns: ["*"]
+        cooldown-days: 7
+  - package-ecosystem: npm
+    directory: "/"
+    schedule: { interval: weekly }
+    open-pull-requests-limit: 5
+    groups:
+      minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+        cooldown-days: 7
+    ignore:
+      # TS 7 与 typescript-eslint（peer <6.1.0）不兼容，npm ci 直接失败。
+      # 工具链支持后删除此规则重新升级。见 PR #1。
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]

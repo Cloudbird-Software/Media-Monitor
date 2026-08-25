@@ -1,0 +1,20 @@
+# zizmor 审计配置：有意的工程决策在此集中豁免，附原因。
+rules:
+  unpinned-uses:
+    ignore:
+      # 跨仓 reusable workflow 采用 @v1 大版本指针策略，由 CI-Workflows 仓集中维护移动，
+      # 不 pin SHA 是有意为之（类似 Dependabot 的 major-version 引用习惯）。
+      - ci.yml
+  dangerous-triggers:
+    ignore:
+      # 标准依赖自动合并模式（GitHub 官方文档写法）：不 checkout PR 代码，
+      # fetch-metadata 校验 PR 元数据 + gate 全绿后才执行合并。
+      - automerge.yml
+  bot-conditions:
+    ignore:
+      # actor 检查只是第一道门，真正的门禁是 fetch-metadata 的元数据校验 + gate check。
+      - automerge.yml
+  dependabot-cooldown:
+    ignore:
+      # 已配置 cooldown-days: 7；安全更新走 Dependabot 独立通道，不受分组冷却影响。
+      - dependabot.yml

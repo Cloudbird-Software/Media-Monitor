@@ -1,0 +1,22 @@
+# quality/glossary.yaml —— 版本化词表（W5-C1 .github#224 / ADR-0070 决策 2；
+# g030-nav 词表 lint 的判定数据）。增改规则：
+#   - 文档（README.md/AGENTS.md/docs/**）散文中新用缩写术语必须先入 acronyms
+#     再使用——未定义即 fail（ruleId=nav-glossary-undefined）；
+#   - deprecated：弃用词 → 规范词映射，出现即 fail（同义词漂移是 agent 检索死敌）；
+#   - version 随删改递增（收紧走普通 PR，删条目/降约束须 ADR）。
+version: 1
+acronyms:
+  AC: 验收准则（Acceptance Criteria，卡面 Given-When-Then 条款）
+  ADR: 架构决策记录（Architecture Decision Record，archive 仓 adr/ 正本）
+  AGENTS: agent 入口协议文件（AGENTS.md，宪法 §11 索引型约束）
+  AGPL: GNU Affero 通用公共许可证（禁入依赖）
+  CAS: compare-and-swap 原子租约（arbiter 认领协议）
+  CI: 持续集成（Continuous Integration）
+  GPL: GNU 通用公共许可证（禁入依赖）
+  LLM: 大语言模型（Large Language Model）
+  PAT: 个人访问令牌（Personal Access Token）
+  PR: 拉取请求（Pull Request）
+  SHA: git 提交哈希（ Secure Hash Algorithm；action 钉版用完整 SHA）
+  SSPL: Server Side Public License（禁入依赖）
+  TODO: 待办标记（代码内占位注释）
+deprecated: {}
