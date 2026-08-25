@@ -1,0 +1,61 @@
+name: upstream-watch
+# Open-source ecosystem radar (docs/UPSTREAM.md): poll every 6h for
+# upstream activity touching watched platform-adaptation surfaces
+# (signatures/protocols/schemas), and file type:upstream drift-issues via
+# the repo App token when hits are found. Runs offline-safe: no secrets
+# needed for a clean summary-only pass.
+on:
+  schedule:
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: scan upstream registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          go run ./cmd/mediactl upstream scan --window-hours 24 --out adapt/reports/upstream-summary.json || {
+            echo "::error::upstream scan failed (fail-closed)"
+            exit 1
+          }
+          cat adapt/reports/upstream-summary.json | jq '{total, hits}'
+      - name: drift issue filing（App secret present）
+        if: always()
+        env:
+          AGENT_APP_SECRET: ${{ secrets.AGENT_APP_SECRET }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AGENT_APP_SECRET" ]; then
+            echo "::notice::upstream issue filing skipped: AGENT_APP_SECRET not provisioned"
+            exit 0
+          fi
+          HITS=$(jq -r '.hits | length' adapt/reports/upstream-summary.json 2>/dev/null || echo 0)
+          if [ "$HITS" -eq 0 ]; then
+            echo "no upstream hits in window; nothing to file"
+            exit 0
+          fi
+          NOW=$(date +%s)
+          APP_ID=4632704
+          HDR=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          PLD=$(printf '%s' "{\"iat\":$((NOW-60)),\"exp\":$((NOW+540)),\"iss\":$APP_ID}" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          SIG=$(printf '%s' "$HDR.$PLD" | openssl dgst -sha256 -sign <(printf '%s' "$AGENT_APP_SECRET") | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          JWT="$HDR.$PLD.$SIG"
+          TKN=$(curl -fsS -X GET "https://api.github.com/app/installations" -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" | jq -r '.[0].id' | xargs -I{} curl -fsS -X POST "https://api.github.com/app/installations/{}/access_tokens" -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" | jq -r '.token')
+          GH_TOKEN="$TKN" gh issue create --repo "Cloudbird-Software/Media-Monitor" \
+            --title "upstream radar hits: $(date -u +%F)" \
+            --body "## upstream watch hits
+
+Machine-filed by upstream-watch.yml (docs/UPSTREAM.md). See the run summary for the hit list; triage via adapt/playbook/AGENTS.md swap-test bench."
+
+            --label "type:upstream" || echo "::warning::upstream issue filing failed"

@@ -34,6 +34,8 @@ Machine-readable index. Humans: use AGENTS.md as the entry point instead.
 | comment + reply collection with author profile (uid, sec_uid/MS4, short_id, nickname, avatar, signature, region ip_label, gender, stats) | collect engine | model.UserProfile |
 | live-room monitoring: enter/like/chat/gift/follow/fansclub/rank/room-stat events | internal/live | websocket+protobuf |
 | group member silent enumeration | collect engine IM endpoints | platform contracts |
+| MCP/CLI/daemon interfaces | cmd/mediad-mcp (15 tools) + medad REST + mediactl | implemented |
+| open-source radar + canary + hardening audit | .github/workflows (upstream-watch/canary/redteam) | implemented (workflows active; secrets provision on deployment) |
 | PC → phone control (ADB + accessibility flows + scrcpy) | internal/adb + internal/vision flows | flow scripts in adapt/flows |
 | GUI-model integration (auto-repair + capability layer) | internal/vision | provider-agnostic |
 
@@ -64,3 +66,11 @@ upstream/                  open-source monitoring registry
 ## Getting started (agent)
 
 Everything an agent needs to onboard is in AGENTS.md; do not read beyond it until instructed by it.
+
+## Quick reference (automation)
+
+- Run offline canary: `make adapt-offline` (or `mediactl adapt canary --offline`)
+- Run live connections: `mediactl live monitor --room <url> [--signer-url $MEDIAMON_SIGNER_URL]`
+- Start daemon: `mediad -dir ./data -addr 127.0.0.1:8088` (health/metrics/tasks/collect REST + dashboard)
+- Start MCP server: `mediad-mcp` (stdio; wire into any MCP host)
+- Adaptation playbook for breakages: `adapt/playbook/AGENTS.md`
