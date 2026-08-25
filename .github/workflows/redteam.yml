@@ -1,0 +1,65 @@
+name: redteam
+# Delivery-hardening self-audit (docs/HARDENING.md M8): builds the linux
+# artifact without debug info and runs the leakage battery — contract
+# endpoint keyword sweep, entropy scan, key-material scan, and a scorecard
+# summary. This is the continuous half of the release gate; the delivery
+# pipeline runs the full battery against the shipped/obfuscated build.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "11 4 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.24"
+      - name: build stripped artifact
+        run: |
+          go build -trimpath -ldflags "-s -w" -o /tmp/mediactl-audit ./cmd/mediactl
+      - name: leakage battery
+        run: |
+          set -euo pipefail
+          SCORE=0
+          # 1) contract endpoint keywords must not appear verbatim in a stripped binary
+          HITS=$(strings /tmp/mediactl-audit | grep -cE "aweme/v1/web/comment|xiaohongshu.com/api/sns|graphql.*visionSearch" || true)
+          if [ "$HITS" -gt 0 ]; then
+            echo "::error::endpoint keyword leakage: $HITS hits (contracts must ship encrypted per docs/HARDENING.md M2)"
+            SCORE=1
+          fi
+          # 2) no key material / PEM markers
+          if strings /tmp/mediactl-audit | grep -qE "BEGIN (RSA )?PRIVATE KEY|BEGIN OPENSSH PRIVATE KEY"; then
+            echo "::error::key material markers present in artifact"
+            SCORE=1
+          fi
+          # 3) high-entropy region count (source binary should be low-entropy)
+          ENTROPY=$(python3 - "$(stat -c%s /tmp/mediactl-audit)" /tmp/mediactl-audit <<'PYEOF'
+import sys, math, collections
+size = int(sys.argv[1])
+data = open(sys.argv[2], 'rb').read()
+count = 0
+W = 8
+for i in range(0, len(data) - W + 1, 64):
+    c = collections.Counter(data[i:i+W])
+    H = -sum((n / W) * math.log2(n / W) for n in c.values())
+    if H > 7.5:
+        count += 1
+print(count)
+PYEOF
+)
+          echo "high-entropy window count: $ENTROPY"
+          echo "redteam scorecard: endpoint_leaks=$HITS entropy_windows=$ENTROPY"
+          if [ "$SCORE" -ne 0 ]; then
+            echo "::error::redteam scorecard non-zero — see docs/HARDENING.md M8 for the full delivery gate"
+            exit 1
+          fi
+          echo "redteam audit PASS (unhardened source build; delivery pipeline applies M1-M7)"

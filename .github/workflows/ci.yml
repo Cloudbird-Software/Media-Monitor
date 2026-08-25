@@ -21,12 +21,12 @@ permissions:
 
 jobs:
   hygiene:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/hygiene.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/hygiene.yml@61191f87c537f6e887695517121c6e530a838261 # v1
 
   check:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/check.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/check.yml@61191f87c537f6e887695517121c6e530a838261 # v1
     with:
-      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
+      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
       runtime: go
       go-version: "1.24"
 
@@ -35,9 +35,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@61191f87c537f6e887695517121c6e530a838261 # v1
     with:
-      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
+      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
 
   deps-audit:
     # Push-side dependency audit (PR-side is the dependency-review action):
@@ -141,14 +141,14 @@ jobs:
           exit $MISSING
 
   contract:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/contract.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/contract.yml@61191f87c537f6e887695517121c6e530a838261 # v1
     with:
-      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
+      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
 
   suppression-budget:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@b0ce93280fd0173f438f3725149117d211eac529
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@61191f87c537f6e887695517121c6e530a838261
     with:
-      detector-ref: b0ce93280fd0173f438f3725149117d211eac529
+      detector-ref: 61191f87c537f6e887695517121c6e530a838261
 
   quality-gates:
     # Same orchestrator as local `make gates-pr`: quality/run-gates.sh with
