@@ -1,0 +1,28 @@
+{
+  "data": [
+    {
+      "type": 1,
+      "aweme_info": {
+        "aweme_id": "7660000000000000001",
+        "desc": "示例视频标题一",
+        "create_time": 1780000001,
+        "image_infos": [],
+        "statistics": {"digg_count": 120000, "comment_count": 83000, "collect_count": 18000, "share_count": 170000},
+        "author": {"sec_uid": "MS4wLjABAAAA-example-author-00000000000001", "nickname": "示例作者一"}
+      }
+    },
+    {
+      "type": 68,
+      "aweme_info": {
+        "aweme_id": "7660000000000000002",
+        "desc": "示例图文笔记二",
+        "create_time": 1780000002,
+        "image_infos": [{}, {}],
+        "statistics": {"digg_count": 2100, "comment_count": 340, "collect_count": 1500, "share_count": 88},
+        "author": {"sec_uid": "MS4wLjABAAAA-example-author-00000000000002", "nickname": "示例作者二"}
+      }
+    }
+  ],
+  "cursor": 20,
+  "has_more": true
+}

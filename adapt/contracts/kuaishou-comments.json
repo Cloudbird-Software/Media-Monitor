@@ -1,0 +1,16 @@
+{
+  "name": "kuaishou-comments",
+  "platform": "kuaishou",
+  "category": "comments",
+  "version": "1",
+  "doc": "comment list of one video (illustrative sample structure; per-comment author profile fields normalized into model.UserProfile)",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/rest/wd/comment/v2/list",
+    "method": "GET",
+    "placeholders": ["photo_id"]
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {"comments": "$.comment_list"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20}
+}

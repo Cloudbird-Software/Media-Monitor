@@ -1,0 +1,18 @@
+{
+  "name": "douyin-group-members",
+  "platform": "douyin",
+  "category": "group_members",
+  "version": "1",
+  "doc": "silent enumeration of members of a group the account belongs to (IM surface; account-bound session required)",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/api/im/web/v2/group/members/",
+    "method": "GET",
+    "query": {"msToken": "", "a_bogus": ""},
+    "placeholders": ["group_id"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid", "sessionid"], "source": "account-bound browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {"members": "$.members"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}

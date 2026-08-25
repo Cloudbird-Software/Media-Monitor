@@ -1,0 +1,16 @@
+{
+  "name": "xhs-comments",
+  "platform": "xhs",
+  "category": "comments",
+  "version": "1",
+  "doc": "note comment page (public web API shape sample; author profile fields normalized into model.UserProfile)",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v2/note/comment/page",
+    "method": "GET",
+    "placeholders": ["note_id"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"comments": "$.data.comments"},
+  "paging": {"cursor_param": "cursor", "count_default": 20, "has_more_path": "$.data.has_more", "next_cursor_path": "$.data.cursor"}
+}

@@ -1,28 +1,71 @@
-# AGENTS.md（索引型——只放不可推断的约束，宪法 §4D ≤30 行；细节按需读索引）
+# AGENTS.md — Media-Monitor
+
+Agents working in this repository must read this file first. It is machine-enforceable where stated.
 
 <!-- entry-protocol v1 -->
 
 ### 入口协议（陌生 agent 从这里开始——宪法 §11 / ADR-0055）
 
-1. 取 ghcb（钉 SHA，禁浮动 main）：`curl -fsS -o ghcb https://raw.githubusercontent.com/Cloudbird-Software/.github/f72d9520706c8fca974d92456f65cae5c1412bb7/scripts/ghcb && chmod +x ghcb`（凭据用你自己的：`gh auth login` 或 `export GH_TOKEN=<PAT>`；`-f` 必带——404 时 curl 无 -f 仍退出 0，会把错误页当脚本落盘）
+1. 取 ghcb（钉 SHA，禁浮动 main）：`curl -fsS -o ghcb https://raw.githubusercontent.com/Cloudbird-Software/.github/f72d9520706c8fca974d92456f65cae5c1412bb7/scripts/ghcb && chmod +x ghcb`（凭据用你自己的：`gh auth login` 或 `export GH_TOKEN=<PAT>`；`-f` 必带）
 2. 找活：`bash ghcb next [owner/repo]` → 列 state:ready 卡（卡 issue 是唯一工作凭证，无卡不开工）
-3. 认领：`bash ghcb claim <n> [owner/repo]` → 评论 /claim——conductor 转介 arbiter 原子 CAS 租约，先到先得；败者换下一张（`bash ghcb status <n>` 看持有者）
-4. 开工：`make card-test CARD=<n>`（读卡 AC、测试先行）→ `make gates-pr`（本地复现 CI 关卡）
-5. 提 PR：body 必带一行卡元数据 `Card: <owner>/<repo>#<n>`（`bash ghcb card-meta <n>` 生成；缺失=后续关卡 exit 3）
-6. front-desk 命令（卡 issue 评论，conductor 转介 arbiter 处理）：/claim 认领 · /release 释放租约 · /retry 隔离回流
+3. 认领：`bash ghcb claim <n> [owner/repo]`
+4. 开工：`make card-test CARD=<n>` → `make gates-pr`（本地复现 CI 关卡）
+5. 提 PR：body 必带一行卡元数据 `Card: <owner>/<repo>#<n>`
+6. front-desk 命令（卡 issue 评论）：/claim 认领 · /release 释放租约 · /retry 隔离回流
 
 <!-- /entry-protocol -->
 
-## 硬规则（违反 = PR 打回）
+## Repo-specific onboarding (read after the entry protocol)
 
-1. 认证：一切 push/PR 用 cloudbrid-agent App 令牌，禁个人 PAT。获取（脚本 pin 到已审阅提交，升级先比对 .github main 再换 SHA——禁 `curl|bash` 浮动 main 指针，ADR-0021）：
-   `GH_TOKEN=$(REPO=template-service bash <(curl -sS https://raw.githubusercontent.com/Cloudbird-Software/.github/487fd930c46a86bf3fb6865a7223287f8e3446e2/scripts/gh-app-token.sh))`
-2. 不改 `.github/workflows/**`、`Makefile` 的 check 目标（App 无此权限，人类专属）
-3. 新依赖先报"名称/用途/许可证/标准库可否替代"等人批；禁 AGPL/GPL-3.0/SSPL；密钥/客户名/连接串不进仓库（`.env.example` 占位）
-4. 一个 PR 一件事，diff < 400 行；bug 修复先写复现失败测试；对外接口变更写 CHANGELOG.md；提交信息 Conventional Commits
+### What this repo is
 
-## 索引（用到再读，不要全读）
+Three divisions, per README.md: software body (`cmd/`+`internal/`), adaptation harness (`adapt/`), open-source monitoring (`upstream/` + `docs/UPSTREAM.md`). Language: Go, stdlib-only. Zero external module requires is a hard invariant (docs/OPERATIONS.md).
 
-- 本地命令：`make setup` 安装 / `make check` 提交前必跑（lint+arch+test）/ `make test <文件>` 单测；建模块/动边界 → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- 选语言/选库 → [.github 仓 governance/policy/languages.yaml](https://github.com/Cloudbird-Software/.github/blob/main/governance/policy/languages.yaml)；测试政策 → [testing.yaml](https://github.com/Cloudbird-Software/.github/blob/main/governance/policy/testing.yaml)
-- 治理措施总清单 → [.github 仓 governance/GOVERNANCE.yaml](https://github.com/Cloudbird-Software/.github/blob/main/governance/GOVERNANCE.yaml)；模块内工作 → 该模块目录下的 AGENTS.md
+### Commands
+
+- `make setup` — toolchain sanity (go version, no external deps).
+- `make check` — the CI check target: gofmt zero-diff, go vet, arch check, `go test -race ./...`, report upload dirs.
+- `make gates-pr` — local equivalent of the PR quality gates (fast subset + card metadata parse).
+- `make card-test CARD=<n>` — print issue AC list for a work card.
+- `make adapt-offline` — run the adapt canary suite against bundled fixtures (no network).
+
+### Change discipline (machine-enforced)
+
+- **C1 paths** (`.github/`, `AGENTS.md`, `CODEOWNERS`, `Makefile`, `docs/`, `quality/`, `governance/`, `scripts/`): any PR touching them MUST reference a real `ADR-NNNN` in title or body; the ADR must exist in `Cloudbird-Software/archive` at `adr/` (org-gate enforces). If your change needs a new ADR, add it to `adr/ADR-NNNN-*.md` in the same PR and cite it.
+- **No `specs/**` directory** in this repo: `specs/` PRs require the org adversary audit (W4-C3). Product specs owned elsewhere; do not create `specs/` here without an org-level decision.
+- **No new third-party Actions**, no new Go dependencies: whitelist and approval flow in org `governance/GOVERNANCE.yaml` + `docs/OPERATIONS.md`.
+- **Branch model**: squash-only merges into `main`, linear history, delete branch on merge, auto-merge allowed. Write identity: GitHub App `cloudbrid-agent`.
+- **Gate semantics**: required checks on PRs are `gate` (this repo's ci.yml aggregation), `org-gate`, `adversary` (auto-passed for PRs without `specs/**`). skipped≠success.
+- **Go package rules**: entry binaries only under `cmd/`; `internal/` must not be imported outside this module; each public package exposes one entry file (`doc.go` or `<pkg>.go`); no circular imports between `internal/` packages (enforced by `go build` + `quality/arch-check.sh`).
+- **Suppression markers** (`t.Skip`, `!TODO-fixme`, `lint:ignore` style markers in Go tests/annotations): budget-gated by the org suppression-gate (max +3 net per PR). Avoid them entirely.
+- **Secrets**: never commit `.env`, `.pem`, `.key`, token-like fixtures. gitleaks runs over the full history on every PR (hygiene gate).
+
+### Data & contract model
+
+- All platform behavior is declared in `adapt/contracts/*.json`. Code must never hardcode endpoint paths/params; a version adaptation is a contract patch + fixture update + canary green. Playbook: `adapt/playbook/AGENTS.md`.
+- Field completeness contract for comment authors: `uid`, `sec_uid` (MS4 form), `short_id`, `nickname`, `avatar_url`, `signature`, `ip_label`, `gender`, `follower_count`, `following_count`, `aweme_count`, `total_favorited` — see `internal/model` and canary assertions.
+
+### Testing policy
+
+- Golden fixtures in `adapt/fixtures/` are the source of truth for parser/binder tests; regenerating them is a C1-adjacent change (must cite ADR and keep both old+new behavior asserted in `adapt/canaries/`).
+- Property tests (`internal/testkit/prop.go`) are required for: JSONPath walker, protobuf reader/writer, ws frame codec, store append/scan. Extend, don't delete.
+- Live-network canaries are opt-in via secrets (docs/CANARY.md). Never commit live cookies.
+
+### PR body template
+
+```
+## What
+<one paragraph>
+## Why
+<one paragraph>
+## Contracts
+- <adapted contract names + version bumps, or none>
+## Tests
+- <what was executed>
+Card: <owner>/<repo>#<n>   (when driven by a work card)
+ADR-XXXX (<reason>)        (required when C1 paths touched)
+```
+
+## Docs (read on demand)
+
+docs/ARCHITECTURE.md · docs/HARNESS.md · docs/CANARY.md · docs/UPSTREAM.md · docs/HARDENING.md · docs/OPERATIONS.md

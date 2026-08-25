@@ -1,13 +1,15 @@
-node_modules/
-__pycache__/
-dist/
+data/
+adapt/reports/*.json
+*.exe
+/mediad
+/mediactl
+/mediad-mcp
 coverage/
-reports/
+dist/
 .env
 .env.*
 !.env.example
-*.log
-.DS_Store
-
-# W2-C2（ADR-0061）：红证据本地留档不入库（贴 PR body）
-quality/evidence/
+*.pem
+*.key
+ghcb
+.ghcb.cache

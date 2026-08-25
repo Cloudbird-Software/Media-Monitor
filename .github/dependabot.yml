@@ -1,23 +1,16 @@
+# Dependabot: gomod ecosystem (stdlib-only policy means this normally finds
+# nothing to bump — kept as a canary against accidental require blocks) plus
+# GitHub Actions pins (SHA-pinned per CI-2 policy; version comments updated
+# only with coordinated CI-Workflows releases).
 version: 2
 updates:
-  - package-ecosystem: github-actions
+  - package-ecosystem: "gomod"
     directory: "/"
-    schedule: { interval: weekly }
-    groups:
-      actions:
-        patterns: ["*"]
-        cooldown-days: 7
-  - package-ecosystem: npm
-    directory: "/"
-    schedule: { interval: weekly }
+    schedule:
+      interval: "weekly"
     open-pull-requests-limit: 5
-    groups:
-      minor-patch:
-        patterns: ["*"]
-        update-types: ["minor", "patch"]
-        cooldown-days: 7
-    ignore:
-      # TS 7 与 typescript-eslint（peer <6.1.0）不兼容，npm ci 直接失败。
-      # 工具链支持后删除此规则重新升级。见 PR #1。
-      - dependency-name: typescript
-        update-types: ["version-update:semver-major"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5

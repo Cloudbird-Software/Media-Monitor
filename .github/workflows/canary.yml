@@ -1,0 +1,76 @@
+name: canary
+# Golden-run verification of the adaptation layer. Offline mode always runs
+# (fixtures + contracts). Live mode activates only when deployment secrets
+# are present; otherwise it is a documented expected-skip success, never a
+# silent pass of live checks. On schedule, drift failures are filed as
+# type:drift issues via the repo App token.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.24"
+
+      - name: offline canary（fixtures × contracts）
+        run: make adapt-offline
+
+      - name: live canary（secrets-gated）
+        env:
+          CANARY_COOKIES_DOUYIN: ${{ secrets.MEDIAMON_CANARY_COOKIES_DOUYIN }}
+          CANARY_COOKIES_KUAISHOU: ${{ secrets.MEDIAMON_CANARY_COOKIES_KUAISHOU }}
+          CANARY_COOKIES_XHS: ${{ secrets.MEDIAMON_CANARY_COOKIES_XHS }}
+        run: |
+          set -euo pipefail
+          if [ -n "$CANARY_COOKIES_DOUYIN" ] || [ -n "$CANARY_COOKIES_KUAISHOU" ] || [ -n "$CANARY_COOKIES_XHS" ]; then
+            echo "live canary secrets present: running mediactl adapt canary --live"
+            go run ./cmd/mediactl adapt canary --live
+          else
+            echo "::notice::live canary skipped: no cookie secrets provisioned (documented expected skip, docs/CANARY.md)"
+          fi
+
+      - name: drift alert subject（当前 run 失败摘要）
+        if: failure()
+        run: |
+          echo "::notice::a canary step failed — if the App secret is provisioned this scheduled run would have filed a type:drift issue"
+
+      - name: drift issue filing（scheduled + App secret present）
+        if: github.event_name == 'schedule'
+        shell: bash
+        env:
+          APP_ID: '4632704'
+          APP_KEY: ${{ secrets.AGENT_APP_SECRET }}
+          ALERT_LABEL: ${{ vars.MEDIAMON_CANARY_ALERT_ISSUE_LABEL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$APP_ID" ] || [ -z "$APP_KEY" ]; then
+            echo "::notice::drift alerting skipped: AGENT_APP_SECRET not provisioned"
+            exit 0
+          fi
+          NOW=$(date +%s)
+          HDR=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          PLD=$(printf '%s' "{\"iat\":$((NOW-60)),\"exp\":$((NOW+540)),\"iss\":$APP_ID}" | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          SIG=$(printf '%s' "$HDR.$PLD" | openssl dgst -sha256 -sign <(printf '%s' "$APP_KEY") | openssl base64 -A | tr '+/' '-_' | tr -d '=')
+          JWT="$HDR.$PLD.$SIG"
+          TKN=$(curl -fsS -X GET "https://api.github.com/app/installations" -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" | jq -r '.[0].id | tostring' | xargs -I{} curl -fsS -X POST "https://api.github.com/app/installations/{}/access_tokens" -H "Authorization: Bearer $JWT" -H "Accept: application/vnd.github+json" | jq -r '.token')
+          LABEL=${ALERT_LABEL:-type:drift}
+          GH_TOKEN="$TKN" gh issue create --repo "Cloudbird-Software/Media-Monitor" \
+            --title "canary drift: $(date -u +%F)" \
+            --body "## canary drift report (scheduled run)
+
+Offline canary reported issues — see Actions run for this date.
+
+ADR-0075 (canary dual-track) — machine-filed drift subject, triage = adapt playbook (adapt/playbook/AGENTS.md)." \
+            --label "$LABEL" || echo "::warning::drift issue filing failed"

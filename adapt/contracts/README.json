@@ -1,0 +1,9 @@
+{
+  "purpose": "Versioned runtime contracts for the collect/live/mobile engines. One JSON per collection operation. Schema + drift semantics: internal/contracts. Adaptation workflow: adapt/playbook/AGENTS.md.",
+  "rules": [
+    "breaking binding/path change bumps 'version' and keeps the old file as <name>-vN.json",
+    "additive field mapping stays in the same version",
+    "version is the consumers' pin; code never hardcodes endpoint paths",
+    "README.json itself is not loaded as a contract"
+  ]
+}

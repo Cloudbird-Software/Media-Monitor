@@ -1,0 +1,18 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "example-note-0001",
+        "model_type": "note",
+        "note_card": {"display_title": "小红书示例笔记一", "type": "video", "user": {"user_id": "xhs-user-0001", "nickname": "小红书示例作者一", "avatar": "https://example.invalid/xhs-1.jpg"}}
+      },
+      {
+        "id": "example-note-0002",
+        "model_type": "note",
+        "note_card": {"display_title": "小红书示例笔记二", "type": "normal", "user": {"user_id": "xhs-user-0002", "nickname": "小红书示例作者二", "avatar": "https://example.invalid/xhs-2.jpg"}}
+      }
+    ],
+    "has_more": true,
+    "cursor": ""
+  }
+}

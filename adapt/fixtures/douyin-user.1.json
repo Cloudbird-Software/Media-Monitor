@@ -1,0 +1,18 @@
+{
+  "user_list": [
+    {
+      "uid": "1000000001",
+      "sec_uid": "MS4wLjABAAAA-example-commenter-000000000001",
+      "short_id": "100001",
+      "nickname": "示例用户一",
+      "avatar_url": "https://example.invalid/avatar-1.jpg",
+      "signature": "示例个签",
+      "ip_label": "陕西",
+      "gender": 2,
+      "follower_count": 1200,
+      "following_count": 88,
+      "aweme_count": 45,
+      "total_favorited": 99000
+    }
+  ]
+}

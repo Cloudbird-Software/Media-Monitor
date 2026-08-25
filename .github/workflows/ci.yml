@@ -1,9 +1,14 @@
 name: CI
+# Organization-governed gate wiring (aligns with Cloudbird-Software governance
+# GOV/BP-2 dual-track: local "gate" aggregation + org-side "org-gate").
+# Reusable workflow refs are pinned to CI-Workflows@v1 (SHA 61191f8...); the
+# same SHA must be passed via ciw-ref inputs (ADR-0043). Do not bump without
+# a coordinated CI-Workflows release note.
 on:
-  merge_group:
-    # P2-7（ADR-0042）：merge queue 必需订阅
-    types: [checks_requested]
   pull_request:
+    # edited so that adding/removing an ADR reference in title/body re-runs
+    # the adr-required check (same semantics as template-service).
+    types: [opened, synchronize, reopened, edited]
   push:
     branches: [main]
 
@@ -16,47 +21,63 @@ permissions:
 
 jobs:
   hygiene:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/hygiene.yml@61191f87c537f6e887695517121c6e530a838261 # v1
-
-  deps-audit:
-    # push 面依赖审计（ADR-0021，红队 #11-C）：dependency-review 只支持 PR 事件（比对
-    # base↔head），直推 main 时 deps job 被 skip 而 gate 判绿——push 面零校验。
-    # 直推本应只有破玻璃（§8 后验），但"跳过=通过"的 gate 语义是声明性漏洞：
-    # push 用 lockfile 审计兜底（npm audit 只读 registry 元数据，无新 action 依赖）。
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-      - name: npm audit（lockfile 高危阻断）
-        run: |
-          # 只装 npm（runner 预装）；审计 prod+dev 依赖的 high/critical
-          npm audit --package-lock-only --audit-level=high
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/hygiene.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
 
   check:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/check.yml@61191f87c537f6e887695517121c6e530a838261 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/check.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
     with:
-      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
-      runtime: node
-      node-version: "24"
+      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
+      runtime: go
+      go-version: "1.24"
 
   deps:
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
       pull-requests: write
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@61191f87c537f6e887695517121c6e530a838261 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
     with:
-      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
+      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
+
+  deps-audit:
+    # Push-side dependency audit (PR-side is the dependency-review action):
+    # this repo's dependency policy is stdlib-only, enforced mechanically here.
+    # Direct pushes to main should only happen under the guarded break-glass
+    # path; the push event still gets the audit (skipped≠success semantics are
+    # handled in the gate aggregator below).
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: "1.24"
+      - name: stdlib-only dependency audit (push side)
+        run: |
+          set -eu
+          if grep -qE '^require ' go.mod; then
+            echo "::error::go.mod contains a require block — repo dependency policy is stdlib-only (docs/OPERATIONS.md); new deps need the org approval flow"
+            exit 1
+          fi
+          MODS=$(go list -m all | tail -n +2)
+          if [ -n "$MODS" ]; then
+            echo "::error::non-empty module graph: $MODS"
+            exit 1
+          fi
+          echo "OK stdlib-only: 0 external modules"
 
   adr-required:
-    # C1 脚手架面（ADR-0021，GOVERNANCE C1 scope）：供应链入口文件变更须引用 ADR。
-    # 存在性校验读公开仓 agent-registry/decisions（GITHUB_TOKEN 可读公开仓，fail-closed）。
+    # C1-path gate (mirror of org-gate semantics; local check name is for
+    # fast feedback only — the org-level org-gate remains the enforcement
+    # authority, ADR-0046). C1 paths for this repo:
+    # .github/ AGENTS.md Makefile docs/ quality/ CODEOWNERS go.mod governance/
+    # Existence of cited ADRs is verified against Cloudbird-Software/archive
+    # at adr/ (ADR-0085 single-home index).
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -64,76 +85,74 @@ jobs:
       contents: read
       pull-requests: read
     steps:
-      - name: C1 脚手架变更须引用 ADR
+      - name: C1 脚手架变更须引用真实 ADR
         env:
           GH_TOKEN: ${{ github.token }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          PR_API: "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}"
         run: |
-          PR_API="repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}"
+          set -euo pipefail
           CHANGED=$(gh api "$PR_API" --jq '.changed_files')
-          GOT=0; C1_HIT=0; PAGE=1
+          GOT=0
+          C1_HIT=0
+          PAGE=1
           while :; do
             PAGEJSON=$(gh api "$PR_API/files?per_page=100&page=$PAGE")
-            jq -e 'type == "array"' <<<"$PAGEJSON" >/dev/null 2>&1 || {
-              echo "::error::files API 拉取失败——C1 判定无法保证，fail-closed"; exit 1; }
+            if ! jq -e 'type == "array"' <<<"$PAGEJSON" >/dev/null 2>&1; then
+              echo "::error::files API page $PAGE fetch failed — C1 check cannot be guaranteed, fail-closed"
+              exit 1
+            fi
             N=$(jq 'length' <<<"$PAGEJSON")
             GOT=$((GOT+N))
             if jq -e '[.[] | .filename, (.previous_filename // empty)]
-                     | any(test("^(\\.github/|AGENTS\\.md|Makefile|docs/|zizmor\\.yml|\\.dependency-cruiser\\.cjs)"))' <<<"$PAGEJSON" >/dev/null 2>&1; then
+                     | any(test("^(\\.github/|AGENTS\\.md|Makefile|docs/|quality/|CODEOWNERS|go\\.mod|governance/)"))' <<<"$PAGEJSON" >/dev/null 2>&1; then
               C1_HIT=1
             fi
             [[ $N -lt 100 ]] && break
             PAGE=$((PAGE+1))
           done
           if [ "$GOT" -lt "$CHANGED" ]; then
-            echo "::error::files API 截断（$GOT/$CHANGED）——fail-closed"; exit 1
+            echo "::error::files API truncated ($GOT/$CHANGED) — fail-closed"
+            exit 1
           fi
           if [ "$C1_HIT" -ne 1 ]; then
-            echo "非 C1 脚手架路径变更，跳过 adr-required"; exit 0
+            echo "non-C1 paths only, skipping adr-required"
+            exit 0
           fi
           ADR_RE='\bADR-[0-9]{4}\b'
           if ! { echo "$PR_TITLE"; echo "$PR_BODY"; } | grep -qE "$ADR_RE"; then
-            echo "::error::C1 脚手架面（.github/AGENTS.md/Makefile/docs/zizmor.yml）变更但 PR 未引用 ADR-NNNN（GOVERNANCE C1——供应链入口，ADR-0021）"
+            echo "::error::C1 paths changed but PR title/body cites no ADR-NNNN (GOVERNANCE C1 rule)"
             exit 1
           fi
-          ADR_LISTING=$(gh api "repos/Cloudbird-Software/agent-registry/contents/decisions?per_page=100" --paginate --jq '.[].name' 2>/dev/null)
-          if [[ -z "$ADR_LISTING" ]]; then
-            echo "::error::agent-registry/decisions 清单拉取失败（fail-closed）"; exit 1
+          ADR_LISTING=$(gh api "repos/Cloudbird-Software/archive/contents/adr?per_page=100" --paginate --jq '.[].name' 2>/dev/null)
+          if [ -z "$ADR_LISTING" ]; then
+            echo "::error::archive/adr listing fetch failed — fail-closed"
+            exit 1
           fi
           MISSING=0
           for ref in $( { echo "$PR_TITLE"; echo "$PR_BODY"; } | grep -oE "$ADR_RE" | sort -u ); do
             num="${ref#ADR-}"
             grep -q "^ADR-${num}-" <<<"$ADR_LISTING" || {
-              echo "::error::引用的 ${ref} 在 agent-registry/decisions/ 无对应文件（幽灵 ADR）"; MISSING=1; }
+              echo "::error::referenced ${ref} has no matching file under archive/adr/ (ghost ADR)"
+              MISSING=1
+            }
           done
           exit $MISSING
 
   contract:
-    # 契约兼容性检测门（P2-4，ADR-0038）：OpenAPI/JSON Schema breaking + DB migration
-    # destructive DDL 分类；policy = .github governance/policy/contracts.yaml（org 合入前
-    # 用引擎内置 bootstrap 快照）。无事件条件：PR/push 两面都真跑，无 EXPECTED_SKIP 登记。
-    # BOOTSTRAP 钉扎：uses 与 ciw-ref 均指向 CI-Workflows PR #18 分支提交（两处一致，
-    # 被调用侧无法自取自身 ref）；其 squash 合入并走 v1.X.Y 发布四步流程后，两处同改
-    # merge SHA（勿用可变 @main）。
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/contract.yml@61191f87c537f6e887695517121c6e530a838261 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/contract.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
     with:
-      ciw-ref: 61191f87c537f6e887695517121c6e530a838261
+      ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
 
   suppression-budget:
-    # P2-2 抑制标记预算门（ADR-0036 / .github #87）：净增 ≤3/PR + 合入树总量棘轮
-    # + ADR 逃生门。独立 reusable（v1.5.1 内嵌 check.yml 实测触发平台 action 解析
-    # 故障，v1.5.3 起独立文件——ADR-0036 修订）。非 PR 事件 n/a-success（无需
-    # EXPECTED_SKIP 登记）。
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@61191f87c537f6e887695517121c6e530a838261
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@b0ce93280fd0173f438f3725149117d211eac529
     with:
-      detector-ref: 61191f87c537f6e887695517121c6e530a838261
+      detector-ref: b0ce93280fd0173f438f3725149117d211eac529
 
   quality-gates:
-    # W2-C2（.github#215，ADR-0061 决策 5 / AC-4）：CI 与本地 make gates-pr 同一编排器
-    # 入口 quality/run-gates.sh（同一脚本 + 同一 GATE_* env 注入协议）——本地/CI 结果一致。
-    # fetch-depth: 0 是 g050 的硬前提：fail-before 判定要在测试 commit 的 worktree 上
-    # 复现红（浅克隆无历史即无拓扑证据，fail-closed）。三事件面都跑，无结构性 skip。
+    # Same orchestrator as local `make gates-pr`: quality/run-gates.sh with
+    # GATE_* env protocol (template-service pattern, ADR-0061).
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -142,41 +161,31 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          node-version: "24"
-      - name: run-gates pr（统一编排器）
+          go-version: "1.24"
+      - name: run-gates pr
         env:
-          GH_TOKEN: ${{ github.token }} # g060 回查 spec PR 状态用（公开仓只读）
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_AUTHOR: ${{ github.event.pull_request.user.login }}
           PR_BODY: ${{ github.event.pull_request.body }}
           BASE_REF: ${{ github.base_ref }}
         run: |
-          # 模板值一律经 env 间接引用（zizmor template-injection 规范）
-          if [ -n "$PR_NUMBER" ]; then
-            export GATE_PR="$PR_NUMBER" GATE_PR_AUTHOR="$PR_AUTHOR" GATE_BASE="origin/$BASE_REF"
-            GATE_CARD=$(printf '%s' "$PR_BODY" | sed -n 's/^Card: [^#]*#\([0-9][0-9]*\).*/\1/p' | head -1)
-            [ -n "$GATE_CARD" ] && export GATE_CARD
-          fi
-          npm ci
+          set -euo pipefail
+          export GATE_PR="$PR_NUMBER" GATE_PR_AUTHOR="$PR_AUTHOR" GATE_BASE="origin/$BASE_REF"
+          GATE_CARD=$(printf '%s' "$PR_BODY" | sed -n 's/^Card: [^#]*#\([0-9][0-9]*\).*/\1/p' | head -1)
+          if [ -n "$GATE_CARD" ]; then export GATE_CARD; fi
           bash quality/run-gates.sh pr
 
   gate:
+    # Strict aggregator (ADR-0032: skipped≠success) with per-event structural
+    # skip allow-list (template-service pattern).
     if: always()
-    needs:
-      [
-        hygiene,
-        check,
-        deps,
-        deps-audit,
-        adr-required,
-        contract,
-        suppression-budget,
-        quality-gates,
-      ]
+    needs: [hygiene, check, deps, deps-audit, adr-required, contract, suppression-budget, quality-gates]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - name: All required jobs green?
         env:
@@ -184,15 +193,9 @@ jobs:
           EVENT: ${{ github.event_name }}
         run: |
           echo "$NEEDS (event=$EVENT)"
-          # 严格断言（P1-3 .github#84 / ADR-0032，standards/automation/required-check-chains.md）：
-          # skipped≠success——仅下列 EXPECTED_SKIP 登记的事件互补 job 允许 skipped，
-          # 未登记的 skipped 与一切非 success（failure/cancelled/timed_out/startup_failure）一律红
           case "$EVENT" in
             pull_request) EXPECTED_SKIP="deps-audit" ;;
             push)         EXPECTED_SKIP="deps adr-required" ;;
-                          # merge_group（ADR-0042）：deps 仅 PR 事件（dependency-review 限制）、deps-audit 仅 push、
-                          # adr-required 消费 PR title——三者均已在入队前 PR 面执法，队列面验证组合树本体
-            merge_group)  EXPECTED_SKIP="deps deps-audit adr-required" ;;
             *)            EXPECTED_SKIP="" ;;
           esac
           BAD=$(echo "$NEEDS" | jq -r --arg skip "$EXPECTED_SKIP" '
@@ -202,5 +205,7 @@ jobs:
             | select((($skip | split(" ")) | index($e.key)) == null)
             | "\($e.key)=\($e.value.result)"')
           if [[ -n "$BAD" ]]; then
-            echo "::error::以下 job 非 success 且不属于事件 $EVENT 的结构性预期跳过：$BAD（skipped≠success——ADR-0032）"; exit 1
+            echo "::error::jobs not success and not structurally skipped for event $EVENT: $BAD (ADR-0032 skipped≠success)"
+            exit 1
           fi
+          echo "gate PASS ($EVENT)"

@@ -1,0 +1,24 @@
+{
+  "members": [
+    {
+      "uid": "2000000001",
+      "sec_uid": "MS4wLjABAAAA-example-member-000000000001",
+      "nickname": "群成员示例一",
+      "avatar_url": "https://example.invalid/member-1.jpg",
+      "ip_label": "北京",
+      "gender": 1,
+      "joined_at": 1780002001
+    },
+    {
+      "uid": "2000000002",
+      "sec_uid": "MS4wLjABAAAA-example-member-000000000002",
+      "nickname": "群成员示例二",
+      "avatar_url": "https://example.invalid/member-2.jpg",
+      "ip_label": "上海",
+      "gender": 2,
+      "joined_at": 1780002002
+    }
+  ],
+  "cursor": 2,
+  "has_more": false
+}
