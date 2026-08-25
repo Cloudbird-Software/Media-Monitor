@@ -1,0 +1,13 @@
+{
+  "canaries": [
+    {"name": "douyin-search-fixture", "contract": "douyin-search", "kind": "items", "fixture": "douyin-search.1.json", "expect": ["data"]},
+    {"name": "douyin-comments-fixture", "contract": "douyin-comments", "kind": "comments", "fixture": "douyin-comments.1.json", "expect": ["comments", "has_more", "cursor"]},
+    {"name": "douyin-user-fixture", "contract": "douyin-user", "kind": "users", "fixture": "douyin-user.1.json", "expect": ["user_list"]},
+    {"name": "douyin-group-fixture", "contract": "douyin-group-members", "kind": "members", "fixture": "douyin-group.1.json", "expect": ["members"]},
+    {"name": "douyin-meta-fixture", "contract": "douyin-meta", "kind": "meta", "fixture": "douyin-meta.1.json", "expect": ["room_id"]},
+    {"name": "kuaishou-search-fixture", "contract": "kuaishou-search", "kind": "items", "fixture": "kuaishou-search.1.json", "expect": ["data"]},
+    {"name": "kuaishou-comments-fixture", "contract": "kuaishou-comments", "kind": "comments", "fixture": "kuaishou-comments.1.json", "expect": ["comment_list"]},
+    {"name": "xhs-search-fixture", "contract": "xhs-search", "kind": "items", "fixture": "xhs-search.1.json", "expect": ["data"]},
+    {"name": "xhs-comments-fixture", "contract": "xhs-comments", "kind": "comments", "fixture": "xhs-comments.1.json", "expect": ["data"]}
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "comment": "Open-source ecosystem registry (metadata/pointers only; see docs/UPSTREAM.md). license.verdict allowed|forbidden per org dependency policy (AGPL/GPL/SSPL forbidden). tracked_paths drive the watcher alerts.",
+  "entries": [
+    {
+      "slug": "NanmiCoder/MediaCrawler",
+      "role": "collector",
+      "pin": {"type": "sha", "ref": "TBD-after-license-verification"},
+      "license": {"spdx": "TBD", "verdict": "pending"},
+      "tracked_paths": ["*.py", "libs/", "media_platform/douyin/", "media_platform/xhs/"],
+      "notes": "multi-platform crawler reference for search/comment flows; pin and license verdict filled by the onboarding PR"
+    },
+    {
+      "slug": "Johnserf-Seed/f2",
+      "role": "collector",
+      "pin": {"type": "sha", "ref": "TBD-after-license-verification"},
+      "license": {"spdx": "TBD", "verdict": "pending"},
+      "tracked_paths": ["f2/apps/douyin/", "f2/apps/xhs/", "f2/apps/kuaishou/"],
+      "notes": "async crawler reference; pin and license verdict filled by the onboarding PR"
+    },
+    {
+      "slug": "Evil0ctal/Douyin_TikTok_Download_API",
+      "role": "signature",
+      "pin": {"type": "sha", "ref": "TBD-after-license-verification"},
+      "license": {"spdx": "Apache-2.0", "verdict": "allowed"},
+      "tracked_paths": ["crawlers/", "*.js", "*webmssdk*"],
+      "notes": "signature/param reference layer; verify current license state at onboarding"
+    },
+    {
+      "slug": "Genymobile/scrcpy",
+      "role": "device",
+      "pin": {"type": "tag", "ref": "v3.3.4"},
+      "license": {"spdx": "Apache-2.0", "verdict": "allowed"},
+      "tracked_paths": ["app/src/", "server/src/"],
+      "notes": "device mirroring/control backend used by the mobile automation layer (delivery pipeline bundles it, not this repo)"
+    },
+    {
+      "slug": "Byaidu/UI-TARS",
+      "role": "vision",
+      "pin": {"type": "sha", "ref": "TBD"} ,
+      "license": {"spdx": "Apache-2.0", "verdict": "allowed"},
+      "tracked_paths": ["*.md", "deployment/"],
+      "notes": "primary GUI visual-agent model candidate; weights/model runtime lives outside this repo, this registry only watches releases"
+    },
+    {
+      "slug": "showlab/ShowUI",
+      "role": "vision",
+      "pin": {"type": "sha", "ref": "TBD"},
+      "license": {"spdx": "TBD", "verdict": "pending"},
+      "tracked_paths": ["*.md"],
+      "notes": "cheap per-frame widget grounding candidate; verify license at onboarding"
+    }
+  ]
+}

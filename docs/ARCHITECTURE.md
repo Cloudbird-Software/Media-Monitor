@@ -1,20 +1,76 @@
-# 架构纪律（每个模块都必须遵守）
+# ARCHITECTURE
 
-> 从 AGENTS.md 拆出以省上下文。新建模块、动模块边界、review 时读。
+## Boundary at a glance
 
-1. **每个模块一个 public entry**（`index.ts`）。跨模块只能 import entry，禁止深入内部实现文件。`make arch` 会检查。
-2. **entry 文件不 export 内部实现类型**——接口必须真正收敛在边界上。
-3. **每个模块目录一份 `AGENTS.md`**：写清该模块负责什么、不变量是什么、禁止做什么、如何独立验证。
-4. **契约测试在模块边界**，实现细节内部自由。这样模块内可以大改而外部测试不动。
-5. **模块大小上限 3000 行**。超过就拆——一个模块必须能被 agent 一次性完整读完。
-6. **生成代码进独立目录**（`*.gen.ts`、`baml_client/` 等），禁止手改。
-7. **接口设计标准**：一个 LLM 能否仅凭函数签名 + 一行 docstring 就零样本正确使用？
-   答案是否 => 接口太浅，重做。
-8. **测试优先级**：行为不变量用 property-based test（vitest + fast-check），
-   关键输出用 golden test。先写不变量，再写实现。
+```
+cmd/mediad          ─┐ (daemon: health/metrics/dashboard/task API)
+cmd/mediactl        ─┤ (CLI: collect / live / adapt / tasks)
+cmd/mediad-mcp      ─┘ (MCP server, stdio)
+        │ Go stdlib only · module-internal imports only
+internal/
+  model        canonical data types (no behavior)
+  contracts    contract loader / JSONPath binder / drift diff
+  collect      contract-driven generic collection engine
+  platforms    per-platform glue: defaults, cookie/signing policies
+  live         live-room event monitors (websocket + protobuf wire)
+  adb          Android device control protocol client
+  vision       GUI-model providers + semantic actions + flow distilling
+  store        JSONL append-only storage + id maps
+  core         task lifecycle
+  obs          counters + metrics text + health
+  sign         signature provider interface (pluggable: local / remote svc)
+  testkit      property-test runner + fixture helpers
+adapt/  contracts/ · canaries/ · fixtures/ · flows/ · playbook/ · reports/
+upstream/  open-source ecosystem registry (git pin pointers + policy)
+quality/  local gate orchestration
+```
 
-## 依赖规则
+## Design invariants (enforced by CI)
 
-新增依赖前先列出"依赖名 / 用途 / 许可证 / 是否能用标准库替代"等人确认；
-禁止引入 AGPL / GPL-3.0 / SSPL 的库。
-规则引擎在 `.dependency-cruiser.cjs`，新模块落地时必须同步补全其中的 TODO 边界规则。
+- Zero external Go modules; everything on the stdlib (dependency policy).
+- Endpoint URLs / params / bindings never hardcoded in .go files — they live
+  in `adapt/contracts/*.json`. Version adaptation = contract patch.
+- All I/O is injectable (http transport, signer, store dir, clock) so tests
+  run offline against `adapt/fixtures/` goldens.
+- `internal/` packages expose one entry file each; entrypoints only under
+  `cmd/`; no package cycles.
+
+## Data flow
+
+1. Task created via CLI/MCP/daemon API (`core.Runner.Submit`) → persisted as
+   JSONL (`store`).
+2. Runner executes a `step` closure. Collect steps are produced by the
+   generic engine (`collect`) from a Contract: build URL (path placeholders +
+   static query) → optional Signer enriches params (a_bogus/msToken/X-Bogus
+   proxies) → request via `httpclient` (UA rotation, retry) → JSON → binding
+   via `contracts.Path` → normalized `model.*` records → store + cursor
+   update → loop until `HasMore=false`.
+3. Live monitors (`live`) subscribe to the room websocket; the wire protocol
+   reader (`protoio`) decodes PushFrame/Response envelopes; per-message-type
+   mappers emit `model.LiveEvent` streams; ack+heartbeat keep the session
+   alive; control messages end the stream.
+4. Mobile automation (`adb` + `vision`): semantic actions are executed either
+   deterministically from `adapt/flows/*.json` (accessibility/input scripts)
+   or through a vision provider (`vision.Provider`) that maps screenshots +
+   task description to the same semantic-action vocabulary; successful
+   vision-driven runs can be distilled back into flow scripts.
+5. Observability (`obs`): counters for requests, retries, records collected,
+   task states, drift issues; `/metrics` text endpoint on the daemon.
+
+## Contract model
+
+Contract = transport (base/path/method/static query/headers/placeholders) +
+signature requirements + response binding (JSONPath-lite) + pagination spec +
+cookie requirements. The same struct drives collection AND drift detection
+(`contracts.Diff`), so a platform change shows up twice: once as a canary
+failure, once as a machine-readable diff report for the adapting agent.
+
+## Extension points
+
+- New platform: add `adapt/contracts/<platform>-*.json` + platform defaults in
+  `internal/platforms` (UA/cookie names/host normalization) + fixture +
+  canary entry. No engine code changes.
+- New live event type: extend the message-type mapper in `internal/live` for
+  the new wire field; canary fixture must carry it.
+- New signer: implement `httpclient.Signer` (local VM port / remote sign
+  service client) and set it in the collector config.
