@@ -11,16 +11,27 @@ import (
 
 // Contract declares one collection operation against one platform endpoint.
 type Contract struct {
-	Name      string     `json:"name"`
-	Platform  string     `json:"platform"` // douyin|kuaishou|xhs|generic
-	Category  string     `json:"category"` // search|items|comments|replies|user|group_members|live_meta
-	Version   string     `json:"version"`
-	Doc       string     `json:"doc,omitempty"`
-	Transport Transport  `json:"transport"`
-	Signature Signature  `json:"signature,omitempty"`
-	Binding   Binding    `json:"binding"`
-	Paging    Paging     `json:"paging,omitempty"`
-	Cookie    CookieSpec `json:"cookie,omitempty"`
+	Name         string            `json:"name"`
+	Platform     string            `json:"platform"` // douyin|kuaishou|xhs|generic
+	Category     string            `json:"category"` // search|items|comments|replies|user|group_members|live_meta
+	Version      string            `json:"version"`
+	Doc          string            `json:"doc,omitempty"`
+	Transport    Transport         `json:"transport"`
+	Signature    Signature         `json:"signature,omitempty"`
+	Binding      Binding           `json:"binding"`
+	TransportWS  *TransportWS      `json:"transport_ws,omitempty"`
+	ProtoMethods map[string]string `json:"protocol_methods,omitempty"`
+	Paging       Paging            `json:"paging,omitempty"`
+	Cookie       CookieSpec        `json:"cookie,omitempty"`
+}
+
+// TransportWS declares a websocket endpoint shape (path + fixed query
+// params + runtime-param names) for live monitors.
+type TransportWS struct {
+	WSSHost       string            `json:"wss_host,omitempty"`
+	Path          string            `json:"path"`
+	Params        map[string]string `json:"params,omitempty"`
+	RuntimeParams []string          `json:"runtime_params,omitempty"`
 }
 
 type Transport struct {

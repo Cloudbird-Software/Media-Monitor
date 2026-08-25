@@ -1,7 +1,7 @@
 name: CI
 # Organization-governed gate wiring (aligns with Cloudbird-Software governance
 # GOV/BP-2 dual-track: local "gate" aggregation + org-side "org-gate").
-# Reusable workflow refs are pinned to CI-Workflows@v1 (SHA 61191f8...); the
+# Reusable workflow refs are pinned to CI-Workflows@v1 (SHA b0ce9328: pinned at the CI-Workflows release that registered this repo suppression baseline); the
 # same SHA must be passed via ciw-ref inputs (ADR-0043). Do not bump without
 # a coordinated CI-Workflows release note.
 on:
