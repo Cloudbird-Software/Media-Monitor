@@ -18,11 +18,24 @@ while IFS= read -r m; do
   fi
 done <<<"$mains"
 
-# 2) everything in internal/ must not be imported by code outside this module
-imports=$(go list -f '{{range .Imports}}{{.}} {{end}}' ./...)
-bad_external=$(echo "$imports" | tr ' ' '\n' | grep -v "^$" | sort -u | grep -v "^$MOD/" | grep -v "^internal/" || true)
+# 2) every import must be stdlib or inside this module (internal/ boundary
+#    is enforced by the module prefix check; stdlib set comes from the local
+#    toolchain, so the check is exact for the compiling Go version)
+STDLIB=$(go list std | tr '\n' ' ')
+imports=$(go list -f '{{range .Imports}}{{.}} {{end}}' ./... | tr ' \n' '\n\n' | grep -v '^$' || true)
+bad_external=""
+while IFS= read -r imp; do
+  [ -z "$imp" ] && continue
+  case "$imp" in
+    "$MOD"|"$MOD"/*) continue ;;
+  esac
+  if [[ " $STDLIB " == *" $imp "* ]]; then
+    continue
+  fi
+  bad_external="$bad_external $imp"
+done <<<"$imports"
 if [ -n "$bad_external" ]; then
-  echo "arch: non-module imports found: $bad_external" >&2
+  echo "arch: non-module, non-stdlib imports found:$bad_external" >&2
   fail=1
 fi
 
