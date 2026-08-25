@@ -1,0 +1,9 @@
+{
+  "name": "douyin-meta",
+  "platform": "douyin",
+  "category": "live_meta",
+  "version": "1",
+  "doc": "live room page → room id extraction target (declarative; values are resolved from the page payload, not hardcoded)",
+  "transport": {"base_url": "https://live.douyin.com", "path": "/{room_web}/", "method": "GET", "placeholders": ["room_web"]},
+  "binding": {"fields": {"room_id": "$.room_id"}}
+}

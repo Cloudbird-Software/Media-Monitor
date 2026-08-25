@@ -1,0 +1,19 @@
+{
+  "comment_list": [
+    {
+      "comment_id": "ks-comment-0001",
+      "content": "快手示例评论一",
+      "create_time": 1780004001,
+      "liked_count": 12,
+      "author": {"id": "ks-author-0001", "name": "快手评论者一", "head_url": "https://example.invalid/ks-1.jpg"}
+    },
+    {
+      "comment_id": "ks-comment-0002",
+      "content": "快手示例评论二",
+      "create_time": 1780004002,
+      "liked_count": 3,
+      "author": {"id": "ks-author-0002", "name": "快手评论者二", "head_url": "https://example.invalid/ks-2.jpg"}
+    }
+  ],
+  "cursor": "2"
+}

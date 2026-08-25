@@ -1,0 +1,16 @@
+{
+  "name": "kuaishou-search",
+  "platform": "kuaishou",
+  "category": "search",
+  "version": "1",
+  "doc": "keyword search over video/image feeds (public GraphQL-ish API shape; illustrative sample structure, versioned independently per platform)",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/graphql",
+    "method": "POST",
+    "body": {"operationName": "visionSearchPhoto"},
+    "placeholders": []
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {"items": "$.data.visionSearchPhotoResult.feeds"}
+}

@@ -1,9 +1,0 @@
-# 测试索引（g010 判定物）：行格式 = TEST-n TASK:AC-n
-# 为什么有这个文件：UID 追溯闭合（IR↔SPEC↔AC↔Card↔测试）需要"测试↔AC"的
-# 离线映射——真源在 CI 由 org-gate 在线对账，这里给 lint 一个零网络快照。
-TEST-101 SPEC-0201:AC-1
-TEST-102 SPEC-0201:AC-2
-TEST-103 SPEC-0201:AC-3
-TEST-201 SPEC-0202:AC-1
-TEST-202 SPEC-0202:AC-9
-TEST-301 SPEC-0203:AC-1

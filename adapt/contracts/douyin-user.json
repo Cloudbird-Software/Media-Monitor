@@ -1,0 +1,17 @@
+{
+  "name": "douyin-user",
+  "platform": "douyin",
+  "category": "user",
+  "version": "1",
+  "doc": "batch user profile enrichment by sec_uid (uid/sec_uid/short_id/nickname/avatar/signature/ip_label/gender/counts)",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/im/user/info/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383"},
+    "placeholders": []
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {"users": "$.user_list"}
+}
