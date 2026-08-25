@@ -16,7 +16,7 @@
 ## 硬规则（违反 = PR 打回）
 
 1. 认证：一切 push/PR 用 cloudbrid-agent App 令牌，禁个人 PAT。获取（脚本 pin 到已审阅提交，升级先比对 .github main 再换 SHA——禁 `curl|bash` 浮动 main 指针，ADR-0021）：
-   `GH_TOKEN=$(REPO=template-service bash <(curl -sS https://raw.githubusercontent.com/Cloudbird-Software/.github/487fd930c46a86bf3fb6865a7223287f8e3446e2/scripts/gh-app-token.sh))`
+   `GH_TOKEN=$(REPO=Media-Monitor bash <(curl -sS https://raw.githubusercontent.com/Cloudbird-Software/.github/487fd930c46a86bf3fb6865a7223287f8e3446e2/scripts/gh-app-token.sh))`
 2. 不改 `.github/workflows/**`、`Makefile` 的 check 目标（App 无此权限，人类专属）
 3. 新依赖先报"名称/用途/许可证/标准库可否替代"等人批；禁 AGPL/GPL-3.0/SSPL；密钥/客户名/连接串不进仓库（`.env.example` 占位）
 4. 一个 PR 一件事，diff < 400 行；bug 修复先写复现失败测试；对外接口变更写 CHANGELOG.md；提交信息 Conventional Commits
