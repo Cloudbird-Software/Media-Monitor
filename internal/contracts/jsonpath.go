@@ -50,7 +50,15 @@ func ParsePath(raw string) (Path, error) {
 		idx := -1
 		if i := strings.IndexByte(part, '['); i >= 0 && strings.HasSuffix(part, "]") {
 			key = part[:i]
-			n, err := strconv.Atoi(part[i+1 : len(part)-1])
+			inner := part[i+1 : len(part)-1]
+			// Empty or "*" index ("x[]", "x[*]") is treated as the wildcard
+			// "x" + "*" — selects every element of the array at "x".
+			if inner == "" || inner == "*" {
+				p.segs = append(p.segs, seg{key: key, index: -1})
+				p.segs = append(p.segs, seg{star: true})
+				continue
+			}
+			n, err := strconv.Atoi(inner)
 			if err != nil {
 				return p, fmt.Errorf("path %q: bad index %q", raw, part)
 			}
@@ -114,6 +122,15 @@ func (s seg) apply(v any) []any {
 			}
 		case map[string]any:
 			if s.index >= 0 {
+				// Key + index on an object: "a[1]" resolves key "a" then
+				// indexes into the resulting array.
+				if s.key != "" {
+					if sub, ok := t[s.key]; ok {
+						if arr, ok := sub.([]any); ok && s.index < len(arr) {
+							out = append(out, arr[s.index])
+						}
+					}
+				}
 				return
 			}
 			if vv, ok := t[s.key]; ok {
