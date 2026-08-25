@@ -61,6 +61,7 @@ upstream/                  open-source monitoring registry
 - docs/CANARY.md — canary semantics, workflows, how live-mode secrets are consumed.
 - docs/UPSTREAM.md — upstream registry policy, watcher, swap-test bench.
 - docs/HARDENING.md — delivery/packaging hardening specification (future delivery pipeline contract).
+- docs/TESTING.md — live verification program: needed resources, matrix, release criteria.
 - docs/OPERATIONS.md — dependency policy, repository governance alignment, release notes discipline.
 
 ## Getting started (agent)

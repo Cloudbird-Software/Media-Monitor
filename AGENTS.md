@@ -68,4 +68,4 @@ ADR-XXXX (<reason>)        (required when C1 paths touched)
 
 ## Docs (read on demand)
 
-docs/ARCHITECTURE.md · docs/HARNESS.md · docs/CANARY.md · docs/UPSTREAM.md · docs/HARDENING.md · docs/OPERATIONS.md
+docs/ARCHITECTURE.md · docs/HARNESS.md · docs/CANARY.md · docs/UPSTREAM.md · docs/HARDENING.md · docs/TESTING.md · docs/OPERATIONS.md
