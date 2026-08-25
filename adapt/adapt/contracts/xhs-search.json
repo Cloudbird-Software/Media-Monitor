@@ -1,0 +1,16 @@
+{
+  "name": "xhs-search",
+  "platform": "xhs",
+  "category": "search",
+  "version": "1",
+  "doc": "note search (public web API shape sample)",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v1/search/notes",
+    "method": "GET",
+    "query": {"page_size": "20"},
+    "placeholders": ["keyword"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"items": "$.data.items"}
+}

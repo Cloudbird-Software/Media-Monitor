@@ -1,0 +1,16 @@
+{
+  "data": {
+    "visionSearchPhotoResult": {
+      "feeds": [
+        {
+          "photo": {"id": "3x8-example-photo-0001", "caption": "快手示例视频一", "timestamp": 1780003001, "view_count": 50000, "like_count": 4000},
+          "author": {"id": "author-0001", "name": "快手示例作者一"}
+        },
+        {
+          "photo": {"id": "3x8-example-photo-0002", "caption": "快手示例视频二", "timestamp": 1780003002, "view_count": 900, "like_count": 120},
+          "author": {"id": "author-0002", "name": "快手示例作者二"}
+        }
+      ]
+    }
+  }
+}
