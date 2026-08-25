@@ -169,7 +169,11 @@ func adaptCanary(args []string) error {
 		return fmt.Errorf("exactly one of --offline / --live is required")
 	}
 	if *live {
-		return fmt.Errorf("live canary driver not implemented yet (see docs/CANARY.md): use --offline")
+		reg, _, err := loadRegistry()
+		if err != nil {
+			return err
+		}
+		return liveCanary(reg)
 	}
 	_, runner, err := loadRegistry()
 	if err != nil {
