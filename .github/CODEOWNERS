@@ -9,6 +9,8 @@
 # 基建：CI/门禁/治理（变更影响全组织，显式归属）
 /.github/ @randypanding
 /Makefile @randypanding
-/.dependency-cruiser.cjs @randypanding
 /zizmor.yml @randypanding
 /docs/ARCHITECTURE.md @randypanding
+/go.mod @randypanding
+/quality/ @randypanding
+/CODEOWNERS @randypanding

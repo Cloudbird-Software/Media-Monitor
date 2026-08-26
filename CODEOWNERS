@@ -1,9 +1,0 @@
-# Owner-only review surfaces (org hard rule: C1 = owner-only).
-*                       @randypanding
-.github/                @randypanding
-docs/                   @randypanding
-quality/                @randypanding
-Makefile                @randypanding
-go.mod                  @randypanding
-AGENTS.md               @randypanding
-CODEOWNERS              @randypanding
