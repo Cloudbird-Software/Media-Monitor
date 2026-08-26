@@ -351,8 +351,81 @@ class NegativeControl(unittest.TestCase):
         self.assertEqual(m.group(1).strip(), m.group(2).strip(),
                          "变形器未构造重述（负控制失效）")
 
+class StrictClauseAnchors(unittest.TestCase):
+    """S1' 深防御（红队 32972226384/32975505230 两轮同因归因补强）：
+    21 条 AC 全覆盖的强承诺矩阵——每条 then 必含其**全部**强承诺短语（AND 语义，
+    非词池 OR）。任何摆拍改写必须保留全部短语 = 保留承诺本身。"""
+
+    # AC → then 段必含强承诺短语（取自 spec 原文核心承诺：动词短语+数值+专名）
+    STRICT_ANCHORS = {
+        1: ["internal/license 包删除", "hygiene/zizmor/gitleaks 关卡零降级"],
+        2: ["offline canary 全绿", "create_time", "翻页深度 ≥3 页进入 canary 断言"],
+        3: ["同 AC-2 规格全绿"],
+        4: ["连续 stop_after_consecutive（默认 5）条低于阈值早停",
+            "stats 缺失条目不参与连续计数", "逐字节一致"],
+        5: ["入参与返回对称", "limit 不再构成翻页天花板"],
+        6: ["platform/sec_uid/window_months/min_engagement/stop_after_consecutive/limit/cursor/account_id",
+            "零样本调用（IF-1 口径）"],
+        7: ["artifacts/<platform>/<item_id>.mp4", "{path, bytes, sha256}",
+            "tmp+rename"],
+        8: ["{healthy, degraded, expired}", "accounts_list 工具可见"],
+        9: ["重试 ≤2（同 cursor 续采）", "连续 3 次失败标记 banned",
+            "轮换与封禁事件进 /metrics"],
+        10: ["自动开 type:drift issue 且幂等去重"],
+        11: ["internal/ 永不 import upstream/",
+             "arch-check 守卫 + 违规样例测试在位"],
+        12: ["文件级 + 关键 hunk", "tracked_paths"],
+        13: ["成功率/新鲜度/许可", "C1 PR 附评分"],
+        14: ["fail-closed 且不产出半成品数据"],
+        15: ["JSON patch + issue 草稿", "落盘前剥离", "全程无人工复制"],
+        16: ["skipped≠success 语义保持", "drift JSON + HAR 摘要 + 脱敏账号 id"],
+        17: ["1 个 canary 周期 + 1 个工作日",
+             "time-to-detect 与 time-to-repair 进 /metrics"],
+        18: ["契约健康时间线", "time-to-detect/time-to-repair",
+             "面板数据与 /metrics 交叉一致"],
+        19: ["全部通过且极端行结局", "12 字段", "≥90% 完备"],
+        20: ["真实 MCP 调用完成", "证据落 VR 仓侧"],
+        21: ["verdict 为 survived 的审计记录",
+             "逐条派生自本 spec 的 AC-1 至 AC-20"],
+    }
+
+    def _then_of(self, text, ac_id):
+        m = re.search(
+            rf"- id: AC-{ac_id}\n\s+given: [^\n]+\n\s+when: [^\n]+\n\s+then: ([^\n]+)", text)
+        return m.group(1) if m else ""
+
+    def test_strict_anchor_matrix(self):
+        """每条 AC 的 then 必含其全部强承诺短语（AND 语义）。"""
+        s = read(SPEC)
+        for ac_id, phrases in self.STRICT_ANCHORS.items():
+            then_text = self._then_of(s, ac_id)
+            self.assertTrue(then_text, f"AC-{ac_id} then 段缺失")
+            missing = [p for p in phrases if p not in then_text]
+            self.assertEqual(missing, [],
+                             f"AC-{ac_id} then 丢强承诺 {missing}（摆拍面：改写掏空语义）")
+
+    def test_strict_anchors_kill_rewrites(self):
+        """负控制：同义改写变体（保留语义骨架但抽走一个强短语）必被矩阵拒绝。"""
+        s = read(SPEC)
+        # 构造变体：AC-4 抽走「逐字节一致」承诺（换成"行为一致"）
+        variant = s.replace("零参数时行为与既有契约逐字节一致（既有测试不改一字全绿）",
+                           "零参数时行为与既有契约保持一致（既有测试全绿）")
+        then_text = self._then_of(variant, 4)
+        self.assertNotIn("逐字节一致", then_text, "变形器未抽走承诺（负控制失效）")
+        missing = [p for p in self.STRICT_ANCHORS[4] if p not in then_text]
+        self.assertTrue(missing, "弱化变体未被矩阵拒绝（套件杀不死改写）")
+
+    def test_ac_ir_lineage(self):
+        """AC 与父意图 IR #16 的血缘：spec 21 条 AC 与 IR 期望变化逐条对应（数量锚）。"""
+        s = read(SPEC)
+        fm = frontmatter(s)
+        self.assertIn("card: \"Cloudbird-Software/Media-Monitor#16\"", fm,
+                      "frontmatter card 绑定必须是 IR #16（血缘防偷换）")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
 
 
