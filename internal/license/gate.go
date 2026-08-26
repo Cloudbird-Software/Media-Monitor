@@ -40,6 +40,39 @@ func (e *DeniedError) Error() string {
 	return fmt.Sprintf("license: denied: %s (%s)", e.Reason, e.Detail)
 }
 
+// DenialFields extracts the transport-independent refusal fields from a Gate
+// denial for the surfaces that render one (HTTP 403 body, MCP tool error):
+// reason is the stable DeniedReason vocabulary, detail the human context. An
+// error that is not a *DeniedError yields ("unknown", err.Error()) so every
+// surface renders a fail-closed refusal instead of dropping it.
+func DenialFields(err error) (reason, detail string) {
+	reason, detail = "unknown", err.Error()
+	var de *DeniedError
+	if errors.As(err, &de) {
+		reason = string(de.Reason)
+		if de.Detail != "" {
+			detail = de.Detail
+		}
+	}
+	return reason, detail
+}
+
+// DenialMessage renders a Gate denial as a structured JSON object message,
+// {"error":"license_denied","reason":...,"detail":...}, for tool-style error
+// channels whose payload is a plain error string.
+func DenialMessage(err error) error {
+	reason, detail := DenialFields(err)
+	raw, merr := json.Marshal(map[string]any{
+		"error":  "license_denied",
+		"reason": reason,
+		"detail": detail,
+	})
+	if merr != nil {
+		return fmt.Errorf("license_denied: %s: %s", reason, detail)
+	}
+	return errors.New(string(raw))
+}
+
 // Gate is the cmd-layer license enforcer: it loads the license file from the
 // data directory once, verifies it, and answers Check(feature) for every
 // gated operation. Fail-closed: any problem yields a *DeniedError. The

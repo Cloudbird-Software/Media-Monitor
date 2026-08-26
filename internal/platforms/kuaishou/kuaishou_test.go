@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -16,37 +14,8 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
-
-func contractsDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(wd, "..", "..", "..", "adapt", "contracts")
-}
-
-func remapContracts(t *testing.T, dir string, srv *httptest.Server, names ...string) *contracts.Registry {
-	t.Helper()
-	all := contracts.NewRegistry()
-	if err := contracts.LoadDir(all, dir); err != nil {
-		t.Fatal(err)
-	}
-	reg := contracts.NewRegistry()
-	for _, n := range names {
-		c, ok := all.Get(n)
-		if !ok {
-			t.Fatalf("contract %q not found in %s", n, dir)
-		}
-		cp := *c
-		cp.Transport.BaseURL = srv.URL
-		if err := reg.Add(&cp); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return reg
-}
 
 func mockEngine(t *testing.T, reg *contracts.Registry, names map[string]map[string]string) *collect.Engine {
 	t.Helper()
@@ -85,9 +54,9 @@ func TestKuaishouSearchPostFlow(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "kuaishou-search")
+	reg := testkit.RemapContracts(t, dir, srv, "kuaishou-search")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 
 	items, _, err := eng.SearchItems(context.Background(), Platform, "智能家居", "", model.Cursor{}, 20)
@@ -130,9 +99,9 @@ func TestKuaishouCommentsFlow(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "kuaishou-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "kuaishou-comments")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 
 	cmts, _, err := eng.ItemComments(context.Background(), Platform, "3x8-comment-item", model.Cursor{}, 20)
@@ -156,7 +125,7 @@ func TestKuaishouCommentsFlow(t *testing.T) {
 
 // TestKuaishouDefaultsSmoke: only search/comments are declared.
 func TestKuaishouDefaultsSmoke(t *testing.T) {
-	d, reg, err := Defaults(contractsDir(t))
+	d, reg, err := Defaults(testkit.ContractsDir(t, 3))
 	if err != nil {
 		t.Fatalf("Defaults: %v", err)
 	}
@@ -200,9 +169,9 @@ func TestKuaishouGroupMembersRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "kuaishou-group-members")
+	reg := testkit.RemapContracts(t, dir, srv, "kuaishou-group-members")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 	members, _, err := eng.GroupMembers(context.Background(), Platform, "g-k1", model.Cursor{}, 20)
 	if err != nil {
@@ -232,9 +201,9 @@ func TestKuaishouUserProfileRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "kuaishou-user")
+	reg := testkit.RemapContracts(t, dir, srv, "kuaishou-user")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 	u, err := eng.UserProfile(context.Background(), Platform, "sec-k1")
 	if err != nil {

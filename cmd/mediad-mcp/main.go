@@ -30,7 +30,6 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -41,7 +40,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -244,7 +242,7 @@ func (a *app) gateWrap(h func(ctx context.Context, args map[string]any) (any, er
 	return func(ctx context.Context, args map[string]any) (any, error) {
 		if a.gate != nil {
 			if err := a.gate.Check(""); err != nil {
-				return nil, licenseDeniedErr(err)
+				return nil, license.DenialMessage(err)
 			}
 		}
 		return h(ctx, args)
@@ -846,7 +844,7 @@ func (a *app) monitorLive(_ context.Context, args map[string]any) (any, error) {
 	case allowUnsigned:
 		// Dev-only deterministic stub; NOT a real signature. Production must
 		// always configure MEDIAMON_SIGNER_URL (see docs/HARDENING.md).
-		signer = md5StubSigner
+		signer = live.MD5StubSigner
 	default:
 		return nil, errors.New("no signature signer configured: set MEDIAMON_SIGNER_URL, or pass allow_unsigned=true for dev-only unsigned monitoring")
 	}
@@ -944,24 +942,6 @@ func liveDecoderFor(reg *contracts.Registry, platform string) live.Decoder {
 		return live.NewKuaishouDecoder(c.ProtoMethods)
 	}
 	return live.NewXhsDecoder(c.ProtoMethods)
-}
-
-// md5StubSigner is an explicitly non-production signature placeholder for
-// local development (same stub as cmd/mediactl live monitor).
-func md5StubSigner(urlQuery string, params map[string]string) (string, error) {
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for _, k := range keys {
-		b.WriteString(k)
-		b.WriteString("=")
-		b.WriteString(params[k])
-	}
-	sum := md5.Sum([]byte(b.String()))
-	return hex.EncodeToString(sum[:]), nil
 }
 
 // ---- tasks, canary, contracts, adb ----

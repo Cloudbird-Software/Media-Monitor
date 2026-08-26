@@ -2,14 +2,11 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
-	"encoding/hex"
 	"flag"
 	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
-	"sort"
 	"strings"
 	"syscall"
 
@@ -84,7 +81,7 @@ func liveMonitor(args []string) error {
 	case *allowUnsigned:
 		// Dev-only deterministic stub: NOT a real signature. Producing
 		// builds must always use the remote signer service.
-		signer = md5StubSigner
+		signer = live.MD5StubSigner
 	default:
 		return fmt.Errorf("no signature signer configured: set --signer-url/$MEDIAMON_SIGNER_URL, or pass --allow-unsigned for local development")
 	}
@@ -114,24 +111,6 @@ func liveMonitor(args []string) error {
 		return emitRow(st, "live_events", ev)
 	}
 	return cfg.Connect(ctx, *room, handler)
-}
-
-// md5StubSigner is an explicitly non-production signature placeholder for
-// local development (documented in docs/HARDENING.md logic-exclusion model).
-func md5StubSigner(urlQuery string, params map[string]string) (string, error) {
-	keys := make([]string, 0, len(params))
-	for k := range params {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	var b strings.Builder
-	for _, k := range keys {
-		b.WriteString(k)
-		b.WriteString("=")
-		b.WriteString(params[k])
-	}
-	sum := md5.Sum([]byte(b.String()))
-	return hex.EncodeToString(sum[:]), nil
 }
 
 // filepathAdaptContracts resolves the adapt contracts dir for the live cmd.

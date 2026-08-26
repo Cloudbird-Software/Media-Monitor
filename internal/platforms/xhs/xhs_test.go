@@ -4,8 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,37 +12,8 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
-
-func contractsDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(wd, "..", "..", "..", "adapt", "contracts")
-}
-
-func remapContracts(t *testing.T, dir string, srv *httptest.Server, names ...string) *contracts.Registry {
-	t.Helper()
-	all := contracts.NewRegistry()
-	if err := contracts.LoadDir(all, dir); err != nil {
-		t.Fatal(err)
-	}
-	reg := contracts.NewRegistry()
-	for _, n := range names {
-		c, ok := all.Get(n)
-		if !ok {
-			t.Fatalf("contract %q not found in %s", n, dir)
-		}
-		cp := *c
-		cp.Transport.BaseURL = srv.URL
-		if err := reg.Add(&cp); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return reg
-}
 
 func mockEngine(t *testing.T, reg *contracts.Registry, names map[string]map[string]string) *collect.Engine {
 	t.Helper()
@@ -81,9 +50,9 @@ func TestXhsCommentsFlow(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "xhs-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "xhs-comments")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 
 	cmts, cur, err := eng.ItemComments(context.Background(), Platform, "example-note-0001", model.Cursor{}, 20)
@@ -132,9 +101,9 @@ func TestXhsSearchFlow(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "xhs-search")
+	reg := testkit.RemapContracts(t, dir, srv, "xhs-search")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 
 	items, _, err := eng.SearchItems(context.Background(), Platform, "露营", "", model.Cursor{}, 20)
@@ -160,7 +129,7 @@ func TestXhsSearchFlow(t *testing.T) {
 
 // TestXhsDefaultsSmoke: only search/comments are declared.
 func TestXhsDefaultsSmoke(t *testing.T) {
-	d, reg, err := Defaults(contractsDir(t))
+	d, reg, err := Defaults(testkit.ContractsDir(t, 3))
 	if err != nil {
 		t.Fatalf("Defaults: %v", err)
 	}
@@ -213,9 +182,9 @@ func TestXhsRepliesRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "xhs-comments-replies")
+	reg := testkit.RemapContracts(t, dir, srv, "xhs-comments-replies")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 
 	cmts, cur, err := eng.CommentReplies(context.Background(), Platform, "example-note-0001", "xhs-comment-0001", model.Cursor{}, 20)
@@ -256,9 +225,9 @@ func TestXhsGroupMembersRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "xhs-group-members")
+	reg := testkit.RemapContracts(t, dir, srv, "xhs-group-members")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 	members, _, err := eng.GroupMembers(context.Background(), Platform, "g-x1", model.Cursor{}, 20)
 	if err != nil {
@@ -285,9 +254,9 @@ func TestXhsUserProfileRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "xhs-user")
+	reg := testkit.RemapContracts(t, dir, srv, "xhs-user")
 	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
 	u, err := eng.UserProfile(context.Background(), Platform, "sec-x1")
 	if err != nil {
