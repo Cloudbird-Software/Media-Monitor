@@ -281,7 +281,7 @@ func (d *daemon) collectHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	op := strings.TrimPrefix(req.URL.Path, "/api/v1/collect/")
 	switch op {
-	case "search", "comments", "replies", "user", "group", "video", "collects", "collects-videos", "im-unread":
+	case "search", "comments", "replies", "user", "user-posts", "group", "video", "collects", "collects-videos", "im-unread":
 	default:
 		http.NotFound(w, req)
 		return
@@ -377,6 +377,30 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 		}
 		d.hubAdd(profileRecord(platform, u, "user")...)
 		return map[string]any{"user": u}, nil
+	case "user-posts":
+		secUID := strVal(body, "sec_uid")
+		if secUID == "" {
+			return nil, errors.New("sec_uid is required")
+		}
+		cur, err := bodyCursor(body)
+		if err != nil {
+			return nil, err
+		}
+		opt := collect.BacktrackOptions{
+			WindowMonths:         intVal(body, "window_months", 0),
+			StopAfterConsecutive: intVal(body, "stop_after_consecutive", 0),
+		}
+		if me, ok := body["min_engagement"].(map[string]any); ok {
+			metric, _ := me["metric"].(string)
+			thr := int64(intVal(me, "threshold", 0))
+			opt.MinEngagement = &collect.EngagementFloor{Metric: metric, Threshold: thr}
+		}
+		items, next, err := eng.UserPosts(ctx, platform, secUID, cur, limit, opt)
+		if err != nil {
+			return nil, err
+		}
+		d.hubAdd(itemRecords(platform, items)...)
+		return map[string]any{"items": items, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 	case "group":
 		groupID := strVal(body, "group_id")
 		if groupID == "" {

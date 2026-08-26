@@ -462,3 +462,60 @@ func TestCollectRESTCursorPassthrough(t *testing.T) {
 		t.Fatalf("platform cursors = %v, want [\"\", p2]", got)
 	}
 }
+
+// TestCollectRESTUserPosts: the REST surface exposes the user-posts atom
+// equivalently to the MCP tool (W3-C2 AC-5) — backtrack params ride the
+// body, the response carries the versioned cursor envelope.
+func TestCollectRESTUserPosts(t *testing.T) {
+	var mu sync.Mutex
+	var sawSec, sawCount string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		sawSec = r.URL.Query().Get("sec_user_id")
+		sawCount = r.URL.Query().Get("count")
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		fmt.Fprint(w, `{"aweme_list":[{"aweme_id":"p1","desc":"d","create_time":1780500000,"type":1,"statistics":{"digg_count":10,"comment_count":1,"collect_count":1,"share_count":1},"author":{"sec_uid":"s","nickname":"n"}}],"has_more":false,"max_cursor":"z"}`)
+	}))
+	defer api.Close()
+
+	dir := t.TempDir()
+	cdir := filepath.Join(dir, "contracts")
+	if err := os.MkdirAll(cdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	contract := `{
+	  "name": "demo-user-posts", "platform": "demo", "category": "user_posts", "version": "1",
+	  "transport": {"base_url": "` + api.URL + `", "path": "/post/", "method": "GET", "placeholders": ["sec_user_id"]},
+	  "binding": {"items": "$.aweme_list"},
+	  "paging": {"cursor_param": "max_cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.max_cursor"}
+	}`
+	if err := os.WriteFile(filepath.Join(cdir, "demo-user-posts.json"), []byte(contract), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, ts := newTestDaemon(t, filepath.Join(t.TempDir(), "data"), dir)
+	resp, b := postJSON(t, ts, "/api/v1/collect/user-posts", map[string]any{
+		"platform": "demo", "sec_uid": "sec-9", "limit": 5,
+		"min_engagement": map[string]any{"metric": "digg", "threshold": 5},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d body = %s", resp.StatusCode, b)
+	}
+	var doc struct {
+		Items      []map[string]any `json:"items"`
+		NextCursor struct {
+			V int `json:"v"`
+		} `json:"next_cursor"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if len(doc.Items) != 1 || doc.NextCursor.V != 1 {
+		t.Fatalf("body = %s", b)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if sawSec != "sec-9" || sawCount != "5" {
+		t.Fatalf("engine passthrough: sec_user_id=%q count=%q", sawSec, sawCount)
+	}
+}

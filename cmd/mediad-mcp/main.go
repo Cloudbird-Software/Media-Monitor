@@ -367,6 +367,29 @@ func buildTools(a *app) []mcpio.Tool {
 			Handler: a.getReplies,
 		},
 		{
+			Name:        "get_user_posts",
+			Description: "List one creator's post history, newest first (account-history backtrack atom): walks the platform's user-posts contract until any stop condition — works exhausted (has_more=false), window_months cutoff (items older than the window are not returned), stop_after_consecutive items below min_engagement (default 5; a single low item never truncates — creator history is not monotonic), or limit. Returns items with full stats + create_time + media_type + author summary plus next_cursor for resumption (pass it back as cursor to continue without restarting; the returned cursor is resumable, early-stop included). Listing only: fetch comments via get_comments and download videos via resolve_video/download_video on the item ids you select. min_engagement.metric: digg|comment|share|collect|play.",
+			InputSchema: objSchema([]string{"platform", "sec_uid"}, map[string]any{
+				"platform":      platformProp,
+				"sec_uid":       sProp("creator id: douyin sec_user_id or xhs user_id"),
+				"window_months": map[string]any{"type": "integer", "description": "history window in months (default 6 when min_engagement is set; 0 = unlimited)"},
+				"min_engagement": map[string]any{
+					"type":        "object",
+					"description": "engagement floor for early stop: items below threshold count toward the consecutive stop",
+					"properties": map[string]any{
+						"metric":    map[string]any{"type": "string", "enum": []string{"digg", "comment", "share", "collect", "play"}},
+						"threshold": map[string]any{"type": "integer"},
+					},
+					"required": []string{"metric", "threshold"},
+				},
+				"stop_after_consecutive": map[string]any{"type": "integer", "description": "consecutive below-threshold items before early stop (default 5)"},
+				"limit":                  limitProp,
+				"cursor":                 cursorProp,
+				"account_id":             accountProp,
+			}),
+			Handler: a.getUserPosts,
+		},
+		{
 			Name:        "get_user",
 			Description: "Resolve one user profile by sec_uid (contract-driven).",
 			InputSchema: objSchema([]string{"platform", "sec_uid"}, map[string]any{
@@ -1119,4 +1142,37 @@ func (a *app) adbScreencap(_ context.Context, args map[string]any) (any, error) 
 		"png_base64": base64.StdEncoding.EncodeToString(png),
 		"bytes":      len(png),
 	}, nil
+}
+
+// getUserPosts is the account-history backtrack tool (IR AC-6): all
+// backtrack parameters pass through to the engine (window / engagement
+// floor / consecutive stop / cursor / account).
+func (a *app) getUserPosts(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	secUID := argStr(args, "sec_uid")
+	if secUID == "" {
+		return nil, errors.New("sec_uid is required")
+	}
+	cur, err := argCursor(args)
+	if err != nil {
+		return nil, err
+	}
+	opt := collect.BacktrackOptions{
+		WindowMonths:         argInt(args, "window_months", 0),
+		StopAfterConsecutive: argInt(args, "stop_after_consecutive", 0),
+	}
+	if me, ok := args["min_engagement"].(map[string]any); ok {
+		opt.MinEngagement = &collect.EngagementFloor{
+			Metric:    argStr(me, "metric"),
+			Threshold: int64(argInt(me, "threshold", 0)),
+		}
+	}
+	items, next, err := a.engineFor(argStr(args, "account_id")).UserPosts(ctx, platform, secUID, cur, argInt(args, "limit", 20), opt)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"items": items, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 }
