@@ -1,0 +1,111 @@
+name: adversary-relay
+# 跨仓 verdict 中继（W4-C2 补件，ADR-0082/0083 关联；Media-Monitor 引入）：
+#   自 Viral_Radar 加固版（VR PR #4）同构引入——首次接入组织红队管线时
+#   落仓。加固面（承 VR review 意见）：审计仓固定常量、verdict 双锚证据、
+#   head SHA 从本仓 PR API 解析并绑定审计对象、permissions 收敛至 job 级。
+#   adversary 管线住在 CI-Workflows（spec+套件执行环境），本仓 specs/** PR 的
+#   survived check run 需要跨仓写入——cloudbrid-agent App 无 checks:write，
+#   本 workflow 以本仓 GITHUB_TOKEN（checks:write）落 check，写入前对
+#   CI-Workflows 审计 run 做**机械核证**（不信触发载荷）：
+#     1. run 存在且 conclusion=success（survived 语义下 workflow 绿）；
+#     2. run 属于固定仓 Cloudbird-Software/CI-Workflows 且 workflow path 为
+#        不可变身份锚（.github/workflows/adversary.yml，比显示名强）；
+#     3. 审计对象绑定：run 日志中跨仓目标 checkout 步骤的 repository/ref
+#        必须等于本仓与目标 PR head SHA（防串用无关 run / 跨 PR 重放）；
+#     4. verdict 双锚证据（步骤锚定）：攻击步输出行"verdict: survived ——
+#        套件通过考验"与报告 schema 校验步输出行"OK validate：
+#        adversary-report/v1（verdict=survived"必须同时命中——两锚分属
+#        两个不同步骤（步骤名+文本同一日志行），且均绑定固定步骤名，
+#        单点日志文本无法冒充（防误配/漏配）。
+#   head SHA 一律从本仓 Pulls API 解析，不接受 dispatcher 输入。
+#   任一不满足 → 红（fail-closed，不写 success check）。
+on:
+  workflow_dispatch:
+    inputs:
+      audit_run_id:
+        {
+          description: "CI-Workflows adversary 审计 run ID",
+          type: string,
+          required: true,
+        }
+      pr_number:
+        { description: "本仓 spec PR 编号", type: number, required: true }
+
+concurrency:
+  group: adversary-relay-${{ github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  relay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: read
+    steps:
+      - name: 机械核证 + 写回 survived check（fail-closed）
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUDIT_RUN_ID: ${{ github.event.inputs.audit_run_id }}
+          PR_NUMBER: ${{ github.event.inputs.pr_number }}
+          AUDIT_REPO: Cloudbird-Software/CI-Workflows
+        run: |
+          set -euo pipefail
+          # 0) 目标 head SHA 从本仓 Pulls API 解析（不信 dispatcher 输入）
+          PR=$(gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER" 2>/dev/null) \
+            || { echo "::error::PR #$PR_NUMBER 不存在（fail-closed）"; exit 1; }
+          HEAD_SHA=$(jq -r .head.sha <<<"$PR")
+          [[ "$HEAD_SHA" =~ ^[0-9a-f]{40}$ ]] \
+            || { echo "::error::PR #$PR_NUMBER head SHA 解析失败（'$HEAD_SHA'）"; exit 1; }
+          export HEAD_SHA
+          # 1) 审计 run 存在 + 绿 + 属于固定仓（AUDIT_REPO 为常量，无输入面）
+          RUN=$(gh api "repos/$AUDIT_REPO/actions/runs/$AUDIT_RUN_ID" 2>/dev/null) \
+            || { echo "::error::审计 run $AUDIT_RUN_ID 不存在（fail-closed）"; exit 1; }
+          STATUS=$(jq -r .status <<<"$RUN"); CONC=$(jq -r .conclusion <<<"$RUN")
+          [[ "$STATUS" == "completed" && "$CONC" == "success" ]] \
+            || { echo "::error::审计 run 未完成或非 success（status=$STATUS conclusion=$CONC）——不足以背书合并"; exit 1; }
+          # 2) workflow 身份双锚：不可变 path + 显示名
+          WFPATH=$(jq -r .path <<<"$RUN"); WFNAME=$(jq -r .name <<<"$RUN")
+          [[ "$WFPATH" == ".github/workflows/adversary.yml" && "$WFNAME" == "adversary" ]] \
+            || { echo "::error::run $AUDIT_RUN_ID 非 adversary workflow（path=$WFPATH name=$WFNAME）"; exit 1; }
+          # 3) 审计对象绑定 + 4) verdict 双锚——同一份日志一次取证，四锚均绑定
+          #    固定步骤名（步骤名+证据文本须同一日志行，防其它步骤文本冒充）
+          LOGS=$(gh run view "$AUDIT_RUN_ID" -R "$AUDIT_REPO" --log 2>/dev/null) \
+            || { echo "::error::审计 run 日志不可读（fail-closed）"; exit 1; }
+          grep -qE "Checkout 跨仓目标仓（可选）.*repository: ${{ github.repository }}" <<<"$LOGS" \
+            || { echo "::error::审计 run 的跨仓目标 checkout 不含本仓——审计对象与目标 PR 不符"; exit 1; }
+          grep -qE "Checkout 跨仓目标仓（可选）.*ref: $HEAD_SHA" <<<"$LOGS" \
+            || { echo "::error::审计 run 的跨仓目标 checkout ref 不含 PR head ${HEAD_SHA:0:8}——审计对象与目标 PR 不符（防串用/重放）"; exit 1; }
+          grep -qE "攻击（judge-deep 锁定 \+ 计量 wrapper，ADR-0067/0062）.*verdict: survived —— 套件通过考验" <<<"$LOGS" \
+            || { echo "::error::审计 run 攻击步判定行非 survived——不得写 success check"; exit 1; }
+          grep -qE "报告 schema 校验（白卷即失败，AC-15）.*OK validate：adversary-report/v1（verdict=survived" <<<"$LOGS" \
+            || { echo "::error::审计 run 报告 schema 校验行缺失或非 survived——证据不完整"; exit 1; }
+          # 5) 写回 success check run（本仓 GITHUB_TOKEN，checks:write；head_sha 来自 PR API）
+          python3 - "$AUDIT_RUN_ID" "$AUDIT_REPO" > "$RUNNER_TEMP/check_body.json" <<'PYEOF'
+          import datetime as dt, json, os, sys
+          run_id, repo = sys.argv[1], sys.argv[2]
+          json.dump({
+              "name": "adversary",
+              "head_sha": os.environ["HEAD_SHA"],
+              "status": "completed",
+              "conclusion": "success",
+              "completed_at": dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "details_url": f"https://github.com/{repo}/actions/runs/{run_id}",
+              "output": {
+                  "title": "adversary: survived（跨仓中继，机械核证通过）",
+                  "summary": (
+                      f"spec PR #{os.environ['PR_NUMBER']} 审计通过："
+                      f"[adversary run {run_id}]({f'https://github.com/{repo}/actions/runs/{run_id}'}) "
+                      "verdict=survived。中继机械核证全过：run 绿（固定仓 CI-Workflows）+ workflow path 身份锚 + "
+                      "跨仓 checkout ref=PR head（防重放）+ 攻击步判定行与 schema 校验步报告行双锚（步骤锚定）。"
+                  ),
+              },
+          }, sys.stdout)
+          PYEOF
+          curl -fsS -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/check-runs" \
+            -d @"$RUNNER_TEMP/check_body.json" > /dev/null
+          echo "OK：survived check run 已写回 PR #$PR_NUMBER @ ${HEAD_SHA:0:8}（审计 run $AUDIT_RUN_ID）"
