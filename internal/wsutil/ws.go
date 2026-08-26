@@ -320,32 +320,31 @@ func (c *Conn) writeFrameLocked(opcode byte, payload []byte) error {
 		return fmt.Errorf("wsutil: mask key: %w", err)
 	}
 
-	hdrLen := 2
+	// Encode the frame header into a small, fixed-capacity buffer. The header is
+	// at most 10 bytes (2 + 8 length), so its allocation is bounded and cannot
+	// overflow. The masked payload is appended separately — combining the two
+	// sizes in a single make() would risk an int overflow for huge payloads
+	// (CodeQL go/incorrect-integer-conversion / allocation-overflow).
+	hdr := make([]byte, 0, 10)
+	hdr = append(hdr, 0x80|opcode) // FIN + opcode
 	switch {
 	case len(payload) < 126:
+		hdr = append(hdr, 0x80|byte(len(payload))) // MASK + length
 	case len(payload) <= 0xFFFF:
-		hdrLen += 2
-	default:
-		hdrLen += 8
-	}
-	frame := make([]byte, 0, hdrLen+4+len(payload))
-	frame = append(frame, 0x80|opcode) // FIN + opcode
-	switch {
-	case len(payload) < 126:
-		frame = append(frame, 0x80|byte(len(payload))) // MASK + length
-	case len(payload) <= 0xFFFF:
-		frame = append(frame, 0x80|126, byte(len(payload)>>8), byte(len(payload)))
+		hdr = append(hdr, 0x80|126, byte(len(payload)>>8), byte(len(payload)))
 	default:
 		var ln [8]byte
 		binary.BigEndian.PutUint64(ln[:], uint64(len(payload)))
-		frame = append(frame, 0x80|127)
-		frame = append(frame, ln[:]...)
+		hdr = append(hdr, 0x80|127)
+		hdr = append(hdr, ln[:]...)
 	}
-	frame = append(frame, maskKey[:]...)
+	hdr = append(hdr, maskKey[:]...)
 	masked := make([]byte, len(payload))
 	for i, b := range payload {
 		masked[i] = b ^ maskKey[i&3]
 	}
+	frame := make([]byte, 0, len(hdr))
+	frame = append(frame, hdr...)
 	frame = append(frame, masked...)
 	_, err := c.conn.Write(frame)
 	return err
