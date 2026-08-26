@@ -63,21 +63,17 @@
 - **小红书直播 WS 方法名**：无直接证据，按原软件 `Webcast*`/`SCWeb*` chunk 字符串命名约定重建，帧格式复用快手 gunzip+base64 JSON。见 `internal/live/xhs.go` 包注释。
 - **视频号留痕 `profile_url_template`**：`weixin://finder/profile/{sec_uid}` 为保守占位——原软件 17.js 中 `persionHomeUrl` 恒为空，主页打开在手机端群控 App 内完成，前端无 deeplink 证据。`adapt/flows/shipinhao-trace.json` 的 `profile_url_template_comment` 字段已注明；接线前需以真机证据校正。
 - **UA 池**：`data/ua-pool.json` 为原软件 `ua.js` 44 条逐字提取（文件头 comment 字段注明来源路径）。
-- **license 公钥**：仓内无内置公钥（私钥不进仓），部署经 `MEDIAMON_LICENSE_PUBKEY`（base64 Ed25519）注入；未配置时 fail-closed 拒绝所有受门禁操作（cmd/mediad/wiring.go、cmd/mediactl/wiring.go）。
+- **license 公钥**：license 门禁已全量拆除（ADR-0098，IR-MM-0001 W1-C1）——`internal/license` 删除、三 cmd wiring 清除、`MEDIAMON_LICENSE_*` 环境变量失效（设置后零行为变化）；未来经 HARDENING 交付管线在打包层重建（docs/HARDENING.md 保留为规范位）。
 - **selfupdate 已最新时的版本号**：库 `Checker.Check()` 在已最新时返回 nil manifest，`mediactl update check` 只能打印 "already up to date"，无法打印远端最新版本号（库 API 限制，不影响功能）。
 
 ## 运维要点
 
-- **license 门禁默认 fail-closed**：collect/send/trace/live monitor 运行前校验 `$MEDIAMON_LICENSE_DIR/license.json`（默认 data/license）对 `$MEDIAMON_LICENSE_PUBKEY` 的 Ed25519 签名；公钥缺失/无效时全部拒绝。`MEDIAMON_LICENSE_REQUIRED=false` 显式关闭（仅开发用）。
 - 主要环境变量（均在代码中可考）：
 
   | 变量 | 用途 | 默认 |
   |---|---|---|
   | MEDIAMON_ACCOUNTS_DIR | 账号池目录 | <dataDir>/accounts（mediactl 默认 data/accounts） |
   | MEDIAMON_UA_POOL | UA 池文件 | <exe>/data/ua-pool.json |
-  | MEDIAMON_LICENSE_DIR | license 文件目录 | data/license |
-  | MEDIAMON_LICENSE_PUBKEY | Ed25519 公钥（base64） | 无（缺失即 fail-closed） |
-  | MEDIAMON_LICENSE_REQUIRED | `false` 显式关闭门禁 | 开启 |
   | MEDIAMON_WEBHOOK_URL | datacenter 推送端点（未设则推送静默关闭、归集继续） | 无 |
   | MEDIAMON_WEBHOOK_MIN_INTERVAL / MAX_INTERVAL | webhook 节流/强制 flush 间隔 | 库默认 |
   | MEDIAMON_DATACENTER_DIR | 数据中心存储目录 | <dataDir>/datacenter |
