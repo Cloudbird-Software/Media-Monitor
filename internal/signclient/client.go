@@ -85,11 +85,11 @@ func (c *Client) Sign(ctx context.Context, contractName, url string, params map[
 	if len(sr.Params) == 0 {
 		return c.degrade(params, fmt.Errorf("signclient: empty params in success response"))
 	}
-	// Pre-size defensively: the response map count is untrusted input — a
-	// bogus huge length must not drive an overflow-sized allocation hint.
-	hint := len(params) + len(sr.Params)
-	if hint < 0 || hint > 1<<12 {
-		hint = 0
+	// Pre-size defensively: the response map count is untrusted input —
+	// only add (and only allocate) when both counts are provably small.
+	hint := 0
+	if n, m := len(params), len(sr.Params); n <= 1<<11 && m <= 1<<11 {
+		hint = n + m
 	}
 	out := make(map[string]string, hint)
 	for k, v := range params {
