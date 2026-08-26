@@ -37,16 +37,21 @@ const (
 // an account may carry only cookies, only a proxy, or any combination. The
 // engine merges account-level values over platform-level defaults.
 type Account struct {
-	ID        string            `json:"id"`       // opaque pool id
-	Platform  string            `json:"platform"` // douyin|kuaishou|xhs
-	Nickname  string            `json:"nickname,omitempty"`
-	Cookies   map[string]string `json:"cookies"`         // name=value pairs
-	Proxy     string            `json:"proxy,omitempty"` // http://user:pass@host:port
-	UA        string            `json:"ua,omitempty"`    // pinned User-Agent
-	Tags      []string          `json:"tags,omitempty"`
-	Status    Status            `json:"status"`
-	CreatedAt int64             `json:"created_at"`
-	UpdatedAt int64             `json:"updated_at"`
+	ID       string            `json:"id"`       // opaque pool id
+	Platform string            `json:"platform"` // douyin|kuaishou|xhs
+	Nickname string            `json:"nickname,omitempty"`
+	Cookies  map[string]string `json:"cookies"`         // name=value pairs
+	Proxy    string            `json:"proxy,omitempty"` // http://user:pass@host:port
+	UA       string            `json:"ua,omitempty"`    // pinned User-Agent
+	Tags     []string          `json:"tags,omitempty"`
+	Status   Status            `json:"status"`
+	// Probe-derived health (W4-C1): empty = never probed. Persisted with the
+	// snapshot so it survives restarts.
+	Health          Health `json:"health,omitempty"`
+	HealthCheckedAt int64  `json:"health_checked_at,omitempty"`
+	HealthDetail    string `json:"health_detail,omitempty"`
+	CreatedAt       int64  `json:"created_at"`
+	UpdatedAt       int64  `json:"updated_at"`
 }
 
 // CookieHeader renders the cookie set as a "k1=v1; k2=v2" header fragment.

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -9,6 +10,12 @@ import (
 	"strings"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/collect"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/kuaishou"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
 )
 
 // bytesReader returns a *bytes.Reader over raw (cookie import helpers take
@@ -54,6 +61,8 @@ func cmdAccounts(args []string) error {
 		return accountsList(fs.Args()[1:])
 	case "delete":
 		return accountsDelete(fs.Args()[1:])
+	case "probe":
+		return accountsProbe(fs.Args()[1:])
 	default:
 		return fmt.Errorf("unknown accounts subcommand %q", fs.Arg(0))
 	}
@@ -209,4 +218,73 @@ func splitTags(s string) []string {
 		}
 	}
 	return parts
+}
+
+// accountsProbe probes one account's health via its platform's cheapest
+// declared contract (douyin: douyin-im-unread; xhs: xhs-user-notes with
+// --param user_id=...) and persists the outcome on the pool.
+func accountsProbe(args []string) error {
+	fs := flag.NewFlagSet("accounts probe", flag.ExitOnError)
+	id := fs.String("id", "", "account id to probe (required)")
+	contract := fs.String("contract", "", "probe contract override (default: platform's cheapest declared)")
+	params := fs.String("param", "", "repeatable k=v contract params (comma-separated)")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *id == "" {
+		return fmt.Errorf("--id is required")
+	}
+	pool, err := accounts.Open(accountsDir())
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	acct, ok := pool.Get(*id)
+	if !ok {
+		return fmt.Errorf("account %q not found", *id)
+	}
+	adaptReg, _, err := loadRegistry()
+	if err != nil {
+		return err
+	}
+	eng := probeEngine(adaptReg, pool, *id)
+	kv := map[string]string{}
+	for _, pair := range splitAndTrim(*params, ",") {
+		if pair == "" {
+			continue
+		}
+		k, v, found := strings.Cut(pair, "=")
+		if !found {
+			return fmt.Errorf("--param %q: want k=v", pair)
+		}
+		kv[k] = v
+	}
+	out, err := eng.ProbeAndStore(context.Background(), pool, *id, *contract, kv)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("{\"account\":%q,\"platform\":%q,\"health\":%q,\"detail\":%q,\"checked_at\":%d}\n",
+		*id, acct.Platform, out.Health, out.Detail, out.CheckedAt)
+	return nil
+}
+
+// probeEngine builds a collect engine bound to one pool account: the
+// probe's requests ride that account's own cookie/proxy/UA (W4-C1 AC-5).
+func probeEngine(reg *contracts.Registry, pool *accounts.Pool, accountID string) *collect.Engine {
+	cdir := filepath.Join(adaptDir(), "contracts")
+	names := map[string]map[string]string{}
+	dou, _, _ := douyin.Defaults(cdir)
+	ks, _, _ := kuaishou.Defaults(cdir)
+	xh, _, _ := xhs.Defaults(cdir)
+	names[douyin.Platform] = dou.Names
+	names[kuaishou.Platform] = ks.Names
+	names[xhs.Platform] = xh.Names
+	return collect.New(collect.Context{
+		Registry:  reg,
+		HTTP:      sharedHTTPClient(),
+		Obs:       obs.NewCounterMap(),
+		Names:     names,
+		Accounts:  pool,
+		AccountID: accountID,
+	})
 }
