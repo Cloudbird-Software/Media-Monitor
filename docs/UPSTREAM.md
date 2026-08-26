@@ -16,28 +16,13 @@ paths + license verdict), not vendored code. Webhook-free; polling based.
   early-warning layer: ecosystem repos usually adapt to platform changes
   before this repo's own canaries notice them.
 
-## Vendor submodules (materialized, ADR-0099)
-
-`upstream/vendor/` holds four observation-copy submodules (f2 /
-wx_channels_download / MediaCrawler / UI-TARS), each pinned to the SHA
-recorded in the registry (clone with `--recurse-submodules`; CI never needs
-them — the arch guard reads source text only). They exist so the watcher's
-diff summaries and the swap-test bench have a local, diffable baseline
-(track A of the dual-track adaptation strategy, IR-MM-0001 D-3).
-`internal/` and `cmd/` never import `upstream/` — enforced fail-closed by
-`quality/arch-check.sh` (INV-3). Moving a pin is a PR (data change).
-Borrowing boundaries per IR D-2: f2 / wx_channels_download / UI-TARS
-(permissive) may be referenced and ported; MediaCrawler (non-commercial) is
-watch-only — parameters and binding knowledge, never code.
-
 ## Swap-test bench (local, agent-driven)
 
 `upstream/swap-test.md` workflow (agent-only; not automated yet):
 pin upstream → adapter shim under `internal/platforms` or standalone script
 → run the same canary suite against the upstream implementation → score
 (success rate / freshness / license). Adoption requires a C1 PR with the
-score attached. Removal mirrors it. The vendor submodules above provide the
-pinned local baseline the bench scores against.
+score attached. Removal mirrors it.
 
 ## Policy
 
