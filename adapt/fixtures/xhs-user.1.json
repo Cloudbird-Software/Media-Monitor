@@ -1,0 +1,18 @@
+{
+  "user_list": [
+    {
+      "uid": "6x111111001",
+      "sec_uid": "",
+      "short_id": "",
+      "nickname": "小红书用户一",
+      "avatar_url": "https://example.invalid/xhs-user-1.jpg",
+      "signature": "小红书签名",
+      "ip_label": "上海",
+      "gender": 2,
+      "follower_count": 800,
+      "following_count": 300,
+      "aweme_count": 40,
+      "total_favorited": 12000
+    }
+  ]
+}

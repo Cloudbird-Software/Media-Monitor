@@ -1,0 +1,17 @@
+{
+  "name": "kuaishou-group-members",
+  "platform": "kuaishou",
+  "category": "group_members",
+  "version": "1",
+  "doc": "silent enumeration of a kuaishou group's members. Evidence: service.kuaishou.* + 'group/members' path in chunks 12/14; QunMember protobuf (docs api-formats-douyin.md live protobuf). The exact endpoint is reconstructed from the kuaishou web origin + the evidenced /api/im/web/v2/group/members path pattern (same IM surface as douyin).",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/api/im/web/v2/group/members",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "1967"},
+    "placeholders": ["group_id"]
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {"members": "$.members"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}

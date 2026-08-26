@@ -1,0 +1,54 @@
+{
+  "comments": [
+    {
+      "cid": "7660020000000000000001",
+      "aweme_id": "7660000000000000001",
+      "text": "示例回复一：结构同公开接口形状",
+      "create_time": 1780002001,
+      "digg_count": 31,
+      "reply_count": 0,
+      "sticky": false,
+      "reply_to_cid": "7660010000000000000001",
+      "user": {
+        "uid": "1000000011",
+        "sec_uid": "MS4wLjABAAAA-example-replier-000000000001",
+        "short_id": "100011",
+        "nickname": "示例回复用户一",
+        "avatar_url": "https://example.invalid/avatar-r1.jpg",
+        "signature": "回复者个签",
+        "ip_label": "广东",
+        "gender": 1,
+        "follower_count": 300,
+        "following_count": 40,
+        "aweme_count": 10,
+        "total_favorited": 5000
+      }
+    },
+    {
+      "cid": "7660020000000000000002",
+      "aweme_id": "7660000000000000001",
+      "text": "示例回复二",
+      "create_time": 1780002002,
+      "digg_count": 5,
+      "reply_count": 0,
+      "sticky": false,
+      "reply_to_cid": "7660010000000000000001",
+      "user": {
+        "uid": "1000000012",
+        "sec_uid": "MS4wLjABAAAA-example-replier-000000000002",
+        "short_id": "100012",
+        "nickname": "示例回复用户二",
+        "avatar_url": "https://example.invalid/avatar-r2.jpg",
+        "signature": "",
+        "ip_label": "江苏",
+        "gender": 2,
+        "follower_count": 88,
+        "following_count": 20,
+        "aweme_count": 4,
+        "total_favorited": 1200
+      }
+    }
+  ],
+  "cursor": 2,
+  "has_more": false
+}

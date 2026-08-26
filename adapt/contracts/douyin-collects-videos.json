@@ -1,0 +1,18 @@
+{
+  "name": "douyin-collects-videos",
+  "platform": "douyin",
+  "category": "collects_videos",
+  "version": "1",
+  "doc": "enumerate the videos inside one bookmark folder (cursor-paginated). Evidence: /aweme/v1/web/collects/video/list/ (docs 7.1.1) + collects_id query.",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/collects/video/list/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["collects_id"]
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {"items": "$.aweme_list"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 10, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}

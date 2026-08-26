@@ -1,0 +1,28 @@
+{
+  "members": [
+    {
+      "uid": "3x222222001",
+      "sec_uid": "",
+      "short_id": "",
+      "nickname": "快手群成员一",
+      "avatar_url": "https://example.invalid/k-avatar-1.jpg",
+      "signature": "",
+      "ip_label": "四川",
+      "gender": 1,
+      "follower_count": 200,
+      "following_count": 50,
+      "aweme_count": 10,
+      "total_favorited": 1000,
+      "joined_at": 1780003001
+    },
+    {
+      "uid": "3x222222002",
+      "nickname": "快手群成员二",
+      "ip_label": "湖北",
+      "gender": 2,
+      "joined_at": 1780003002
+    }
+  ],
+  "cursor": "c2",
+  "has_more": false
+}

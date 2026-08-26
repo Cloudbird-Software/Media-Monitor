@@ -1,0 +1,16 @@
+{
+  "name": "kuaishou-user",
+  "platform": "kuaishou",
+  "category": "user",
+  "version": "1",
+  "doc": "user profile enrichment by sec_uid. Evidence: 'user/profile' path + '/user/self' + kuaishou web origin (www.kuaishou.com). Endpoint reconstructed from the evidenced user/profile route; the response is shaped to match the engine's users-binding contract.",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/api/user/info/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "1967"},
+    "placeholders": ["sec_uid"]
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {"users": "$.user_list"}
+}

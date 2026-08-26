@@ -1,0 +1,16 @@
+{
+  "name": "shipinhao-trace",
+  "platform": "shipinhao",
+  "doc": "视频号留痕动作序列与默认概率。参数从原软件 views/shipinhao/liuHen.vue（打包 chunk 17.js）setting 默认值提取：h_conf 主页动作 like/follow/favs/message/comment 及概率（百分比已归一化到 0..1），home_start/end_time 主页停留 4-8 秒，project_start/end_time 作品浏览 4-8 秒，project_interval 作品间隔 4 秒（当前 Flow 模型无每动作间隔字段，记录于注释）。原软件为手机群控（adb/群控 App 执行），n_conf（私信页 message/follow 各 10）未见独立入口，未单列。概率字段 0=绝不执行，1=必执行。",
+  "profile_url_template": "weixin://finder/profile/{sec_uid}",
+  "profile_url_template_comment": "证据未找到，保守占位：17.js 中 persionHomeUrl 始终为空，主页打开由手机端群控 App 完成，前端无 deeplink 证据。此占位为微信内视频号 scheme 形式，接线前需以真机证据校正。",
+  "actions": [
+    {"type": "like", "prob": 0.8, "comment": "点赞，h_conf.like 默认开、like_pr=80"},
+    {"type": "follow", "prob": 0.2, "comment": "关注，h_conf.follow 默认关、follow_pr=20"},
+    {"type": "collect", "prob": 0.8, "comment": "收藏，h_conf.favs 默认开、favs_pr=80"},
+    {"type": "dm", "prob": 0.1, "comment": "私信，h_conf.message 默认关、message_pr=10；话术默认 content='你好'（复用 M2 发送）"},
+    {"type": "comment", "prob": 0.1, "comment": "评论，h_conf.comment 默认关、comment_pr=10"},
+    {"type": "dwell", "prob": 1, "duration_ms": [4000, 8000], "comment": "主页停留，home_start_time=4s / home_end_time=8s，原软件进主页必停留故 prob=1"},
+    {"type": "browse", "prob": 1, "duration_ms": [4000, 8000], "comment": "作品浏览，project_start_time=4s / project_end_time=8s；作品间隔 project_interval=4s 暂无对应字段"}
+  ]
+}

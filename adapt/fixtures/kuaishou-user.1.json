@@ -1,0 +1,18 @@
+{
+  "user_list": [
+    {
+      "uid": "3x111111001",
+      "sec_uid": "",
+      "short_id": "K100001",
+      "nickname": "快手用户一",
+      "avatar_url": "https://example.invalid/k-user-1.jpg",
+      "signature": "快手个签",
+      "ip_label": "四川",
+      "gender": 1,
+      "follower_count": 3200,
+      "following_count": 200,
+      "aweme_count": 55,
+      "total_favorited": 50000
+    }
+  ]
+}

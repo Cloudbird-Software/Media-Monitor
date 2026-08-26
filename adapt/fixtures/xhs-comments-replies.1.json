@@ -1,0 +1,22 @@
+{
+  "data": {
+    "comments": [
+      {
+        "id": "xhs-subcomment-0001",
+        "content": "小红书示例子评论一",
+        "create_time": 1780006001,
+        "like_count": "12",
+        "user_info": {"user_id": "xhs-user-0005", "nickname": "小红书回复者一", "avatar": "https://example.invalid/xhsr-1.jpg", "ip_location": "上海"}
+      },
+      {
+        "id": "xhs-subcomment-0002",
+        "content": "小红书示例子评论二",
+        "create_time": 1780006002,
+        "like_count": "3",
+        "user_info": {"user_id": "xhs-user-0006", "nickname": "小红书回复者二", "avatar": "https://example.invalid/xhsr-2.jpg", "ip_location": "浙江"}
+      }
+    ],
+    "has_more": false,
+    "cursor": ""
+  }
+}

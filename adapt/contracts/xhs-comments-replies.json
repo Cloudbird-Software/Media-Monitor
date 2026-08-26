@@ -1,0 +1,16 @@
+{
+  "name": "xhs-comments-replies",
+  "platform": "xhs",
+  "category": "replies",
+  "version": "1",
+  "doc": "sub-comment (reply) page of one top-level note comment; each reply carries a user_info author object whose profile fields the collector normalizes into model.UserProfile. Evidence: '/api/sns/web/v2/comment/sub/page' + noteSubCommentHandler strings in the original software (app-extracted/public/electron/_strings.js).",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v2/comment/sub/page",
+    "method": "GET",
+    "placeholders": ["comment_id"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"comments": "$.data.comments"},
+  "paging": {"cursor_param": "cursor", "count_default": 20, "has_more_path": "$.data.has_more", "next_cursor_path": "$.data.cursor"}
+}

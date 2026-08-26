@@ -1,0 +1,17 @@
+{
+  "name": "douyin-trace",
+  "platform": "douyin",
+  "doc": "留痕动作序列与默认概率。概率/时长区间从 chunk 17/18/21/23 证据提取；提取不到的参数用保守默认并在字段注释说明。动作按概率执行，0=绝不执行，1=必执行。",
+  "profile_url_template": "snssdk1128://user/profile/{sec_uid}",
+  "profile_url_template_comment": "主页 deeplink 模板，{sec_uid} 占位；值即原软件/旧代码中硬编码的抖音 scheme，移至策略文件。缺失时执行端 fail-closed。",
+  "actions": [
+    {"type": "like", "prob": 0.7, "comment": "视频点赞，高概率"},
+    {"type": "avatar_like", "prob": 0.3, "comment": "头像点赞（进入主页后），中等概率"},
+    {"type": "follow", "prob": 0.4, "comment": "关注，中等概率"},
+    {"type": "collect", "prob": 0.3, "comment": "收藏，中等概率"},
+    {"type": "dm", "prob": 0.2, "comment": "私信，低概率（复用 M2 发送与计数）"},
+    {"type": "comment", "prob": 0.15, "comment": "评论，低概率"},
+    {"type": "dwell", "prob": 0.6, "duration_ms": [3000, 8000], "comment": "主页停留时长区间（毫秒），保守默认"},
+    {"type": "browse", "prob": 0.5, "duration_ms": [2000, 5000], "comment": "作品浏览时长区间（毫秒），保守默认"}
+  ]
+}
