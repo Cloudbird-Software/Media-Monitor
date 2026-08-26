@@ -9,6 +9,9 @@
 //
 //	MEDIAMON_ADAPT_DIR     adapt dir (default "adapt")
 //	MEDIAMON_DATA_DIR      task store dir (default "./data", relative CWD)
+//	MEDIAMON_ACCOUNTS_DIR  account pool dir (default <data>/accounts)
+//	MEDIAMON_UA_POOL       UA pool file (default data/ua-pool.json next to the
+//	                       executable; missing file keeps the built-in pool)
 //	MEDIAMON_SIGNER_URL    remote signer base URL; when unset, collect tools
 //	                       for douyin fail closed (its contracts require
 //	                       a_bogus) and monitor_live refuses to start unless
@@ -17,6 +20,12 @@
 //	MEDIAMON_KUAISHOU_COOKIES  "(optional)"
 //	MEDIAMON_XHS_COOKIES   "(optional)"
 //	MEDIAMON_ADB_ADDR      default adb server address (default 127.0.0.1:5037)
+//	MEDIAMON_LICENSE_DIR   license dir (default <data>/license)
+//	MEDIAMON_LICENSE_PUBKEY  base64 Ed25519 public key used to verify the
+//	                       license; without it the gate denies everything
+//	MEDIAMON_LICENSE_REQUIRED  "false" disables the license gate (dev-only;
+//	                       default is fail-closed, same spirit as the
+//	                       --allow-unsigned convention)
 package main
 
 import (
@@ -25,6 +34,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -38,12 +48,14 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/adapt"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/adb"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/collect"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/core"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/live"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/mcpio"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
@@ -53,6 +65,7 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/signclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/store"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/tasks"
 )
 
 const version = "dev"
@@ -84,6 +97,9 @@ func run(rw io.ReadWriter) error {
 		return err
 	}
 	defer a.store.Close()
+	a.gate, a.licenseNote = loadLicenseGate(dataDir)
+	// Protocol lives on stdout; operational notes go to stderr.
+	fmt.Fprintf(os.Stderr, "mediad-mcp: license gate: %s\n", a.licenseNote)
 
 	srv := mcpio.NewServer(rw)
 	srv.Name = "mediad-mcp"
@@ -107,14 +123,19 @@ func envOr(key, def string) string {
 
 // app is the dependency bundle shared by every tool handler.
 type app struct {
-	reg    *contracts.Registry
-	engine *collect.Engine
-	runner *core.Runner
-	canary *adapt.Runner
-	sc     *signclient.Client // nil when MEDIAMON_SIGNER_URL is unset
-	obs    *obs.CounterMap
-	lob    *lobbyRegistry
-	store  *store.Store
+	reg      *contracts.Registry
+	engine   *collect.Engine
+	baseCtx  collect.Context // base engine wiring (account_id clones it)
+	runner   *core.Runner
+	canary   *adapt.Runner
+	sc       *signclient.Client // nil when MEDIAMON_SIGNER_URL is unset
+	obs      *obs.CounterMap
+	lob      *lobbyRegistry
+	store    *store.Store
+	accounts *accounts.Pool
+	// license gate (nil = disabled via MEDIAMON_LICENSE_REQUIRED=false).
+	gate        *license.Gate
+	licenseNote string
 }
 
 // newApp loads the contract registry, assembles the collect engine and the
@@ -161,28 +182,73 @@ func newApp(adaptDir, dataDir string) (*app, error) {
 	if v := os.Getenv("MEDIAMON_XHS_COOKIES"); v != "" {
 		cookies[xhs.Platform] = v
 	}
-	engine := collect.New(collect.Context{
-		Registry: reg,
-		HTTP:     httpclient.New(httpclient.Config{}),
-		Obs:      obsMap,
-		Signers:  signers,
-		Cookies:  cookies,
-		Names:    names,
-	})
 	st, err := store.Open(dataDir)
 	if err != nil {
 		return nil, fmt.Errorf("store %s: %w", dataDir, err)
 	}
+	var pool *accounts.Pool
+	if p, err := accounts.Open(accountsDirEnv(dataDir)); err == nil {
+		pool = p
+	} else {
+		fmt.Fprintf(os.Stderr, "mediad-mcp: account pool unavailable: %v (account_id routing disabled)\n", err)
+	}
+	baseCtx := collect.Context{
+		Registry: reg,
+		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()}),
+		Obs:      obsMap,
+		Signers:  signers,
+		Cookies:  cookies,
+		Names:    names,
+		Accounts: pool,
+	}
 	return &app{
-		reg:    reg,
-		engine: engine,
-		runner: core.NewRunner(st, obsMap),
-		canary: adapt.NewRunner(reg, filepath.Join(adaptDir, "fixtures"), filepath.Join(adaptDir, "canaries")),
-		sc:     sc,
-		obs:    obsMap,
-		lob:    newLobbyRegistry(),
-		store:  st,
+		reg:      reg,
+		engine:   collect.New(baseCtx),
+		baseCtx:  baseCtx,
+		runner:   core.NewRunner(st, obsMap),
+		canary:   adapt.NewRunner(reg, filepath.Join(adaptDir, "fixtures"), filepath.Join(adaptDir, "canaries")),
+		sc:       sc,
+		obs:      obsMap,
+		lob:      newLobbyRegistry(),
+		store:    st,
+		accounts: pool,
 	}, nil
+}
+
+// engineFor returns the engine for one tool call: the shared engine for
+// platform defaults, or a per-call clone pinned to a pool account (cookie/
+// proxy/UA then override the platform defaults).
+func (a *app) engineFor(accountID string) *collect.Engine {
+	if accountID == "" || a.accounts == nil {
+		return a.engine
+	}
+	ctx := a.baseCtx
+	ctx.AccountID = accountID
+	return collect.New(ctx)
+}
+
+// gatedTools are the collect/action tools that require a valid license.
+// Read-only/meta surfaces (version, contracts_list, accounts_list,
+// adapt_canary_offline, task listing, live event reads) stay exempt.
+var gatedTools = map[string]bool{
+	"search_items": true, "get_comments": true, "get_replies": true,
+	"get_user": true, "group_members": true, "monitor_live": true,
+	"send_message": true, "resolve_video": true, "get_collects": true,
+	"get_im_unread": true,
+	"adb_list":      true, "adb_shell": true, "adb_screencap": true,
+}
+
+// gateWrap refuses a gated tool call with a structured license error when
+// the gate denies; with no gate (disabled) it passes through.
+func (a *app) gateWrap(h func(ctx context.Context, args map[string]any) (any, error)) func(ctx context.Context, args map[string]any) (any, error) {
+	return func(ctx context.Context, args map[string]any) (any, error) {
+		if a.gate != nil {
+			if err := a.gate.Check(""); err != nil {
+				return nil, licenseDeniedErr(err)
+			}
+		}
+		return h(ctx, args)
+	}
 }
 
 // ---- argument coercion helpers ----
@@ -237,7 +303,8 @@ func bProp(desc string) map[string]any {
 func buildTools(a *app) []mcpio.Tool {
 	platformProp := sProp("platform to query: douyin|kuaishou|xhs")
 	limitProp := iProp("max records to fetch (default 20)")
-	return []mcpio.Tool{
+	accountProp := sProp("act as this account-pool id: the account's cookie/proxy/UA override the platform defaults (empty = platform default)")
+	tools := []mcpio.Tool{
 		{
 			Name:        "search_items",
 			Description: "Collect keyword search results for a platform (contract-driven).",
@@ -246,6 +313,7 @@ func buildTools(a *app) []mcpio.Tool {
 				"keyword":    sProp("search keyword"),
 				"media_type": sProp("media type filter: video|image"),
 				"limit":      limitProp,
+				"account_id": accountProp,
 			}),
 			Handler: a.searchItems,
 		},
@@ -253,20 +321,22 @@ func buildTools(a *app) []mcpio.Tool {
 			Name:        "get_comments",
 			Description: "Collect the comment list of one item (contract-driven).",
 			InputSchema: objSchema([]string{"platform", "item_id"}, map[string]any{
-				"platform": platformProp,
-				"item_id":  sProp("item id"),
-				"limit":    limitProp,
+				"platform":   platformProp,
+				"item_id":    sProp("item id"),
+				"limit":      limitProp,
+				"account_id": accountProp,
 			}),
 			Handler: a.getComments,
 		},
 		{
 			Name:        "get_replies",
-			Description: "Collect the replies of one top-level comment (no platform declares a replies contract yet, so this fails with the engine's explicit error).",
+			Description: "Collect the replies of one top-level comment (contract-driven; douyin and xhs declare replies contracts, kuaishou does not — there it fails with the engine's explicit not-declared error).",
 			InputSchema: objSchema([]string{"platform", "item_id", "cid"}, map[string]any{
-				"platform": platformProp,
-				"item_id":  sProp("item id"),
-				"cid":      sProp("top-level comment id"),
-				"limit":    limitProp,
+				"platform":   platformProp,
+				"item_id":    sProp("item id"),
+				"cid":        sProp("top-level comment id"),
+				"limit":      limitProp,
+				"account_id": accountProp,
 			}),
 			Handler: a.getReplies,
 		},
@@ -274,8 +344,9 @@ func buildTools(a *app) []mcpio.Tool {
 			Name:        "get_user",
 			Description: "Resolve one user profile by sec_uid (contract-driven).",
 			InputSchema: objSchema([]string{"platform", "sec_uid"}, map[string]any{
-				"platform": platformProp,
-				"sec_uid":  sProp("user sec_uid"),
+				"platform":   platformProp,
+				"sec_uid":    sProp("user sec_uid"),
+				"account_id": accountProp,
 			}),
 			Handler: a.getUser,
 		},
@@ -283,17 +354,49 @@ func buildTools(a *app) []mcpio.Tool {
 			Name:        "group_members",
 			Description: "Enumerate the members of a target group (silent enumeration, contract-driven).",
 			InputSchema: objSchema([]string{"platform", "group_id"}, map[string]any{
-				"platform": platformProp,
-				"group_id": sProp("group id"),
-				"limit":    limitProp,
+				"platform":   platformProp,
+				"group_id":   sProp("group id"),
+				"limit":      limitProp,
+				"account_id": accountProp,
 			}),
 			Handler: a.groupMembers,
 		},
 		{
+			Name:        "resolve_video",
+			Description: "Resolve one video's watermark-free play address plus cover metadata via the platform's video-download contract. Returns the address only; downloading the bytes is left to the caller (e.g. mediactl).",
+			InputSchema: objSchema([]string{"platform", "item_id"}, map[string]any{
+				"platform":   platformProp,
+				"item_id":    sProp("item id (aweme id / note id)"),
+				"account_id": accountProp,
+			}),
+			Handler: a.resolveVideo,
+		},
+		{
+			Name:        "get_collects",
+			Description: "List the account's bookmark folders (collects, contract-driven). Pass collects_id to list the videos inside one folder instead. Requires an account with valid cookies (account_id or the platform default cookies).",
+			InputSchema: objSchema([]string{"platform"}, map[string]any{
+				"platform":    platformProp,
+				"collects_id": sProp("folder id: when set, list the videos inside this folder instead of the folder list"),
+				"limit":       limitProp,
+				"account_id":  accountProp,
+			}),
+			Handler: a.getCollects,
+		},
+		{
+			Name:        "get_im_unread",
+			Description: "Fetch the IM unread-message count and conversation list of an account (contract-driven). Requires an account with valid cookies (account_id or the platform default cookies).",
+			InputSchema: objSchema([]string{"platform"}, map[string]any{
+				"platform":   platformProp,
+				"account_id": accountProp,
+			}),
+			Handler: a.getIMUnread,
+		},
+		{
 			Name:        "monitor_live",
-			Description: "Start a background live-room monitor session; events land in an in-memory ring buffer (200 events) for read_live_events. Requires MEDIAMON_SIGNER_URL unless allow_unsigned is true (dev-only).",
+			Description: "Start a background live-room monitor session; events land in an in-memory ring buffer (200 events) for read_live_events. The platform selects the <platform>-meta contract and wire decoder (douyin protobuf, kuaishou/xhs gunzip+base64 JSON). Requires MEDIAMON_SIGNER_URL unless allow_unsigned is true (dev-only).",
 			InputSchema: objSchema([]string{"room_url"}, map[string]any{
 				"room_url":       sProp("live room URL, e.g. https://live.douyin.com/123456"),
+				"platform":       sProp("live platform: douyin|kuaishou|xhs (default douyin)"),
 				"events":         sProp("comma-separated event filter (enter,like,chat,gift,follow,fansclub,rank,seq,room_stat,control,emoji,stream); empty = all"),
 				"allow_unsigned": bProp("allow starting without a signature signer (dev-only, NOT for production)"),
 			}),
@@ -336,6 +439,29 @@ func buildTools(a *app) []mcpio.Tool {
 			Handler:     a.contractsList,
 		},
 		{
+			Name:        "send_message",
+			Description: "Broadcast direct messages to a list of target sec_uids (contract-driven). Supports a first + optional second message with a delay, {nickname} substitution, and a per-account send cap.",
+			InputSchema: objSchema([]string{"platform", "targets"}, map[string]any{
+				"platform":            platformProp,
+				"targets":             sProp("comma-separated or JSON array of target sec_uids"),
+				"first_message":       sProp("first message text (required; use {nickname} for substitution)"),
+				"second_message":      sProp("optional second message text"),
+				"second_delay_ms":     iProp("delay before second message (default 15000)"),
+				"send_cap":            iProp("max sends per account (0 = unlimited)"),
+				"account_id":          sProp("act as this account (empty = platform default)"),
+				"substitute_nickname": map[string]any{"type": "object", "description": "sec_uid -> nickname map for {nickname}"},
+			}),
+			Handler: a.sendMessage,
+		},
+		{
+			Name:        "accounts_list",
+			Description: "List accounts in the account pool (platform, nickname, cookie count, proxy, status).",
+			InputSchema: objSchema(nil, map[string]any{
+				"platform": sProp("optional platform filter: douyin|kuaishou|xhs"),
+			}),
+			Handler: a.accountsList,
+		},
+		{
 			Name:        "adb_list",
 			Description: "List device serials known to an adb server.",
 			InputSchema: objSchema(nil, map[string]any{
@@ -371,6 +497,15 @@ func buildTools(a *app) []mcpio.Tool {
 			},
 		},
 	}
+	// License gate: collect/action tools are wrapped; meta/read-only tools
+	// (version, contracts_list, accounts_list, adapt_canary_offline, task
+	// listing, live event reads) stay exempt.
+	for i := range tools {
+		if gatedTools[tools[i].Name] {
+			tools[i].Handler = a.gateWrap(tools[i].Handler)
+		}
+	}
+	return tools
 }
 
 func validPlatform(p string) bool {
@@ -394,7 +529,7 @@ func (a *app) searchItems(ctx context.Context, args map[string]any) (any, error)
 	if keyword == "" {
 		return nil, errors.New("keyword is required")
 	}
-	items, cur, err := a.engine.SearchItems(ctx, platform, keyword, argStr(args, "media_type"), model.Cursor{}, argInt(args, "limit", 20))
+	items, cur, err := a.engineFor(argStr(args, "account_id")).SearchItems(ctx, platform, keyword, argStr(args, "media_type"), model.Cursor{}, argInt(args, "limit", 20))
 	if err != nil {
 		return nil, err
 	}
@@ -410,7 +545,7 @@ func (a *app) getComments(ctx context.Context, args map[string]any) (any, error)
 	if itemID == "" {
 		return nil, errors.New("item_id is required")
 	}
-	cmts, cur, err := a.engine.ItemComments(ctx, platform, itemID, model.Cursor{}, argInt(args, "limit", 20))
+	cmts, cur, err := a.engineFor(argStr(args, "account_id")).ItemComments(ctx, platform, itemID, model.Cursor{}, argInt(args, "limit", 20))
 	if err != nil {
 		return nil, err
 	}
@@ -427,11 +562,121 @@ func (a *app) getReplies(ctx context.Context, args map[string]any) (any, error) 
 	if itemID == "" || cid == "" {
 		return nil, errors.New("item_id and cid are required")
 	}
-	cmts, cur, err := a.engine.CommentReplies(ctx, platform, itemID, cid, model.Cursor{}, argInt(args, "limit", 20))
+	cmts, cur, err := a.engineFor(argStr(args, "account_id")).CommentReplies(ctx, platform, itemID, cid, model.Cursor{}, argInt(args, "limit", 20))
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{"comments": cmts, "cursor": cur}, nil
+}
+
+// resolveVideo resolves a video's watermark-free play address (M6).
+func (a *app) resolveVideo(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	itemID := argStr(args, "item_id")
+	if itemID == "" {
+		return nil, errors.New("item_id is required")
+	}
+	meta, err := a.engineFor(argStr(args, "account_id")).ResolveVideo(ctx, platform, itemID)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"video": meta}, nil
+}
+
+// getCollects lists bookmark folders, or the videos of one folder when
+// collects_id is given (M6).
+func (a *app) getCollects(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	eng := a.engineFor(argStr(args, "account_id"))
+	limit := argInt(args, "limit", 20)
+	if collectsID := argStr(args, "collects_id"); collectsID != "" {
+		items, cur, err := eng.CollectVideos(ctx, platform, collectsID, model.Cursor{}, limit)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"items": items, "cursor": cur}, nil
+	}
+	folders, cur, err := eng.CollectFolders(ctx, platform, model.Cursor{}, limit)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"collects": folders, "cursor": cur}, nil
+}
+
+// getIMUnread fetches the IM unread count of an account (M6).
+func (a *app) getIMUnread(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	res, err := a.engineFor(argStr(args, "account_id")).FetchIMUnread(ctx, platform)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"im_unread": res}, nil
+}
+
+func (a *app) sendMessage(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	targets := splitTargets(argStr(args, "targets"))
+	if len(targets) == 0 {
+		return nil, errors.New("targets is required")
+	}
+	first := argStr(args, "first_message")
+	if first == "" {
+		return nil, errors.New("first_message is required")
+	}
+	cfg := tasks.SendTaskConfig{
+		Platform:      platform,
+		Targets:       targets,
+		FirstMessage:  tasks.MessageTemplate{Content: first},
+		SecondDelayMs: int64(argInt(args, "second_delay_ms", 15000)),
+		SendCap:       argInt(args, "send_cap", 0),
+		AccountID:     argStr(args, "account_id"),
+	}
+	if s := argStr(args, "second_message"); s != "" {
+		cfg.SecondMessage = &tasks.MessageTemplate{Content: s}
+	}
+	if raw, ok := args["substitute_nickname"].(map[string]any); ok {
+		cfg.SubstituteNick = map[string]string{}
+		for k, v := range raw {
+			cfg.SubstituteNick[k] = fmt.Sprint(v)
+		}
+	}
+	rep, err := tasks.NewSender(a.engineFor(cfg.AccountID), a.store).Run(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return rep, nil
+}
+
+// splitTargets accepts either a comma-separated string or a JSON array.
+func splitTargets(s string) []string {
+	if s == "" {
+		return nil
+	}
+	if strings.HasPrefix(s, "[") {
+		var arr []string
+		if err := json.Unmarshal([]byte(s), &arr); err == nil {
+			return arr
+		}
+	}
+	var out []string
+	for _, p := range strings.Split(s, ",") {
+		if t := strings.TrimSpace(p); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func (a *app) getUser(ctx context.Context, args map[string]any) (any, error) {
@@ -443,7 +688,7 @@ func (a *app) getUser(ctx context.Context, args map[string]any) (any, error) {
 	if secUID == "" {
 		return nil, errors.New("sec_uid is required")
 	}
-	u, err := a.engine.UserProfile(ctx, platform, secUID)
+	u, err := a.engineFor(argStr(args, "account_id")).UserProfile(ctx, platform, secUID)
 	if err != nil {
 		return nil, err
 	}
@@ -459,7 +704,7 @@ func (a *app) groupMembers(ctx context.Context, args map[string]any) (any, error
 	if groupID == "" {
 		return nil, errors.New("group_id is required")
 	}
-	members, cur, err := a.engine.GroupMembers(ctx, platform, groupID, model.Cursor{}, argInt(args, "limit", 20))
+	members, cur, err := a.engineFor(argStr(args, "account_id")).GroupMembers(ctx, platform, groupID, model.Cursor{}, argInt(args, "limit", 20))
 	if err != nil {
 		return nil, err
 	}
@@ -586,11 +831,18 @@ func (a *app) monitorLive(_ context.Context, args map[string]any) (any, error) {
 	if roomURL == "" {
 		return nil, errors.New("room_url is required")
 	}
+	platform := argStr(args, "platform")
+	if platform == "" {
+		platform = douyin.Platform
+	}
+	if !validPlatform(platform) {
+		return nil, fmt.Errorf("platform %q must be one of douyin, kuaishou, xhs", platform)
+	}
 	allowUnsigned := argBool(args, "allow_unsigned")
 	var signer live.SignFn
 	switch {
 	case a.sc != nil:
-		signer = a.sc.WSSSignatureSigner("douyin-live")
+		signer = a.sc.WSSSignatureSigner(platform + "-live")
 	case allowUnsigned:
 		// Dev-only deterministic stub; NOT a real signature. Production must
 		// always configure MEDIAMON_SIGNER_URL (see docs/HARDENING.md).
@@ -608,10 +860,12 @@ func (a *app) monitorLive(_ context.Context, args map[string]any) (any, error) {
 		}
 	}
 	cfg := &live.Config{
-		HTTP:     httpclient.New(httpclient.Config{}),
+		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()}),
 		Registry: a.reg,
 		Signer:   signer,
 		Obs:      a.obs,
+		Platform: platform,
+		Decoder:  liveDecoderFor(a.reg, platform),
 	}
 	lob := a.lob.register(roomURL)
 	go func() {
@@ -667,6 +921,29 @@ func (a *app) readLiveEvents(_ context.Context, args map[string]any) (any, error
 		res["end_error"] = endErr
 	}
 	return res, nil
+}
+
+// liveDecoderFor selects the platform wire decoder from the platform's
+// <platform>-meta contract: kuaishou/xhs speak gunzip+base64 JSON frames,
+// douyin uses the built-in protobuf path (nil decoder).
+func liveDecoderFor(reg *contracts.Registry, platform string) live.Decoder {
+	var metaName string
+	switch platform {
+	case kuaishou.Platform:
+		metaName = "kuaishou-meta"
+	case xhs.Platform:
+		metaName = "xhs-meta"
+	default:
+		return nil // douyin protobuf path
+	}
+	c, ok := reg.Get(metaName)
+	if !ok || c == nil || len(c.ProtoMethods) == 0 {
+		return nil
+	}
+	if platform == kuaishou.Platform {
+		return live.NewKuaishouDecoder(c.ProtoMethods)
+	}
+	return live.NewXhsDecoder(c.ProtoMethods)
 }
 
 // md5StubSigner is an explicitly non-production signature placeholder for
@@ -740,6 +1017,21 @@ func (a *app) adaptCanaryOffline(_ context.Context, _ map[string]any) (any, erro
 
 func (a *app) contractsList(_ context.Context, _ map[string]any) (any, error) {
 	return map[string]any{"contracts": a.reg.List()}, nil
+}
+
+func (a *app) accountsList(_ context.Context, args map[string]any) (any, error) {
+	if a.accounts == nil {
+		return map[string]any{"accounts": []accounts.Account{}}, nil
+	}
+	platform := argStr(args, "platform")
+	out := []accounts.Account{}
+	for _, acct := range a.accounts.List() {
+		if platform != "" && acct.Platform != platform {
+			continue
+		}
+		out = append(out, acct)
+	}
+	return map[string]any{"accounts": out}, nil
 }
 
 // adbServerAddr resolves the adb server address: explicit arg beats

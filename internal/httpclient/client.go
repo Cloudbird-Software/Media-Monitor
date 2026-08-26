@@ -28,6 +28,9 @@ type Config struct {
 	// MaxRetries is the number of extra attempts after the first one for
 	// 429/Too Many Requests and 5xx responses. 0 means a single attempt.
 	MaxRetries int
+	// Proxy is an optional proxy URL (e.g. "http://user:pass@host:port",
+	// "socks5://host:port"). When set, every request is routed through it.
+	Proxy string
 }
 
 // Signer computes per-contract request signature values. params holds the
@@ -70,9 +73,15 @@ func New(cfg Config) *Client {
 	if len(cfg.UserAgents) == 0 {
 		cfg.UserAgents = append([]string(nil), defaultUAs...)
 	}
+	hc := &http.Client{Timeout: cfg.Timeout}
+	if cfg.Proxy != "" {
+		if u, err := url.Parse(cfg.Proxy); err == nil {
+			hc.Transport = &http.Transport{Proxy: http.ProxyURL(u)}
+		}
+	}
 	return &Client{
 		cfg:    cfg,
-		hc:     &http.Client{Timeout: cfg.Timeout},
+		hc:     hc,
 		uaPool: cfg.UserAgents,
 	}
 }
@@ -136,12 +145,45 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 }
 
 func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, error) {
+	resp, err := c.doRequest(ctx, method, rawURL, headers, body)
+	if err != nil {
+		return 0, nil, err
+	}
+	defer resp.Body.Close()
+	rb, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("httpclient: read body: %w", err)
+	}
+	return resp.StatusCode, rb, nil
+}
+
+// DoStream performs a single-attempt request and returns the response body
+// as an open stream (the caller must close it). Unlike Do it never buffers
+// the body in memory, which makes it suitable for large media downloads;
+// retries are the caller's decision (a partial stream cannot be replayed).
+func (c *Client) DoStream(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, io.ReadCloser, error) {
+	resp, err := c.doRequest(ctx, method, rawURL, headers, body)
+	if err != nil {
+		return 0, nil, err
+	}
+	return resp.StatusCode, resp.Body, nil
+}
+
+// doRequest builds and sends one request: signer decoration, base+caller
+// headers and the rotating UA (a caller-supplied UA header wins).
+func (c *Client) doRequest(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (*http.Response, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if method == "" {
+		method = http.MethodGet
+	}
 	u, err := url.Parse(rawURL)
 	if err != nil {
-		return 0, nil, fmt.Errorf("httpclient: parse url: %w", err)
+		return nil, fmt.Errorf("httpclient: parse url: %w", err)
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
-		return 0, nil, fmt.Errorf("httpclient: unsupported scheme %q", u.Scheme)
+		return nil, fmt.Errorf("httpclient: unsupported scheme %q", u.Scheme)
 	}
 
 	// Signer sees the URL's existing query as a param map, then its output
@@ -155,7 +197,7 @@ func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[
 		}
 		sig, serr := c.signer.Sign(ctx, c.contract, u.String(), params)
 		if serr != nil {
-			return 0, nil, fmt.Errorf("httpclient: sign %q: %w", c.contract, serr)
+			return nil, fmt.Errorf("httpclient: sign %q: %w", c.contract, serr)
 		}
 		if len(sig) > 0 {
 			q := u.Query()
@@ -168,7 +210,7 @@ func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[
 
 	req, err := http.NewRequestWithContext(ctx, method, u.String(), bytes.NewReader(body))
 	if err != nil {
-		return 0, nil, fmt.Errorf("httpclient: new request: %w", err)
+		return nil, fmt.Errorf("httpclient: new request: %w", err)
 	}
 	h := make(http.Header, len(c.cfg.BaseHeaders)+len(headers)+1)
 	for k, v := range c.cfg.BaseHeaders {
@@ -184,14 +226,9 @@ func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return 0, nil, err
+		return nil, err
 	}
-	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, nil, fmt.Errorf("httpclient: read body: %w", err)
-	}
-	return resp.StatusCode, rb, nil
+	return resp, nil
 }
 
 // defaultUAs is a pool of generic consumer User-Agents (desktop + mobile

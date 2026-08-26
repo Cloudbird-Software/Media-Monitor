@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/signal"
 	"sort"
@@ -13,7 +14,6 @@ import (
 	"syscall"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/live"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
@@ -55,6 +55,9 @@ func liveMonitor(args []string) error {
 	if *room == "" {
 		return fmt.Errorf("--room is required")
 	}
+	if err := requireLicense("live"); err != nil {
+		return err
+	}
 	filter := map[string]bool{}
 	for _, e := range strings.Split(*events, ",") {
 		e = strings.TrimSpace(e)
@@ -68,6 +71,10 @@ func liveMonitor(args []string) error {
 	if err := contracts.LoadDir(reg, cdir); err != nil {
 		return err
 	}
+
+	// Pick the platform decoder from the live room URL host (kuaishou/xhs use
+	// the gunzip+base64 JSON decoders; douyin uses the built-in protobuf path).
+	decoder := liveDecoderFor(reg, *room)
 
 	var signer live.SignFn
 	switch {
@@ -91,11 +98,12 @@ func liveMonitor(args []string) error {
 	}
 
 	cfg := &live.Config{
-		HTTP:         httpclient.New(httpclient.Config{}),
+		HTTP:         sharedHTTPClient(),
 		Registry:     reg,
 		Signer:       signer,
 		Obs:          obs.NewCounterMap(),
 		ReconnectMax: *reconnect,
+		Decoder:      decoder,
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -130,4 +138,44 @@ func md5StubSigner(urlQuery string, params map[string]string) (string, error) {
 func filepathAdaptContracts() string {
 	dir := adaptDir()
 	return dir + string(os.PathSeparator) + "contracts"
+}
+
+// liveDecoderFor selects a platform decoder from the room URL host. douyin
+// uses the built-in protobuf path (nil); kuaishou/xhs use gunzip+base64 JSON
+// decoders built from their live_meta contract's protocol_methods.
+func liveDecoderFor(reg *contracts.Registry, roomURL string) live.Decoder {
+	if roomURL == "" {
+		return nil
+	}
+	u := roomURL
+	if !strings.Contains(u, "://") {
+		u = "https://" + u
+	}
+	pu, err := url.Parse(u)
+	if err != nil {
+		return nil
+	}
+	host := strings.ToLower(pu.Hostname())
+	meta := "douyin-meta"
+	switch host {
+	case "live.kuaishou.com", "www.live.kuaishou.com":
+		meta = "kuaishou-meta"
+	case "www.xiaohongshu.com", "xiaohongshu.com":
+		meta = "xhs-meta"
+	}
+	c, ok := reg.Get(meta)
+	if !ok || c == nil || len(c.ProtoMethods) == 0 {
+		// Fall back to douyin protobuf for unknown/undeclared platforms.
+		if d, ok := reg.Get("douyin-meta"); ok && d != nil {
+			return nil // douyin path
+		}
+		return nil
+	}
+	switch meta {
+	case "kuaishou-meta":
+		return live.NewKuaishouDecoder(c.ProtoMethods)
+	case "xhs-meta":
+		return live.NewXhsDecoder(c.ProtoMethods)
+	}
+	return nil
 }

@@ -5,18 +5,24 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/protoio"
 )
 
@@ -586,7 +592,7 @@ func TestNormalizeRoomURL(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got, err := normalizeRoomURL(reg, c.raw)
+			got, err := normalizeRoomURL(reg, metaContractName, c.raw)
 			if c.wantErr {
 				if err == nil {
 					t.Fatalf("normalizeRoomURL = %q, want error", got)
@@ -747,4 +753,238 @@ func TestPushFrameWireLayout(t *testing.T) {
 	if _, ok := DecodePushFrame([]byte{0, 0, 0, 5, 0x0a}); ok {
 		t.Error("length mismatch accepted as ok")
 	}
+}
+
+// TestKuaishouDecode verifies the gunzip+base64 JSON frame decoder: a payload
+// is JSON-encoded, gzipped, base64-wrapped, then decoded back to messages with
+// the SCWeb* method names.
+func TestKuaishouDecode(t *testing.T) {
+	dec := newKuaishouDecoder(map[string]string{ksMethodComment: "chat"})
+	payload := map[string]any{"method": "SCWebFeedPush", "content": "你好", "user": map[string]any{"uid": "ks1", "nickname": "快手用户"}}
+	jsonBytes, _ := json.Marshal(payload)
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	_, _ = zw.Write(jsonBytes)
+	_ = zw.Close()
+	frame := []byte(base64.StdEncoding.EncodeToString(buf.Bytes()))
+
+	msgs, err := dec.Decode(frame)
+	if err != nil {
+		t.Fatalf("Decode: %v", err)
+	}
+	if len(msgs) != 1 || !msgs[0].OK || msgs[0].Method != ksMethodFeedPush {
+		t.Fatalf("msgs = %+v", msgs)
+	}
+}
+
+// TestKuaishouLiveSession drives a full kuaishou session: room page fetch,
+// signed dial, and JSON-frame event mapping (chat/like/enter/gift/room_stat).
+func TestKuaishouLiveSession(t *testing.T) {
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = io.WriteString(w, `<html>"roomId":"9988776655"</html>`)
+	}))
+	defer page.Close()
+	var gotSig atomic.Value
+	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sig := r.URL.Query().Get("signature"); sig != "" {
+			gotSig.Store(sig)
+		}
+		wsUpgrade(t, w, r, func(br *bufio.Reader, bw *bufio.Writer) error {
+			chat := ksJSONFrame(map[string]any{"method": "SCWebFeedPush", "content": "直播弹幕", "user": map[string]any{"uid": "ks100", "nickname": "观众甲"}})
+			like := ksJSONFrame(map[string]any{"method": "SCWebLikeMessage", "count": 5})
+			enter := ksJSONFrame(map[string]any{"method": "SCWebEnterRoomAck"})
+			gift := ksJSONFrame(map[string]any{"method": "SCWebGiftMessage", "gift_name": "啤酒", "count": 2, "user": map[string]any{"uid": "ks200", "nickname": "送礼人乙"}})
+			watching := ksJSONFrame(map[string]any{"method": "SCWebLiveWatchingUsers", "count": 777})
+			for _, f := range [][]byte{chat, like, enter, gift, watching} {
+				if err := writeFrameBytes(bw, 0x2, f); err != nil {
+					return err
+				}
+			}
+			// Keep the connection open until the client closes it.
+			_, _ = io.Copy(io.Discard, br)
+			return nil
+		})
+	}))
+	defer ws.Close()
+	envFor(t, page.URL, ws.URL)
+
+	reg := contracts.NewRegistry()
+	// The engine resolves the live-meta contract as "<platform>-meta" from
+	// Config.Platform; register the kuaishou transport under kuaishou-meta.
+	if err := reg.Add(&contracts.Contract{
+		Name:         "kuaishou-meta",
+		Platform:     "kuaishou",
+		Category:     "live_meta",
+		Version:      "1",
+		Transport:    contracts.Transport{BaseURL: "https://live.kuaishou.com", Path: "/{web_rid}", Method: "GET", Placeholders: []string{"web_rid"}},
+		TransportWS:  &contracts.TransportWS{WSSHost: "ws.local.test", Path: "/ws", Params: map[string]string{"aid": "1967"}, RuntimeParams: []string{"room_id"}},
+		Binding:      contracts.Binding{Fields: map[string]string{"room_id": "$.room_id"}},
+		ProtoMethods: map[string]string{ksMethodComment: "chat", ksMethodLike: "like", ksMethodEnterAck: "enter", ksMethodGift: "gift", ksMethodWatching: "room_stat"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &Config{
+		HTTP:     httpclient.New(httpclient.Config{}),
+		Registry: reg,
+		Signer:   func(string, map[string]string) (string, error) { return "ks-sig", nil },
+		Obs:      obs.NewCounterMap(),
+		Platform: "kuaishou",
+		Decoder:  newKuaishouDecoder(map[string]string{ksMethodComment: "chat", ksMethodLike: "like", ksMethodEnterAck: "enter", ksMethodGift: "gift", ksMethodWatching: "room_stat"}),
+	}
+	// Handler returns ErrRoomEnd once it has received 5 events, ending the
+	// session cleanly (kuaishou has no control-status termination).
+	var mu sync.Mutex
+	events := make([]model.LiveEvent, 0, 5)
+	handler := func(ev model.LiveEvent) error {
+		mu.Lock()
+		defer mu.Unlock()
+		events = append(events, ev)
+		if len(events) >= 5 {
+			return ErrRoomEnd
+		}
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := cfg.Connect(ctx, "https://live.kuaishou.com/9988776655", handler); err != nil && ctx.Err() == nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(events) != 5 {
+		t.Fatalf("got %d events, want 5: %+v", len(events), events)
+	}
+	if events[0].Event != "chat" || events[0].Content != "直播弹幕" {
+		t.Fatalf("chat = %+v", events[0])
+	}
+	if events[0].User.UID != "ks100" || events[0].User.Nickname != "观众甲" {
+		t.Fatalf("chat user = %+v", events[0].User)
+	}
+	if events[1].Event != "like" || events[1].Count != 5 {
+		t.Fatalf("like = %+v", events[1])
+	}
+	if events[2].Event != "enter" {
+		t.Fatalf("enter = %+v", events[2])
+	}
+	if events[3].Event != "gift" || events[3].Content != "啤酒" || events[3].Count != 2 {
+		t.Fatalf("gift = %+v", events[3])
+	}
+	if events[3].User.UID != "ks200" || events[3].User.Nickname != "送礼人乙" {
+		t.Fatalf("gift user = %+v", events[3].User)
+	}
+	if events[4].Event != "room_stat" || events[4].Count != 777 {
+		t.Fatalf("room_stat = %+v", events[4])
+	}
+	if sig, _ := gotSig.Load().(string); sig != "ks-sig" {
+		t.Fatalf("signature = %q", sig)
+	}
+}
+
+// TestXhsLiveSession drives a full xhs session over the same gunzip+base64
+// JSON frame format as kuaishou: room page fetch, signed dial, and the
+// EventFromXhsMessage mapping (chat/like/gift/enter/room_stat).
+func TestXhsLiveSession(t *testing.T) {
+	page := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = io.WriteString(w, `<html>"roomId":"667700011"</html>`)
+	}))
+	defer page.Close()
+	var gotSig atomic.Value
+	ws := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if sig := r.URL.Query().Get("signature"); sig != "" {
+			gotSig.Store(sig)
+		}
+		wsUpgrade(t, w, r, func(br *bufio.Reader, bw *bufio.Writer) error {
+			chat := ksJSONFrame(map[string]any{"method": "CommentMessage", "content": "小红书弹幕", "user": map[string]any{"uid": "xhs100", "nickname": "红薯甲"}})
+			like := ksJSONFrame(map[string]any{"method": "LikeMessage", "count": 9, "user": map[string]any{"uid": "xhs101", "nickname": "红薯乙"}})
+			gift := ksJSONFrame(map[string]any{"method": "GiftMessage", "gift_name": "小红花", "count": 1, "user": map[string]any{"uid": "xhs102", "nickname": "红薯丙"}})
+			member := ksJSONFrame(map[string]any{"method": "MemberMessage", "user": map[string]any{"uid": "xhs103", "nickname": "红薯丁"}})
+			stats := ksJSONFrame(map[string]any{"method": "RoomStatsMessage", "count": 321})
+			for _, f := range [][]byte{chat, like, gift, member, stats} {
+				if err := writeFrameBytes(bw, 0x2, f); err != nil {
+					return err
+				}
+			}
+			// Keep the connection open until the client closes it.
+			_, _ = io.Copy(io.Discard, br)
+			return nil
+		})
+	}))
+	defer ws.Close()
+	envFor(t, page.URL, ws.URL)
+
+	reg := contracts.NewRegistry()
+	if err := reg.Add(&contracts.Contract{
+		Name:         "xhs-meta",
+		Platform:     "xhs",
+		Category:     "live_meta",
+		Version:      "1",
+		Transport:    contracts.Transport{BaseURL: "https://www.xiaohongshu.com", Path: "/live/{room_id}", Method: "GET", Placeholders: []string{"room_id"}},
+		TransportWS:  &contracts.TransportWS{WSSHost: "ws.local.test", Path: "/ws/live", Params: map[string]string{"aid": "1967"}, RuntimeParams: []string{"room_id"}},
+		Binding:      contracts.Binding{Fields: map[string]string{"room_id": "$.room_id"}},
+		ProtoMethods: map[string]string{xhsMethodComment: "chat", xhsMethodLike: "like", xhsMethodGift: "gift", xhsMethodMember: "enter", xhsMethodStats: "room_stat"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	cfg := &Config{
+		HTTP:     httpclient.New(httpclient.Config{}),
+		Registry: reg,
+		Signer:   func(string, map[string]string) (string, error) { return "xhs-sig", nil },
+		Obs:      obs.NewCounterMap(),
+		Platform: "xhs",
+		Decoder:  newXhsDecoder(map[string]string{xhsMethodComment: "chat", xhsMethodLike: "like", xhsMethodGift: "gift", xhsMethodMember: "enter", xhsMethodStats: "room_stat"}),
+	}
+	var mu sync.Mutex
+	events := make([]model.LiveEvent, 0, 5)
+	handler := func(ev model.LiveEvent) error {
+		mu.Lock()
+		defer mu.Unlock()
+		events = append(events, ev)
+		if len(events) >= 5 {
+			return ErrRoomEnd
+		}
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := cfg.Connect(ctx, "https://www.xiaohongshu.com/live/667700011", handler); err != nil && ctx.Err() == nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(events) != 5 {
+		t.Fatalf("got %d events, want 5: %+v", len(events), events)
+	}
+	if events[0].Event != "chat" || events[0].Content != "小红书弹幕" {
+		t.Fatalf("chat = %+v", events[0])
+	}
+	if events[0].User.UID != "xhs100" || events[0].User.Nickname != "红薯甲" {
+		t.Fatalf("chat user = %+v", events[0].User)
+	}
+	if events[1].Event != "like" || events[1].Count != 9 {
+		t.Fatalf("like = %+v", events[1])
+	}
+	if events[2].Event != "gift" || events[2].Content != "小红花" || events[2].Count != 1 {
+		t.Fatalf("gift = %+v", events[2])
+	}
+	if events[3].Event != "enter" || events[3].User.UID != "xhs103" {
+		t.Fatalf("enter = %+v", events[3])
+	}
+	if events[4].Event != "room_stat" || events[4].Count != 321 {
+		t.Fatalf("room_stat = %+v", events[4])
+	}
+	if sig, _ := gotSig.Load().(string); sig != "xhs-sig" {
+		t.Fatalf("signature = %q", sig)
+	}
+}
+
+// ksJSONFrame wraps a JSON message in gunzip+base64 (kuaishou wire format).
+func ksJSONFrame(msg map[string]any) []byte {
+	b, _ := json.Marshal(msg)
+	var buf bytes.Buffer
+	zw := gzip.NewWriter(&buf)
+	_, _ = zw.Write(b)
+	_ = zw.Close()
+	return []byte(base64.StdEncoding.EncodeToString(buf.Bytes()))
 }

@@ -1,0 +1,16 @@
+{
+  "name": "xhs-user",
+  "platform": "xhs",
+  "category": "user",
+  "version": "1",
+  "doc": "user profile enrichment by user id. Evidence: https://www.xiaohongshu.com/user/profile/{USER_ID} (docs api-formats-douyin.md 7.7.1) + 'user/profile' path in strings table. Endpoint reconstructed as a JSON surface with users binding.",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v1/user/info",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "1967"},
+    "placeholders": ["sec_uid"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"users": "$.user_list"}
+}

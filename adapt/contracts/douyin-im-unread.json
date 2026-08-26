@@ -1,0 +1,17 @@
+{
+  "name": "douyin-im-unread",
+  "platform": "douyin",
+  "category": "im_unread",
+  "version": "1",
+  "doc": "fetch the IM unread-message count. Evidence: /v1/client/unread_count (docs 7.6.3) + service.douyin.unread_count (service.* table) + 'unread_count' string. Polled as a task; emits an event when the count changes.",
+  "transport": {
+    "base_url": "https://imapi.douyin.com",
+    "path": "/v1/client/unread_count",
+    "method": "GET",
+    "query": {"aid": "6383"},
+    "placeholders": []
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["sessionid"], "source": "account cookie pool import"},
+  "binding": {"fields": {"total_unread": "$.unread_count", "conv_list": "$.conv_list"}}
+}

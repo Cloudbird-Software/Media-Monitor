@@ -1,0 +1,18 @@
+{
+  "name": "douyin-send-message",
+  "platform": "douyin",
+  "category": "send_message",
+  "version": "1",
+  "doc": "send one direct message to a target user. Evidence: IPC controller.controller.douyin.sendMessageV2 (chunk 19) carries web_id + ms4 (sec_uid); secondMessageContent + 'ms 后发送第二条消息' prove a two-message flow with a delay; send_count + msgTimeLoad:15000 prove per-account send caps and timing. The exact HTTP path is reconstructed from the documented imapi /v1/message/ namespace (3 sibling endpoints evidenced in docs/api-formats-douyin.md 7.6) since the obfuscated main.js constructs the URL dynamically and it is not directly readable.",
+  "transport": {
+    "base_url": "https://imapi.douyin.com",
+    "path": "/v1/message/send/",
+    "method": "POST",
+    "query": {"aid": "6383", "device_platform": "webapp"},
+    "body": {"sec_user_id": "", "text": ""},
+    "placeholders": []
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["sessionid"], "source": "account cookie pool import (browser profile)"},
+  "binding": {"fields": {"status": "$.data.status", "data": "$.data"}}
+}

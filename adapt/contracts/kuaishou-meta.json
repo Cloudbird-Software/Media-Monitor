@@ -1,0 +1,29 @@
+{
+  "name": "kuaishou-meta",
+  "platform": "kuaishou",
+  "category": "live_meta",
+  "version": "1",
+  "doc": "kuaishou live room metadata + websocket shape. Evidence: live.kuaishou.com + SCWebFeedPush/SCWebLiveWatchingUsers strings + gunzip+base64 frame format (docs api-formats-douyin.md live protobuf section references SCWebEnterRoomAck/CSWebEnterRoom). The wss host and path follow the kuaishou webcast surface.",
+  "transport": {
+    "base_url": "https://live.kuaishou.com",
+    "path": "/webcast/room/web/enter/",
+    "method": "GET",
+    "query": {"aid": "1967", "device_platform": "web", "language": "zh-CN", "enter_from": "web_live", "cookie_enabled": "true"},
+    "placeholders": ["web_rid"]
+  },
+  "transport_ws": {
+    "wss_host": "wss://ws2-web.sf-webcast.com",
+    "path": "/ws2/webcast",
+    "params": {"aid": "1967", "device_platform": "web", "live_id": "1"},
+    "runtime_params": ["web_rid"]
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {"fields": {"room_id": "$.room_id"}},
+  "protocol_methods": {
+    "SCWebFeedPush": "chat",
+    "SCWebLiveWatchingUsers": "room_stat",
+    "SCWebEnterRoomAck": "enter",
+    "SCWebLikeMessage": "like",
+    "SCWebGiftMessage": "gift"
+  }
+}

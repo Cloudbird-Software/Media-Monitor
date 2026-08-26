@@ -2,12 +2,24 @@
   "canaries": [
     {"name": "douyin-search-fixture", "contract": "douyin-search", "kind": "items", "fixture": "douyin-search.1.json", "expect": ["data"]},
     {"name": "douyin-comments-fixture", "contract": "douyin-comments", "kind": "comments", "fixture": "douyin-comments.1.json", "expect": ["comments", "has_more", "cursor"]},
+    {"name": "douyin-comments-replies-fixture", "contract": "douyin-comments-replies", "kind": "comments", "fixture": "douyin-comments-replies.1.json", "expect": ["comments", "has_more", "cursor"]},
     {"name": "douyin-user-fixture", "contract": "douyin-user", "kind": "users", "fixture": "douyin-user.1.json", "expect": ["user_list"]},
     {"name": "douyin-group-fixture", "contract": "douyin-group-members", "kind": "members", "fixture": "douyin-group.1.json", "expect": ["members"]},
     {"name": "douyin-meta-fixture", "contract": "douyin-meta", "kind": "meta", "fixture": "douyin-meta.1.json", "expect": ["room_id"]},
+    {"name": "kuaishou-meta-fixture", "contract": "kuaishou-meta", "kind": "meta", "fixture": "kuaishou-meta.1.json", "expect": ["room_id"]},
+    {"name": "xhs-meta-fixture", "contract": "xhs-meta", "kind": "meta", "fixture": "xhs-meta.1.json", "expect": ["room_id"]},
+    {"name": "douyin-send-message-fixture", "contract": "douyin-send-message", "kind": "meta", "fixture": "douyin-send-message.1.json", "expect": ["data"]},
+    {"name": "douyin-video-download-fixture", "contract": "douyin-video-download", "kind": "meta", "fixture": "douyin-video-download.1.json", "expect": ["aweme_detail"]},
+    {"name": "douyin-collects-fixture", "contract": "douyin-collects", "kind": "items", "fixture": "douyin-collects.1.json", "expect": ["collects"]},
+    {"name": "douyin-im-unread-fixture", "contract": "douyin-im-unread", "kind": "meta", "fixture": "douyin-im-unread.1.json", "expect": ["unread_count"]},
     {"name": "kuaishou-search-fixture", "contract": "kuaishou-search", "kind": "items", "fixture": "kuaishou-search.1.json", "expect": ["data"]},
     {"name": "kuaishou-comments-fixture", "contract": "kuaishou-comments", "kind": "comments", "fixture": "kuaishou-comments.1.json", "expect": ["comment_list"]},
+    {"name": "kuaishou-user-fixture", "contract": "kuaishou-user", "kind": "users", "fixture": "kuaishou-user.1.json", "expect": ["user_list"]},
+    {"name": "kuaishou-group-fixture", "contract": "kuaishou-group-members", "kind": "members", "fixture": "kuaishou-group.1.json", "expect": ["members"]},
     {"name": "xhs-search-fixture", "contract": "xhs-search", "kind": "items", "fixture": "xhs-search.1.json", "expect": ["data"]},
-    {"name": "xhs-comments-fixture", "contract": "xhs-comments", "kind": "comments", "fixture": "xhs-comments.1.json", "expect": ["data"]}
+    {"name": "xhs-comments-fixture", "contract": "xhs-comments", "kind": "comments", "fixture": "xhs-comments.1.json", "expect": ["data"]},
+    {"name": "xhs-comments-replies-fixture", "contract": "xhs-comments-replies", "kind": "comments", "fixture": "xhs-comments-replies.1.json", "expect": ["data"]},
+    {"name": "xhs-user-fixture", "contract": "xhs-user", "kind": "users", "fixture": "xhs-user.1.json", "expect": ["user_list"]},
+    {"name": "xhs-group-fixture", "contract": "xhs-group-members", "kind": "members", "fixture": "xhs-group.1.json", "expect": ["members"]}
   ]
 }

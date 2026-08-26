@@ -166,13 +166,12 @@ func TestKuaishouDefaultsSmoke(t *testing.T) {
 	if len(d.CookieNames) != 1 || d.CookieNames[0] != "did" {
 		t.Fatalf("CookieNames = %v", d.CookieNames)
 	}
-	if d.Names["search"] != "kuaishou-search" || d.Names["comments"] != "kuaishou-comments" {
+	if d.Names["search"] != "kuaishou-search" || d.Names["comments"] != "kuaishou-comments" ||
+		d.Names["user"] != "kuaishou-user" || d.Names["group"] != "kuaishou-group-members" {
 		t.Fatalf("Names = %v", d.Names)
 	}
-	for _, cat := range []string{"replies", "user", "group"} {
-		if d.Names[cat] != "" {
-			t.Fatalf("category %s should not be declared, got %q", cat, d.Names[cat])
-		}
+	if d.Names["replies"] != "" {
+		t.Fatalf("replies should not be declared, got %q", d.Names["replies"])
 	}
 	for cat, name := range d.Names {
 		if name == "" {
@@ -184,5 +183,67 @@ func TestKuaishouDefaultsSmoke(t *testing.T) {
 	}
 	if d.SignerAs() != nil {
 		t.Fatal("default Signer should be nil")
+	}
+}
+
+// TestKuaishouGroupMembersRealContract: the kuaishou-group-members contract
+// drives a mocked group-member enumeration; group_id travels as a query
+// placeholder and member records bind with joined_at.
+func TestKuaishouGroupMembersRealContract(t *testing.T) {
+	var sawGroupID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawGroupID = r.URL.Query().Get("group_id")
+		_, _ = w.Write([]byte(`{"members":[
+			{"uid":"3x222222001","nickname":"快手群成员一","joined_at":1780003001,"ip_label":"四川","gender":1},
+			{"uid":"3x222222002","nickname":"快手群成员二","joined_at":1780003002}
+		],"cursor":"","has_more":false}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDir(t)
+	d, _, _ := Defaults(dir)
+	reg := remapContracts(t, dir, srv, "kuaishou-group-members")
+	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
+	members, _, err := eng.GroupMembers(context.Background(), Platform, "g-k1", model.Cursor{}, 20)
+	if err != nil {
+		t.Fatalf("GroupMembers: %v", err)
+	}
+	if len(members) != 2 {
+		t.Fatalf("members = %d, want 2", len(members))
+	}
+	if members[0].UID != "3x222222001" || members[0].Nickname != "快手群成员一" || members[0].JoinedAt != 1780003001 {
+		t.Fatalf("member fields wrong: %+v", members[0])
+	}
+	if members[0].IPLabel != "四川" || members[0].Gender != 1 {
+		t.Fatalf("member binding wrong: %+v", members[0])
+	}
+	if sawGroupID != "g-k1" {
+		t.Fatalf("group_id param = %q", sawGroupID)
+	}
+}
+
+// TestKuaishouUserProfileRealContract: the kuaishou-user contract drives a
+// mocked profile lookup; sec_uid travels as a query placeholder.
+func TestKuaishouUserProfileRealContract(t *testing.T) {
+	var sawUID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawUID = r.URL.Query().Get("sec_uid")
+		_, _ = w.Write([]byte(`{"user_list":[{"uid":"3x111111001","short_id":"K100001","nickname":"快手用户一","follower_count":3200}]}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDir(t)
+	d, _, _ := Defaults(dir)
+	reg := remapContracts(t, dir, srv, "kuaishou-user")
+	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
+	u, err := eng.UserProfile(context.Background(), Platform, "sec-k1")
+	if err != nil {
+		t.Fatalf("UserProfile: %v", err)
+	}
+	if u.UID != "3x111111001" || u.ShortID != "K100001" || u.Nickname != "快手用户一" || u.FollowerCount != 3200 {
+		t.Fatalf("profile = %+v", u)
+	}
+	if sawUID != "sec-k1" {
+		t.Fatalf("sec_uid param = %q", sawUID)
 	}
 }

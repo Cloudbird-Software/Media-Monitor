@@ -43,7 +43,7 @@ func openTaskStore(override string) (*store.Store, error) {
 // tasksSubmit submits one queued task and prints it as a JSON row.
 func tasksSubmit(args []string) error {
 	fs := flag.NewFlagSet("tasks submit", flag.ExitOnError)
-	kind := fs.String("kind", "", "task kind: search|comments|replies|users|group_members|live_monitor|flow")
+	kind := fs.String("kind", "", "task kind: search|comments|replies|users|group_members|live_monitor|trace|flow")
 	config := fs.String("config", "", "raw JSON task config object")
 	if err := fs.Parse(args); err != nil {
 		return err

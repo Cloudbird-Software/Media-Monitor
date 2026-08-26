@@ -57,11 +57,12 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 		UA:          mobileUA,
 		CookieNames: []string{"did"},
 		Names: map[string]string{
-			"search":   "kuaishou-search",
-			"comments": "kuaishou-comments",
-			"replies":  "",
-			"user":     "",
-			"group":    "",
+			"search":       "kuaishou-search",
+			"comments":     "kuaishou-comments",
+			"replies":      "",
+			"user":         "kuaishou-user",
+			"group":        "kuaishou-group-members",
+			"send_message": "",
 		},
 	}, reg, nil
 }

@@ -4,7 +4,7 @@
   "category": "live_meta",
   "version": "2",
   "doc": "live room page -> room id extraction target (declarative), plus the websocket endpoint shape and the webcast message-method table consumed by internal/live. Values are data, code never hardcodes them.",
-  "transport": {"base_url": "https://live.douyin.com", "path": "/{room_web}/", "method": "GET", "placeholders": ["room_web"]},
+  "transport": {"base_url": "https://live.douyin.com", "path": "/{room_web}/", "method": "GET", "placeholders": ["room_web"], "alt_hosts": ["live.douyin.com", "www.live.douyin.com"]},
   "transport_ws": {
     "wss_host": "webcast100-ws-web-lq.douyin.com",
     "path": "/webcast/im/push/v2/",

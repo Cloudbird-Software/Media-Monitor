@@ -31,7 +31,10 @@ var ErrRoomEnd = errors.New("live: room ended by handler")
 var errHandlerFatal = errors.New("live: handler failed")
 
 const (
+	// metaContractName is the live-meta contract name for the default
+	// (douyin) platform; other platforms resolve to "<platform>-meta".
 	metaContractName       = "douyin-meta"
+	defaultLivePlatform    = "douyin"
 	roomIDField            = "room_id"
 	defaultReconnectMax    = 3
 	defaultHeartbeat       = 10 * time.Second
@@ -49,6 +52,22 @@ type Config struct {
 	Obs               *obs.CounterMap
 	ReconnectMax      int           // <=0 defaults to 3
 	HeartbeatInterval time.Duration // <=0 defaults to 10s
+	// Platform selects the live-meta contract ("<platform>-meta"); "" keeps
+	// the historic douyin default.
+	Platform string
+	// Decoder is the optional platform decoder. When set, runSession uses it
+	// instead of the built-in douyin protobuf path — this is how kuaishou's
+	// gunzip+base64 JSON frames plug into the same engine (see 3.1). nil falls
+	// back to douyin protobuf decoding.
+	Decoder Decoder
+}
+
+// metaName resolves the live-meta contract name for the configured platform.
+func (c *Config) metaName() string {
+	if c.Platform == "" || c.Platform == defaultLivePlatform {
+		return metaContractName
+	}
+	return c.Platform + "-meta"
 }
 
 // SignFn computes the wss "signature" query parameter. urlQuery is the
@@ -61,7 +80,7 @@ type SignFn func(urlQuery string, params map[string]string) (signature string, e
 // protocolMethods loads the contract's method table (proto name -> event
 // key) with the built-in defaults when absent (declared fallback).
 func (c *Config) protocolMethods() (map[string]string, error) {
-	if meta, ok := c.Registry.Get(metaContractName); ok && meta != nil && len(meta.ProtoMethods) > 0 {
+	if meta, ok := c.Registry.Get(c.metaName()); ok && meta != nil && len(meta.ProtoMethods) > 0 {
 		out := map[string]string{}
 		for key, proto := range meta.ProtoMethods {
 			out[proto] = key
@@ -101,7 +120,7 @@ func (c *Config) Connect(ctx context.Context, roomURL string, handler func(ev mo
 		heartbeat = defaultHeartbeat
 	}
 
-	pageURL, err := normalizeRoomURL(c.Registry, roomURL)
+	pageURL, err := normalizeRoomURL(c.Registry, c.metaName(), roomURL)
 	if err != nil {
 		return err
 	}
@@ -112,7 +131,7 @@ func (c *Config) Connect(ctx context.Context, roomURL string, handler func(ev mo
 	if err != nil {
 		return err
 	}
-	roomID, err := fetchRoomID(ctx, c.HTTP, c.Registry, pageURL)
+	roomID, err := fetchRoomID(ctx, c.HTTP, c.Registry, c.metaName(), pageURL)
 	if err != nil {
 		return err
 	}
@@ -154,7 +173,7 @@ func (c *Config) runSession(ctx context.Context, roomID string, cursor *string, 
 	if err != nil {
 		return err
 	}
-	conn, err := wsutil.Dial(ctx, wssURL, wssHeaders(c.HTTP, c.Registry))
+	conn, err := wsutil.Dial(ctx, wssURL, wssHeaders(c.HTTP, c.Registry, c.metaName()))
 	if err != nil {
 		return fmt.Errorf("live: dial: %w", err)
 	}
@@ -173,52 +192,40 @@ func (c *Config) runSession(ctx context.Context, roomID string, cursor *string, 
 			}
 			return fmt.Errorf("live: read: %w", err)
 		}
-		body, err := maybeGunzip(raw)
+
+		// Decode one frame into zero or more messages. With a platform
+		// Decoder (kuaishou) the decoder owns gunzip+base64+JSON and returns
+		// already-mapped methods; otherwise fall back to the douyin protobuf
+		// path (gunzip -> DecodeResponse -> DecodeMessage).
+		frameCursor, ackToken, decoded, err := c.decodeFrame(raw)
 		if err != nil {
-			return fmt.Errorf("live: decompress: %w", err)
+			return err
 		}
-		resp, err := DecodeResponse(body)
-		if err != nil {
-			return fmt.Errorf("live: response decode: %w", err)
-		}
-		if resp.Cursor != "" {
-			*cursor = resp.Cursor
+		if frameCursor != "" {
+			*cursor = frameCursor
 		}
 
-		// Ack every non-control response once (control responses terminate
-		// the session and are never acked); decode first to know the family.
-		type decodedMsg struct {
-			method  string
-			payload []byte
-			ok      bool
-		}
-		decoded := make([]decodedMsg, 0, len(resp.Messages))
 		hasNonControl := false
-		for _, msg := range resp.Messages {
-			method, payload, ok := DecodeMessage(msg)
-			decoded = append(decoded, decodedMsg{method, payload, ok})
-			if ok && method != methodControl {
+		for _, dm := range decoded {
+			if dm.OK && dm.Method != methodControl {
 				hasNonControl = true
 			}
 		}
-		if hasNonControl {
-			c.sendAck(conn, resp)
+		if hasNonControl && ackToken != "" {
+			c.sendAckWith(conn, ackToken)
 		}
 
+		now := time.Now().Unix()
 		for _, dm := range decoded {
-			if !dm.ok {
+			if !dm.OK {
 				c.inc("live.error", 1)
 				continue
 			}
-			fallbackNow := time.Now().Unix()
-			if resp.Now > 0 {
-				fallbackNow = int64(resp.Now)
-			}
-			ev, status, recognized := EventFromMessage(roomID, dm.method, dm.payload, fallbackNow)
+			ev, status, recognized := c.eventFromPayload(roomID, dm, now)
 			if !recognized {
 				continue
 			}
-			if dm.method == methodControl {
+			if dm.Method == methodControl {
 				// Non-terminal control messages are housekeeping and are not
 				// delivered; the terminal one (status==3) is delivered as the
 				// final event and then ends the session.
@@ -246,17 +253,86 @@ func (c *Config) runSession(ctx context.Context, roomID string, cursor *string, 
 	}
 }
 
+// decodeFrame turns one raw downlink frame into decoded messages. With a
+// platform Decoder it delegates entirely (the decoder owns gunzip+base64 /
+// JSON and supplies its own ack token); otherwise it runs the douyin protobuf
+// path and returns the response cursor + internal_ext ack token.
+func (c *Config) decodeFrame(raw []byte) (cursor string, ackToken string, decoded []Decoded, err error) {
+	if c.Decoder != nil {
+		msgs, derr := c.Decoder.Decode(raw)
+		return "", c.Decoder.AckToken(), msgs, derr
+	}
+	body, err := maybeGunzip(raw)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("live: decompress: %w", err)
+	}
+	resp, err := DecodeResponse(body)
+	if err != nil {
+		return "", "", nil, fmt.Errorf("live: response decode: %w", err)
+	}
+	out := make([]Decoded, 0, len(resp.Messages))
+	for _, msg := range resp.Messages {
+		method, payload, ok := DecodeMessage(msg)
+		out = append(out, Decoded{Method: method, Payload: payload, OK: ok})
+	}
+	return resp.Cursor, resp.InternalExt, out, nil
+}
+
+// sendAckWith writes an ack PushFrame carrying the given token.
+func (c *Config) sendAckWith(conn *wsutil.Conn, token string) {
+	var payload []byte
+	if token != "" {
+		payload = []byte(token)
+	}
+	if err := conn.WriteBinary(EncodePushFrame(PushFrame{PayloadType: "ack", Payload: payload})); err != nil {
+		return
+	}
+	c.inc("live.ack", 1)
+}
+
+// eventFromPayload maps a decoded message to a LiveEvent. With a platform
+// Decoder the method name is already the platform method (e.g. SCWebFeedPush)
+// and we dispatch via the decoder's own Event mapping (control status 0);
+// otherwise the douyin path, which returns the control status for control
+// messages.
+func (c *Config) eventFromPayload(roomID string, dm Decoded, now int64) (ev model.LiveEvent, status int64, recognized bool) {
+	if c.Decoder != nil {
+		ev, recognized = c.Decoder.Event(roomID, dm.Method, dm.Payload, now)
+		return ev, 0, recognized
+	}
+	return EventFromMessage(roomID, dm.Method, dm.Payload, now)
+}
+
+// sendAckToken sends an ack using the Decoder's token (kuaishou: none).
+func (c *Config) sendAckToken(conn *wsutil.Conn) {
+	if c.Decoder != nil {
+		// Kuaishou uses no internal_ext ack token; nothing to echo.
+		return
+	}
+	// douyin ack is sent in decodeFrame path via sendAck; kept for compat.
+}
+
 // hbLoop sends a heartbeat PushFrame every interval until ctx is done or a
 // write fails (a dead socket also surfaces in the read loop).
 func hbLoop(ctx context.Context, conn *wsutil.Conn, c *Config, interval time.Duration) {
 	t := time.NewTicker(interval)
 	defer t.Stop()
-	frame := EncodePushFrame(PushFrame{PayloadType: "hb"})
+	// Kuaishou uses a JSON heartbeat; douyin uses a protobuf PushFrame. The
+	// Decoder supplies the right bytes when present.
+	var frame []byte
+	if c.Decoder != nil {
+		frame = c.Decoder.Heartbeat()
+	} else {
+		frame = EncodePushFrame(PushFrame{PayloadType: "hb"})
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
+			if len(frame) == 0 {
+				continue
+			}
 			if err := conn.WriteBinary(frame); err != nil {
 				return
 			}
@@ -298,36 +374,48 @@ func maybeGunzip(b []byte) ([]byte, error) {
 	return out, nil
 }
 
-// wssEndpointRoot is the im-push host. MEDIAMON_LIVE_WSS_ENDPOINT
-// (test-only escape hatch, never set in production) redirects the endpoint
-// to a local server; wsutil accepts http:// as a ws:// alias.
+// defaultWSSEndpoint is the built-in fallback im-push endpoint (douyin's
+// historic webcast host). The canonical source is the meta contract's
+// transport_ws.wss_host; this constant only serves contracts that predate
+// the field. MEDIAMON_LIVE_WSS_ENDPOINT (test-only escape hatch, never set
+// in production) redirects the endpoint to a local server; wsutil accepts
+// http:// as a ws:// alias.
+const defaultWSSEndpoint = "wss://webcast100-ws-web-lq.douyin.com"
+
 func wssEndpointRoot() string {
 	if e := os.Getenv("MEDIAMON_LIVE_WSS_ENDPOINT"); e != "" {
 		return strings.TrimRight(e, "/")
 	}
-	return "wss://webcast100-ws-web-lq.douyin.com"
+	return defaultWSSEndpoint
 }
 
-// buildWSSURL assembles the signed websocket URL: the fixed im-push query
-// template plus cursor, then "&signature=" with the SignFn result appended
-// last (the signature covers the params the SignFn chooses from urlQuery).
-// buildWSSURL assembles the wss dial URL entirely from the douyin-meta
-// contract's transport_ws section (host/path/fixed params/runtime-param
-// names). Env override MEDIAMON_LIVE_WSS_ENDPOINT replaces scheme://host,
-// matching the page endpoint pattern. Fail-closed when the section (or any
-// required part) is missing.
+// buildWSSURL assembles the wss dial URL from the platform meta contract's
+// transport_ws section (host/path/fixed params/runtime-param names), then
+// appends "&signature=" with the SignFn result last (the signature covers
+// the params the SignFn chooses from urlQuery). Env override
+// MEDIAMON_LIVE_WSS_ENDPOINT replaces scheme://host, matching the page
+// endpoint pattern. Fail-closed when the section or its path is missing;
+// a missing wss_host falls back to the built-in default endpoint (see
+// wssEndpointRoot).
 func (c *Config) buildWSSURL(roomID, cursor string) (string, error) {
-	meta, ok := c.Registry.Get(metaContractName)
+	metaName := c.metaName()
+	meta, ok := c.Registry.Get(metaName)
 	if !ok {
-		return "", fmt.Errorf("live: contract %q not registered", metaContractName)
+		return "", fmt.Errorf("live: contract %q not registered", metaName)
 	}
 	tws := meta.TransportWS
-	if tws == nil || tws.Path == "" || tws.WSSHost == "" {
-		return "", fmt.Errorf("live: contract %q declares no transport_ws (wss_host+path)", metaContractName)
+	if tws == nil || tws.Path == "" {
+		return "", fmt.Errorf("live: contract %q declares no transport_ws (path)", metaName)
 	}
-	root := "wss://" + tws.WSSHost
-	if e := os.Getenv("MEDIAMON_LIVE_WSS_ENDPOINT"); e != "" {
-		root = strings.TrimRight(e, "/")
+	root := wssEndpointRoot()
+	if tws.WSSHost != "" {
+		// The contract's wss_host is canonical; tolerate a scheme-qualified
+		// value (ws:// or wss://) as well as a bare host.
+		host := strings.TrimPrefix(strings.TrimPrefix(tws.WSSHost, "wss://"), "ws://")
+		root = "wss://" + host
+		if e := os.Getenv("MEDIAMON_LIVE_WSS_ENDPOINT"); e != "" {
+			root = strings.TrimRight(e, "/")
+		}
 	}
 	q := url.Values{}
 	for k, v := range tws.Params {
@@ -342,7 +430,7 @@ func (c *Config) buildWSSURL(roomID, cursor string) (string, error) {
 		case "cursor":
 			q.Set("cursor", cursor)
 		default:
-			return "", fmt.Errorf("live: contract %q declares unknown runtime param %q", metaContractName, rp)
+			return "", fmt.Errorf("live: contract %q declares unknown runtime param %q", metaName, rp)
 		}
 	}
 	base := root + tws.Path + "?" + q.Encode()
@@ -397,23 +485,23 @@ func randomUniqueID() string {
 }
 
 // wssHeaders builds the websocket handshake headers: a rotating UA from the
-// HTTP client and an Origin derived from the douyin-meta contract base_url
-// (no hardcoded URL here).
-func wssHeaders(hc *httpclient.Client, reg *contracts.Registry) http.Header {
+// HTTP client and an Origin derived from the meta contract base_url (no
+// hardcoded URL here).
+func wssHeaders(hc *httpclient.Client, reg *contracts.Registry, metaName string) http.Header {
 	h := http.Header{}
 	if hc != nil {
 		h.Set("User-Agent", hc.UA())
 	}
-	if origin := pageOrigin(reg); origin != "" {
+	if origin := pageOrigin(reg, metaName); origin != "" {
 		h.Set("Origin", origin)
 	}
 	return h
 }
 
-// pageOrigin derives the wss Origin header from the douyin-meta contract
-// base_url (scheme://host).
-func pageOrigin(reg *contracts.Registry) string {
-	c, ok := reg.Get(metaContractName)
+// pageOrigin derives the wss Origin header from the meta contract base_url
+// (scheme://host).
+func pageOrigin(reg *contracts.Registry, metaName string) string {
+	c, ok := reg.Get(metaName)
 	if !ok {
 		return ""
 	}
@@ -424,17 +512,23 @@ func pageOrigin(reg *contracts.Registry) string {
 	return u.Scheme + "://" + u.Host
 }
 
+// defaultRoomHosts is the built-in fallback room-URL host whitelist
+// (douyin's historic live hosts). The canonical source is the meta
+// contract's transport base_url host + alt_hosts; these constants only
+// serve contracts that declare no alt_hosts.
+var defaultRoomHosts = []string{"live.douyin.com", "www.live.douyin.com"}
+
 // normalizeRoomURL validates an input room URL and normalizes it to the
-// canonical live.douyin.com/{room_web} form declared by the douyin-meta
-// contract (transport base_url + path placeholder; nothing else is
-// hardcoded here).
-func normalizeRoomURL(reg *contracts.Registry, raw string) (string, error) {
+// canonical {base_url}/{room_web} form declared by the platform meta
+// contract (transport base_url + path placeholder; accepted hosts come from
+// the contract's base_url host and alt_hosts).
+func normalizeRoomURL(reg *contracts.Registry, metaName, raw string) (string, error) {
 	if strings.TrimSpace(raw) == "" {
 		return "", errors.New("live: room url is required")
 	}
-	c, ok := reg.Get(metaContractName)
+	c, ok := reg.Get(metaName)
 	if !ok {
-		return "", fmt.Errorf("live: contract %q not registered", metaContractName)
+		return "", fmt.Errorf("live: contract %q not registered", metaName)
 	}
 	if len(c.Transport.Placeholders) == 0 {
 		return "", fmt.Errorf("live: contract %q declares no path placeholders", c.Name)
@@ -447,10 +541,26 @@ func normalizeRoomURL(reg *contracts.Registry, raw string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("live: parse room url: %w", err)
 	}
-	switch strings.ToLower(pu.Hostname()) {
-	case "live.douyin.com", "www.live.douyin.com":
-	default:
-		return "", fmt.Errorf("live: unsupported room url host %q (want live.douyin.com)", pu.Hostname())
+	// Accepted hosts: the contract's transport base_url host plus its
+	// declared alt_hosts. Contracts without alt_hosts fall back to the
+	// built-in douyin aliases (defaultRoomHosts) for compatibility.
+	contractHost := ""
+	if cu, err := url.Parse(c.Transport.BaseURL); err == nil {
+		contractHost = strings.ToLower(cu.Hostname())
+	}
+	allowed := map[string]bool{contractHost: true}
+	if len(c.Transport.AltHosts) > 0 {
+		for _, h := range c.Transport.AltHosts {
+			allowed[strings.ToLower(h)] = true
+		}
+	} else {
+		for _, h := range defaultRoomHosts {
+			allowed[h] = true
+		}
+	}
+	want := strings.ToLower(pu.Hostname())
+	if !allowed[want] {
+		return "", fmt.Errorf("live: unsupported room url host %q (want %q)", pu.Hostname(), contractHost)
 	}
 	segs := strings.Split(strings.Trim(pu.Path, "/"), "/")
 	if len(segs) == 0 || segs[0] == "" {
@@ -475,11 +585,11 @@ func normalizeRoomURL(reg *contracts.Registry, raw string) (string, error) {
 }
 
 // fetchRoomID GETs the room page and extracts the room id via the runtime
-// locator semantics declared by the douyin-meta binding field "room_id".
-func fetchRoomID(ctx context.Context, hc *httpclient.Client, reg *contracts.Registry, pageURL string) (string, error) {
-	c, ok := reg.Get(metaContractName)
+// locator semantics declared by the meta contract's binding field "room_id".
+func fetchRoomID(ctx context.Context, hc *httpclient.Client, reg *contracts.Registry, metaName, pageURL string) (string, error) {
+	c, ok := reg.Get(metaName)
 	if !ok {
-		return "", fmt.Errorf("live: contract %q not registered", metaContractName)
+		return "", fmt.Errorf("live: contract %q not registered", metaName)
 	}
 	// The binding KEY is the semantic field name whose camelCase form is the
 	// page locator; the VALUE ($.room_id) is the JSON-document path form and

@@ -1,0 +1,12 @@
+{
+  "aweme_detail": {
+    "aweme_id": "7660000000000000001",
+    "desc": "示例视频",
+    "video": {
+      "duration": 15000,
+      "play_addr": {"url_list": ["https://example.invalid/video/play/7660000000000000001.mp4"]},
+      "cover": {"url_list": ["https://example.invalid/cover/1.jpg"]}
+    },
+    "author": {"uid": "1000000001", "nickname": "作者一"}
+  }
+}

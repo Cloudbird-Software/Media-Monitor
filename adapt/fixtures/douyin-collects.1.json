@@ -1,0 +1,8 @@
+{
+  "collects": [
+    {"collects_id": "7382917462983745280", "collects_name": "默认收藏夹", "total": 42},
+    {"collects_id": "7382917462983745281", "collects_name": "素材", "total": 10}
+  ],
+  "cursor": 0,
+  "has_more": false
+}

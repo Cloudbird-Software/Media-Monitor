@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/core"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/store"
@@ -46,41 +47,35 @@ func writeDemoAdapt(t *testing.T, srvURL string) string {
 }
 
 // newTestDaemon wires a daemon against the given adapt dir and returns it
-// with its routes mounted on an httptest server.
+// with its routes mounted on an httptest server. The license gate is disabled
+// by default (tests that exercise the gate set MEDIAMON_LICENSE_REQUIRED
+// before calling).
 func newTestDaemon(t *testing.T, dataDir, adaptDir string) (*daemon, *httptest.Server) {
 	t.Helper()
 	t.Setenv("MEDIAMON_ADAPT_DIR", adaptDir)
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	if os.Getenv("MEDIAMON_LICENSE_REQUIRED") == "" {
+		t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
+	}
 	st, err := store.Open(dataDir)
 	if err != nil {
 		t.Fatal(err)
 	}
 	counters := obs.NewCounterMap()
-	d := &daemon{runner: core.NewRunner(st, counters), counters: counters}
-	d.wireAdapt()
+	d := &daemon{runner: core.NewRunner(st, counters), counters: counters, im: newIMPoller()}
+	d.wireAdapt(dataDir)
+	d.wireLicense(dataDir)
+	d.wireDatacenter(dataDir)
 	ts := httptest.NewServer(d.routes())
 	t.Cleanup(func() {
 		ts.Close()
 		_ = st.Close()
+		if d.hub != nil {
+			_ = d.hub.Close()
+		}
+		d.Close()
 	})
 	return d, ts
-}
-
-// routes exposes the handler tree (equivalent to the mux assembled in main).
-func (d *daemon) routes() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(obs.HealthNow(true))
-	})
-	mux.HandleFunc("/metrics", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; version=0.0.4")
-		_, _ = io.WriteString(w, d.counters.MetricsText())
-	})
-	mux.HandleFunc("/api/v1/tasks", taskHandler(d.runner))
-	mux.HandleFunc("/api/v1/collect/", d.collectHandler)
-	mux.HandleFunc("/", d.dashboardHandler)
-	return mux
 }
 
 func postJSON(t *testing.T, ts *httptest.Server, path string, body map[string]any) (*http.Response, []byte) {
@@ -239,6 +234,105 @@ func TestDashboardTaskStatsAndCanary(t *testing.T) {
 		if !strings.Contains(page, want) {
 			t.Fatalf("dashboard misses %q", want)
 		}
+	}
+}
+
+func TestSendRESTEndpoint(t *testing.T) {
+	apiCalls := 0
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiCalls++
+		if r.URL.Path != "/v1/message/send/" {
+			t.Errorf("path = %q", r.URL.Path)
+		}
+		_, _ = w.Write([]byte(`{"data":{"status":"sent","msg_id":"m-1"},"status_code":0}`))
+	}))
+	defer api.Close()
+
+	adaptDir := writeDemoAdapt(t, api.URL)
+	// Add a send_message contract for the demo platform (no signature required,
+	// matching the demo-search shape) so the daemon engine resolves it.
+	sendContract := `{
+	  "name": "demo-send-message",
+	  "platform": "demo",
+	  "category": "send_message",
+	  "version": "1",
+	  "doc": "test-only send contract",
+	  "transport": {"base_url": "` + api.URL + `", "path": "/v1/message/send/", "method": "POST", "body": {"sec_user_id": "", "text": ""}},
+	  "binding": {"fields": {"status": "$.data.status"}}
+	}`
+	if err := os.WriteFile(filepath.Join(adaptDir, "contracts/demo-send-message.json"), []byte(sendContract), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dataDir := t.TempDir()
+	d, ts := newTestDaemon(t, dataDir, adaptDir)
+	_ = d
+
+	body := `{"platform":"demo","targets":["sec-1"],"first_message":{"content":"hi"}}`
+	resp, err := http.Post(ts.URL+"/api/v1/send", "application/json", strings.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		rb, _ := io.ReadAll(resp.Body)
+		t.Fatalf("status = %d body=%s", resp.StatusCode, rb)
+	}
+	var rep map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&rep); err != nil {
+		t.Fatal(err)
+	}
+	results, _ := rep["results"].([]any)
+	if len(results) != 1 {
+		t.Fatalf("results = %v", rep["results"])
+	}
+	first, _ := results[0].(map[string]any)
+	if first["first_status"] != "sent" && first["first_status"] != "" {
+		// accept either binding; the demo contract returns status via fields
+	}
+	if first["first_status"] != "sent" {
+		t.Fatalf("first_status = %v (full %+v)", first["first_status"], first)
+	}
+	if apiCalls != 1 {
+		t.Fatalf("apiCalls = %d, want 1", apiCalls)
+	}
+}
+
+func TestAccountsRESTList(t *testing.T) {
+	dataDir := t.TempDir()
+	d, ts := newTestDaemon(t, dataDir, writeDemoAdapt(t, "http://127.0.0.1:1"))
+	// Seed two accounts directly through the pool.
+	if d.accounts != nil {
+		_ = d.accounts.Save(accounts.Account{ID: "a1", Platform: "douyin", Cookies: map[string]string{"s": "1"}})
+		_ = d.accounts.Save(accounts.Account{ID: "a2", Platform: "xhs", Cookies: map[string]string{"s": "2"}})
+	}
+	resp, err := http.Get(ts.URL + "/api/v1/accounts")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d", resp.StatusCode)
+	}
+	var out struct {
+		Accounts []accounts.Account `json:"accounts"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Accounts) != 2 {
+		t.Fatalf("accounts = %d, want 2", len(out.Accounts))
+	}
+	// Platform filter.
+	resp, err = http.Get(ts.URL + "/api/v1/accounts?platform=douyin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Accounts) != 1 || out.Accounts[0].ID != "a1" {
+		t.Fatalf("filtered accounts = %+v", out.Accounts)
 	}
 }
 

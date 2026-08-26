@@ -1,16 +1,21 @@
 package collect
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
@@ -23,6 +28,61 @@ func addContracts(t *testing.T, cs ...*contracts.Contract) *contracts.Registry {
 	for _, c := range cs {
 		if err := reg.Add(c); err != nil {
 			t.Fatalf("add contract %s: %v", c.Name, err)
+		}
+	}
+	return reg
+}
+
+// contractsDirForTest resolves the adapt/contracts dir from this package
+// (collect → internal → root).
+func contractsDirForTest(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(wd, "..", "..", "adapt", "contracts")
+}
+
+// sendMsgAssembly loads the real douyin assembly (Names + Signer) from dir.
+type sendMsgAssembly struct {
+	Names  map[string]string
+	Signer httpclient.Signer
+}
+
+func loadSendMsgAssembly(t *testing.T, dir string) *sendMsgAssembly {
+	t.Helper()
+	all := contracts.NewRegistry()
+	if err := contracts.LoadDir(all, dir); err != nil {
+		t.Fatal(err)
+	}
+	// douyin assembly Names: search/comments/replies/user/group/send_message.
+	names := map[string]string{}
+	for _, c := range all.List() {
+		if cc, ok := all.Get(c); ok && cc.Platform == "douyin" {
+			names[cc.Category] = cc.Name
+		}
+	}
+	return &sendMsgAssembly{Names: names}
+}
+
+// remapContractsForTest re-registers the named contracts with srv as base URL.
+func remapContractsForTest(t *testing.T, dir string, srv *httptest.Server, names ...string) *contracts.Registry {
+	t.Helper()
+	all := contracts.NewRegistry()
+	if err := contracts.LoadDir(all, dir); err != nil {
+		t.Fatal(err)
+	}
+	reg := contracts.NewRegistry()
+	for _, n := range names {
+		c, ok := all.Get(n)
+		if !ok {
+			t.Fatalf("contract %q not found", n)
+		}
+		cp := *c
+		cp.Transport.BaseURL = srv.URL
+		if err := reg.Add(&cp); err != nil {
+			t.Fatal(err)
 		}
 	}
 	return reg
@@ -535,6 +595,391 @@ func TestPostBodyContract(t *testing.T) {
 	}
 	if !strings.HasPrefix(contentType, "application/json") {
 		t.Fatalf("Content-Type = %q", contentType)
+	}
+}
+
+// TestAccountContextOverridesCookie: when an account is selected and matches
+// the platform, its cookie header replaces the platform default.
+func TestAccountContextOverridesCookie(t *testing.T) {
+	var gotCookie string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotCookie = r.Header.Get("Cookie")
+		_, _ = w.Write([]byte(`{"data":[{"id":"a1"}]}`))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	pool, err := accounts.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Save(accounts.Account{
+		ID:       "acc-x",
+		Platform: "mock",
+		Cookies:  map[string]string{"sessionid": "from-account", "ttwid": "acctok"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	eng := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
+		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
+		c.Cookies = map[string]string{"mock": "ttwid=platform-default"}
+		c.Accounts = pool
+		c.AccountID = "acc-x"
+	})
+	if _, _, err := eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 10); err != nil {
+		t.Fatalf("SearchItems: %v", err)
+	}
+	if gotCookie != "sessionid=from-account; ttwid=acctok" {
+		t.Fatalf("Cookie = %q, want account cookie", gotCookie)
+	}
+}
+
+// TestAccountContextFallsBackToPlatformCookie: with no account selected, the
+// platform default cookie is used (backward compatible).
+func TestAccountContextFallsBackToPlatformCookie(t *testing.T) {
+	var gotCookie string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotCookie = r.Header.Get("Cookie")
+		_, _ = w.Write([]byte(`{"data":[{"id":"b1"}]}`))
+	}))
+	defer srv.Close()
+
+	eng := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
+		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
+		c.Cookies = map[string]string{"mock": "ttwid=platform-default"}
+	})
+	if _, _, err := eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 10); err != nil {
+		t.Fatalf("SearchItems: %v", err)
+	}
+	if gotCookie != "ttwid=platform-default" {
+		t.Fatalf("Cookie = %q, want platform default", gotCookie)
+	}
+}
+
+// TestAccountContextProxyRouted: an account with a proxy gets a dedicated
+// proxy-bearing HTTP client (the shared client is used when no proxy).
+func TestAccountContextProxyRouted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"data":[{"id":"c1"}]}`))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	pool, err := accounts.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Save(accounts.Account{
+		ID:       "acc-proxy",
+		Platform: "mock",
+		Proxy:    "http://127.0.0.1:8080",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	eng := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
+		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
+		c.Accounts = pool
+		c.AccountID = "acc-proxy"
+	})
+	// A proxy client is created and cached; the fetch fails closed at the
+	// network layer (dead proxy) rather than silently using the shared client.
+	_, _, err = eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 10)
+	if err == nil {
+		t.Fatal("expected proxy connection error")
+	}
+	// The shared client must not have been used: confirm the proxy client was
+	// created and is distinct.
+	eng.proxyMu.Lock()
+	if len(eng.proxyCache) != 1 {
+		t.Fatalf("proxyCache = %d entries, want 1", len(eng.proxyCache))
+	}
+	eng.proxyMu.Unlock()
+}
+
+// TestResolveVideoRealContract: the real douyin-video-download contract
+// (loaded from adapt/contracts, base URL remapped to httptest) resolves the
+// play URL, cover and aweme id through its declared binding fields.
+func TestResolveVideoRealContract(t *testing.T) {
+	var sawPath, sawAweme string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawPath = r.URL.Path
+		sawAweme = r.URL.Query().Get("aweme_id")
+		_, _ = w.Write([]byte(`{"aweme_detail":{"aweme_id":"7660000000000000001","video":{"play_addr":{"url_list":["https://cdn.invalid/v/aw-1.mp4"]},"cover":{"url_list":["https://cdn.invalid/c.jpg"]}}}}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDirForTest(t)
+	signer := httpclient.StaticSigner{Fn: func(_ context.Context, contractName, _ string, _ map[string]string) (map[string]string, error) {
+		return map[string]string{"a_bogus": "ab-" + contractName}, nil
+	}}
+	reg := remapContractsForTest(t, dir, srv, "douyin-video-download")
+	eng := New(Context{
+		Registry: reg,
+		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
+		Obs:      obs.NewCounterMap(),
+		Signers:  map[string]httpclient.Signer{"douyin": signer},
+		Cookies:  map[string]string{"douyin": "ttwid=test-ttwid"},
+		Names:    map[string]map[string]string{"douyin": {"video_download": "douyin-video-download"}},
+	})
+	meta, err := eng.ResolveVideo(context.Background(), "douyin", "aw-1")
+	if err != nil {
+		t.Fatalf("ResolveVideo: %v", err)
+	}
+	if sawPath != "/aweme/v1/web/aweme/detail/" {
+		t.Fatalf("path = %q, want the contract transport path", sawPath)
+	}
+	if sawAweme != "aw-1" {
+		t.Fatalf("aweme_id = %q", sawAweme)
+	}
+	if meta.URL != "https://cdn.invalid/v/aw-1.mp4" {
+		t.Fatalf("URL = %q", meta.URL)
+	}
+	if meta.Cover != "https://cdn.invalid/c.jpg" {
+		t.Fatalf("Cover = %q", meta.Cover)
+	}
+	if meta.AwemeID != "7660000000000000001" {
+		t.Fatalf("AwemeID = %q, want the binding-resolved id", meta.AwemeID)
+	}
+}
+
+// TestResolveVideoFailClosedNoPlayURLBinding: a video-download contract
+// without a play_url binding errors before any request is made (no
+// platform-specific path guessing in the engine).
+func TestResolveVideoFailClosedNoPlayURLBinding(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("server must not be called without a play_url binding")
+	}))
+	defer srv.Close()
+	c := &contracts.Contract{
+		Name: "mock-video", Platform: "mock", Category: "video_download", Version: "1",
+		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/detail/", Method: "GET", Placeholders: []string{"aweme_id"}},
+	}
+	eng := mockEngine(t, addContracts(t, c), func(ctx *Context) {
+		ctx.Names = map[string]map[string]string{"mock": {"video_download": "mock-video"}}
+	})
+	_, err := eng.ResolveVideo(context.Background(), "mock", "aw-1")
+	if err == nil || !strings.Contains(err.Error(), "play_url") {
+		t.Fatalf("err = %v, want missing play_url binding error", err)
+	}
+}
+
+// TestDownloadStreamsToDisk: a known 5 MiB body downloads byte-identical
+// through the streaming path (io.Copy, no whole-body buffering).
+func TestDownloadStreamsToDisk(t *testing.T) {
+	payload := make([]byte, 5<<20)
+	for i := range payload {
+		payload[i] = byte(i * 31)
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write(payload)
+	}))
+	defer srv.Close()
+
+	eng := mockEngine(t, addContracts(t), nil)
+	dst := filepath.Join(t.TempDir(), "video.bin")
+	f, err := os.Create(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := eng.Download(context.Background(), srv.URL+"/v", f)
+	if cerr := f.Close(); cerr != nil {
+		t.Fatal(cerr)
+	}
+	if err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if n != int64(len(payload)) {
+		t.Fatalf("downloaded bytes = %d, want %d", n, len(payload))
+	}
+	got, err := os.ReadFile(dst)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got, payload) {
+		t.Fatalf("file content differs from server payload (%d bytes)", len(got))
+	}
+}
+
+// TestDownloadHTTPError: a non-2xx status fails the download.
+func TestDownloadHTTPError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+	eng := mockEngine(t, addContracts(t), nil)
+	if _, err := eng.Download(context.Background(), srv.URL+"/v", io.Discard); err == nil ||
+		!strings.Contains(err.Error(), "403") {
+		t.Fatalf("err = %v, want status 403 error", err)
+	}
+}
+
+// TestAccountContextUA: with an account selected, its pinned UA travels as
+// the User-Agent header; without an account the shared pool UA applies.
+func TestAccountContextUA(t *testing.T) {
+	var mu sync.Mutex
+	var uas []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		uas = append(uas, r.Header.Get("User-Agent"))
+		mu.Unlock()
+		_, _ = w.Write([]byte(`{"data":[{"id":"u1"}]}`))
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	pool, err := accounts.Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	if err := pool.Save(accounts.Account{ID: "acc-ua", Platform: "mock", UA: "pinned-ua-1"}); err != nil {
+		t.Fatal(err)
+	}
+	eng := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
+		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
+		c.Accounts = pool
+		c.AccountID = "acc-ua"
+	})
+	if _, _, err := eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 10); err != nil {
+		t.Fatalf("SearchItems (account): %v", err)
+	}
+
+	eng2 := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
+		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
+	})
+	if _, _, err := eng2.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 10); err != nil {
+		t.Fatalf("SearchItems (no account): %v", err)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(uas) != 2 || uas[0] != "pinned-ua-1" {
+		t.Fatalf("account UA = %v, want first request pinned-ua-1", uas)
+	}
+	if uas[1] != "test-ua" {
+		t.Fatalf("shared pool UA = %q, want test-ua", uas[1])
+	}
+}
+
+// TestCollectFoldersRealContract: the collects contract drives folder listing.
+func TestCollectFoldersRealContract(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"collects":[{"collects_id":"f1","collects_name":"默认"}],"has_more":false}`))
+	}))
+	defer srv.Close()
+	c := &contracts.Contract{
+		Name: "mock-collects", Platform: "mock", Category: "collects", Version: "1",
+		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/collects/", Method: "GET"},
+		Binding:   contracts.Binding{Items: "$.collects"},
+		Paging:    contracts.Paging{CursorParam: "cursor", CountParam: "count"},
+	}
+	eng := mockEngine(t, addContracts(t, c), func(ctx *Context) {
+		ctx.Names = map[string]map[string]string{"mock": {"collects": "mock-collects"}}
+	})
+	items, _, err := eng.CollectFolders(context.Background(), "mock", model.Cursor{}, 10)
+	if err != nil {
+		t.Fatalf("CollectFolders: %v", err)
+	}
+	if len(items) != 1 || items[0].ID != "f1" {
+		t.Fatalf("items = %+v", items)
+	}
+}
+
+// TestFetchIMUnreadRealContract: the im-unread contract polls unread count.
+func TestFetchIMUnreadRealContract(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{"unread_count":9,"conv_list":[{"conv_id":"a"}]}`))
+	}))
+	defer srv.Close()
+	c := &contracts.Contract{
+		Name: "mock-im", Platform: "mock", Category: "im_unread", Version: "1",
+		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/unread/", Method: "GET"},
+		Binding:   contracts.Binding{Fields: map[string]string{"total_unread": "$.unread_count"}},
+	}
+	eng := mockEngine(t, addContracts(t, c), func(ctx *Context) {
+		ctx.Names = map[string]map[string]string{"mock": {"im_unread": "mock-im"}}
+	})
+	res, err := eng.FetchIMUnread(context.Background(), "mock")
+	if err != nil {
+		t.Fatalf("FetchIMUnread: %v", err)
+	}
+	if res.TotalUnread != 9 {
+		t.Fatalf("TotalUnread = %d", res.TotalUnread)
+	}
+	if len(res.Conversations) != 1 || res.Conversations[0]["conv_id"] != "a" {
+		t.Fatalf("Conversations = %+v", res.Conversations)
+	}
+}
+
+// TestSendMessageRealContract: the douyin-send-message contract drives a
+// single POST; sec_user_id and text travel in the JSON body and the response
+// binds msg_id + status from the data envelope.
+func TestSendMessageRealContract(t *testing.T) {
+	var gotMethod, gotBody, gotCookie, gotPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotMethod = r.Method
+		gotPath = r.URL.Path
+		gotCookie = r.Header.Get("Cookie")
+		var m map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&m)
+		b, _ := json.Marshal(m)
+		gotBody = string(b)
+		_, _ = w.Write([]byte(`{"data":{"status":"sent","msg_id":"7660090000000000000001"},"status_code":0}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDirForTest(t)
+	asm := loadSendMsgAssembly(t, dir)
+	signer := httpclient.StaticSigner{Fn: func(_ context.Context, contractName, _ string, _ map[string]string) (map[string]string, error) {
+		return map[string]string{"a_bogus": "ab-" + contractName}, nil
+	}}
+	reg := remapContractsForTest(t, dir, srv, "douyin-send-message")
+	eng := New(Context{
+		Registry: reg,
+		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
+		Obs:      obs.NewCounterMap(),
+		Signers:  map[string]httpclient.Signer{"douyin": signer},
+		Cookies:  map[string]string{"douyin": "sessionid=sess-1"},
+		Names:    map[string]map[string]string{"douyin": asm.Names},
+	})
+	res, err := eng.SendMessage(context.Background(), "douyin", "MS4wLjABAAAA-target", "你好，感兴趣吗？")
+	if err != nil {
+		t.Fatalf("SendMessage: %v", err)
+	}
+	if res.MsgID != "7660090000000000000001" || res.Status != "sent" {
+		t.Fatalf("SendResult = %+v", res)
+	}
+	if gotMethod != http.MethodPost {
+		t.Fatalf("method = %q, want POST", gotMethod)
+	}
+	if gotPath != "/v1/message/send/" {
+		t.Fatalf("path = %q", gotPath)
+	}
+	if !strings.Contains(gotBody, `"sec_user_id":"MS4wLjABAAAA-target"`) {
+		t.Fatalf("body missing sec_user_id: %s", gotBody)
+	}
+	if !strings.Contains(gotBody, `"text":"你好，感兴趣吗？"`) {
+		t.Fatalf("body missing text: %s", gotBody)
+	}
+	if gotCookie != "sessionid=sess-1" {
+		t.Fatalf("Cookie = %q", gotCookie)
+	}
+}
+
+// TestSendMessageContractNotDeclared: without a send_message contract the
+// resolver surfaces the explicit error.
+func TestSendMessageContractNotDeclared(t *testing.T) {
+	dir := contractsDirForTest(t)
+	asm := loadSendMsgAssembly(t, dir)
+	asm.Names["send_message"] = ""
+	reg := remapContractsForTest(t, dir, httptest.NewServer(nil), "douyin-comments")
+	eng := New(Context{Registry: reg, Names: map[string]map[string]string{"douyin": asm.Names}})
+	_, err := eng.SendMessage(context.Background(), "douyin", "sec", "hi")
+	if err == nil || !strings.Contains(err.Error(), "send_message") {
+		t.Fatalf("err = %v, want send_message contract error", err)
 	}
 }
 

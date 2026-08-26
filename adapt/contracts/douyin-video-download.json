@@ -1,0 +1,17 @@
+{
+  "name": "douyin-video-download",
+  "platform": "douyin",
+  "category": "video_download",
+  "version": "1",
+  "doc": "resolve one item's watermark-free play address. Evidence: /aweme/v1/web/aweme/detail/ (docs 7.2.1) + service.douyin.video_download_process/finished (service.* table). The play URL is extracted from aweme_detail.video.play_addr.url_list; the download itself is a plain HTTP GET.",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/aweme/detail/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["aweme_id"]
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {"fields": {"play_url": "$.aweme_detail.video.play_addr.url_list[0]", "duration": "$.aweme_detail.video.duration", "cover": "$.aweme_detail.video.cover.url_list[0]", "aweme_id": "$.aweme_detail.aweme_id"}}
+}

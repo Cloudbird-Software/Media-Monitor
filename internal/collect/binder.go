@@ -329,7 +329,7 @@ func bindUser(c *contracts.Contract, rec map[string]any) model.UserProfile {
 func bindItem(c *contracts.Contract, rec map[string]any) model.Item {
 	var it model.Item
 	it.ID = fieldStr(c, "id", rec, []string{
-		"id", "aweme_id", "aweme_info.aweme_id", "photo.id", "note_id", "note_card.id", "noteCard.id",
+		"id", "aweme_id", "aweme_info.aweme_id", "photo.id", "note_id", "note_card.id", "noteCard.id", "collects_id",
 	})
 	it.Desc = fieldStr(c, "desc", rec, []string{
 		"desc", "aweme_info.desc", "caption", "aweme_info.caption", "title", "photo.caption",

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -384,6 +385,11 @@ func readHexLen(r io.Reader) (int, error) {
 	n, err := strconv.ParseUint(raw, 16, 32)
 	if err != nil {
 		return 0, fmt.Errorf("adb: bad frame length %q", raw)
+	}
+	// Frame length is a 4-hex-digit field (max 0xFFFF); bound-check before
+	// widening to int so the conversion is provably lossless (CodeQL go/incorrect-integer-conversion).
+	if n > math.MaxInt {
+		return 0, fmt.Errorf("adb: frame length overflow %q", raw)
 	}
 	return int(n), nil
 }

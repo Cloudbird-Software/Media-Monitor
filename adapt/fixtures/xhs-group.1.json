@@ -1,0 +1,21 @@
+{
+  "members": [
+    {
+      "uid": "6x333333001",
+      "sec_uid": "",
+      "short_id": "",
+      "nickname": "小红书群成员一",
+      "avatar_url": "https://example.invalid/xhs-avatar-1.jpg",
+      "signature": "小红书用户",
+      "ip_label": "上海",
+      "gender": 2,
+      "follower_count": 500,
+      "following_count": 120,
+      "aweme_count": 30,
+      "total_favorited": 3000,
+      "joined_at": 1780004001
+    }
+  ],
+  "cursor": "",
+  "has_more": false
+}

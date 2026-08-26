@@ -42,6 +42,9 @@ type Transport struct {
 	Headers      map[string]string `json:"headers,omitempty"`
 	Body         map[string]any    `json:"body,omitempty"`         // static JSON body fields
 	Placeholders []string          `json:"placeholders,omitempty"` // required path placeholders, e.g. ["aweme_id"]
+	// AltHosts lists additional accepted hosts for URL validation (e.g. live
+	// room URL aliases); the base_url host is always accepted.
+	AltHosts []string `json:"alt_hosts,omitempty"`
 }
 
 type Signature struct {

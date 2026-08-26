@@ -1,0 +1,29 @@
+{
+  "name": "xhs-meta",
+  "platform": "xhs",
+  "category": "live_meta",
+  "version": "1",
+  "doc": "xiaohongshu live room metadata + websocket shape. Evidence: service.xiaohongshu.live.room.info/refresh + xiaohongshu.live.user (docs api-formats-douyin.md service.* table) + 'xiaohongshu.live.room.info' string. XHS live uses a JSON ws channel; endpoint reconstructed from xhs web origin.",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/red/live/web/v1/room/enter",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "1967"},
+    "placeholders": ["room_id"]
+  },
+  "transport_ws": {
+    "wss_host": "wss://ws.xiaohongshu.com",
+    "path": "/ws/live",
+    "params": {"aid": "1967", "device_platform": "web"},
+    "runtime_params": ["room_id"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"fields": {"room_id": "$.room_id"}},
+  "protocol_methods": {
+    "CommentMessage": "chat",
+    "GiftMessage": "gift",
+    "LikeMessage": "like",
+    "MemberMessage": "enter",
+    "RoomStatsMessage": "room_stat"
+  }
+}

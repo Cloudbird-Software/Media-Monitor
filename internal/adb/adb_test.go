@@ -124,21 +124,46 @@ func execHandler(w *bufio.ReadWriter, req, out string) error {
 	return fmt.Errorf("unexpected request %q", req)
 }
 
+// TestListDevices verifies the wire request (host:devices) and the parsing
+// of the device-list response: only serials in the "device" state are
+// returned, offline/unauthorized ones are filtered.
 func TestListDevices(t *testing.T) {
-	c, _ := startFake(t, func(req string, w *bufio.ReadWriter) error {
-		writeOKAY(w)
-		writeFrames(w, "emulator-5554\tdevice\n123abc\toffline\n")
-		return nil
-	})
-	f := &fakeServer{t: t}
-	_ = f
-	serials, err := c.ListDevices("127.0.0.1:1")
-	_ = serials
-	_ = err
-	// ListDevices opens its own ephemeral connection to its argument; the
-	// fake server above was reached via Connect. Use the same listener by
-	// asserting the wire path instead: covered by TestExecOutFramesMerged and
-	// the standalone ListDevices test below.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		br := bufio.NewReader(conn)
+		var hdr [4]byte
+		if _, err := io.ReadFull(br, hdr[:]); err != nil {
+			return
+		}
+		n, _ := parseHexLen(string(hdr[:]))
+		req := make([]byte, n)
+		if _, err := io.ReadFull(br, req); err != nil {
+			return
+		}
+		if string(req) != "host:devices" {
+			t.Errorf("request = %q, want host:devices", req)
+			return
+		}
+		_, _ = conn.Write([]byte("OKAY"))
+		_, _ = conn.Write(hexFrames("emulator-5554\tdevice\n123abc\toffline\n"))
+	}()
+	c, _ := startFake(t, nil)
+	serials, err := c.ListDevices(ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(serials) != 1 || serials[0] != "emulator-5554" {
+		t.Fatalf("serials = %v, want [emulator-5554] (only online devices)", serials)
+	}
 }
 
 func TestListDevicesOwnConnection(t *testing.T) {

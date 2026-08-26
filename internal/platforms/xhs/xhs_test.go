@@ -170,13 +170,12 @@ func TestXhsDefaultsSmoke(t *testing.T) {
 	if len(d.CookieNames) != 1 || d.CookieNames[0] != "web_session" {
 		t.Fatalf("CookieNames = %v", d.CookieNames)
 	}
-	if d.Names["search"] != "xhs-search" || d.Names["comments"] != "xhs-comments" {
+	if d.Names["search"] != "xhs-search" || d.Names["comments"] != "xhs-comments" ||
+		d.Names["user"] != "xhs-user" || d.Names["group"] != "xhs-group-members" {
 		t.Fatalf("Names = %v", d.Names)
 	}
-	for _, cat := range []string{"replies", "user", "group"} {
-		if d.Names[cat] != "" {
-			t.Fatalf("category %s should not be declared, got %q", cat, d.Names[cat])
-		}
+	if d.Names["replies"] != "xhs-comments-replies" {
+		t.Fatalf("replies should map to xhs-comments-replies, got %q", d.Names["replies"])
 	}
 	for cat, name := range d.Names {
 		if name == "" {
@@ -188,5 +187,116 @@ func TestXhsDefaultsSmoke(t *testing.T) {
 	}
 	if d.SignerAs() != nil {
 		t.Fatal("default Signer should be nil")
+	}
+}
+
+// TestXhsRepliesRealContract: the real xhs-comments-replies contract drives
+// a mocked sub-comment page; comment_id travels as the placeholder and the
+// data.comments records bind id/content/like_count + user_info author.
+func TestXhsRepliesRealContract(t *testing.T) {
+	var sawCommentID, sawPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawPath = r.URL.Path
+		sawCommentID = r.URL.Query().Get("comment_id")
+		_, _ = w.Write([]byte(`{
+			"data": {
+				"comments": [
+					{"id": "xhs-subcomment-0001", "content": "小红书示例子评论一", "create_time": 1780006001, "like_count": "12",
+					 "user_info": {"user_id": "xhs-user-0005", "nickname": "小红书回复者一", "avatar": "https://example.invalid/xhsr-1.jpg", "ip_location": "上海"}},
+					{"id": "xhs-subcomment-0002", "content": "小红书示例子评论二", "create_time": 1780006002, "like_count": "3",
+					 "user_info": {"user_id": "xhs-user-0006", "nickname": "小红书回复者二", "avatar": "https://example.invalid/xhsr-2.jpg", "ip_location": "浙江"}}
+				],
+				"has_more": false,
+				"cursor": ""
+			}
+		}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDir(t)
+	d, _, _ := Defaults(dir)
+	reg := remapContracts(t, dir, srv, "xhs-comments-replies")
+	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
+
+	cmts, cur, err := eng.CommentReplies(context.Background(), Platform, "example-note-0001", "xhs-comment-0001", model.Cursor{}, 20)
+	if err != nil {
+		t.Fatalf("CommentReplies: %v", err)
+	}
+	if len(cmts) != 2 {
+		t.Fatalf("replies = %d, want 2", len(cmts))
+	}
+	c0 := cmts[0]
+	if c0.CID != "xhs-subcomment-0001" || c0.Text != "小红书示例子评论一" || c0.CreateTime != 1780006001 || c0.DiggCount != 12 {
+		t.Fatalf("reply fields wrong: %+v", c0)
+	}
+	if c0.User.UID != "xhs-user-0005" || c0.User.Nickname != "小红书回复者一" || c0.User.IPLabel != "上海" ||
+		c0.User.AvatarURL != "https://example.invalid/xhsr-1.jpg" {
+		t.Fatalf("reply author wrong: %+v", c0.User)
+	}
+	if cur.HasMore {
+		t.Fatalf("cursor = %+v, want single page", cur)
+	}
+	if sawPath != "/api/sns/web/v2/comment/sub/page" {
+		t.Fatalf("path = %q, want the contract sub-comment endpoint", sawPath)
+	}
+	if sawCommentID != "xhs-comment-0001" {
+		t.Fatalf("comment_id = %q", sawCommentID)
+	}
+}
+
+// TestXhsGroupMembersRealContract: the xhs-group-members contract drives a
+// mocked group-member enumeration; group_id travels as a query placeholder.
+func TestXhsGroupMembersRealContract(t *testing.T) {
+	var sawGroupID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawGroupID = r.URL.Query().Get("group_id")
+		_, _ = w.Write([]byte(`{"members":[
+			{"uid":"6x333333001","nickname":"小红书群成员一","joined_at":1780004001,"ip_label":"上海","gender":2}
+		],"cursor":"","has_more":false}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDir(t)
+	d, _, _ := Defaults(dir)
+	reg := remapContracts(t, dir, srv, "xhs-group-members")
+	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
+	members, _, err := eng.GroupMembers(context.Background(), Platform, "g-x1", model.Cursor{}, 20)
+	if err != nil {
+		t.Fatalf("GroupMembers: %v", err)
+	}
+	if len(members) != 1 {
+		t.Fatalf("members = %d, want 1", len(members))
+	}
+	if members[0].UID != "6x333333001" || members[0].Nickname != "小红书群成员一" || members[0].JoinedAt != 1780004001 {
+		t.Fatalf("member fields wrong: %+v", members[0])
+	}
+	if sawGroupID != "g-x1" {
+		t.Fatalf("group_id param = %q", sawGroupID)
+	}
+}
+
+// TestXhsUserProfileRealContract: the xhs-user contract drives a mocked
+// profile lookup; user_id travels as a query placeholder.
+func TestXhsUserProfileRealContract(t *testing.T) {
+	var sawUID string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawUID = r.URL.Query().Get("sec_uid")
+		_, _ = w.Write([]byte(`{"user_list":[{"uid":"6x111111001","nickname":"小红书用户一","follower_count":800}]}`))
+	}))
+	defer srv.Close()
+
+	dir := contractsDir(t)
+	d, _, _ := Defaults(dir)
+	reg := remapContracts(t, dir, srv, "xhs-user")
+	eng := mockEngine(t, reg, map[string]map[string]string{Platform: d.Names})
+	u, err := eng.UserProfile(context.Background(), Platform, "sec-x1")
+	if err != nil {
+		t.Fatalf("UserProfile: %v", err)
+	}
+	if u.UID != "6x111111001" || u.Nickname != "小红书用户一" || u.FollowerCount != 800 {
+		t.Fatalf("profile = %+v", u)
+	}
+	if sawUID != "sec-x1" {
+		t.Fatalf("sec_uid param = %q", sawUID)
 	}
 }

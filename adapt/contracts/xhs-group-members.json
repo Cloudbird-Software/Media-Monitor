@@ -1,0 +1,17 @@
+{
+  "name": "xhs-group-members",
+  "platform": "xhs",
+  "category": "group_members",
+  "version": "1",
+  "doc": "silent enumeration of a xiaohongshu group's members. Evidence: service.xiaohongshu.qunmemberids + 'group/members' path in chunks 12/14; QunMember protobuf. Endpoint reconstructed from xhs web origin + the evidenced /api/im/web/v2/group/members path pattern.",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/im/web/v2/group/members",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "1967"},
+    "placeholders": ["group_id"]
+  },
+  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
+  "binding": {"members": "$.members"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}

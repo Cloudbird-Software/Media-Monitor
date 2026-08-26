@@ -61,11 +61,12 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 		UA:          desktopUA,
 		CookieNames: []string{"ttwid", "sessionid"},
 		Names: map[string]string{
-			"search":   "douyin-search",
-			"comments": "douyin-comments",
-			"replies":  "", // no replies contract declared yet (later PR)
-			"user":     "douyin-user",
-			"group":    "douyin-group-members",
+			"search":       "douyin-search",
+			"comments":     "douyin-comments",
+			"replies":      "douyin-comments-replies",
+			"user":         "douyin-user",
+			"group":        "douyin-group-members",
+			"send_message": "douyin-send-message",
 		},
 	}, reg, nil
 }

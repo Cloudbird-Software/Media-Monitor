@@ -7,12 +7,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
+	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
@@ -36,26 +39,38 @@ type Context struct {
 	// absent, the engine falls back to the "<platform>-<category>" naming
 	// convention. Built by internal/platforms.
 	Names map[string]map[string]string
+	// Accounts is the optional account pool. When set together with AccountID,
+	// requests are routed through the account's cookie/proxy/UA.
+	Accounts *accounts.Pool
+	// AccountID selects the account to act as; "" means platform defaults.
+	AccountID string
 }
 
 // Engine executes contracts. Safe for concurrent use once built.
 type Engine struct {
-	reg     *contracts.Registry
-	hc      *httpclient.Client
-	obs     *obs.CounterMap
-	signers map[string]httpclient.Signer
-	cookies map[string]string
-	names   map[string]map[string]string
+	reg        *contracts.Registry
+	hc         *httpclient.Client
+	obs        *obs.CounterMap
+	signers    map[string]httpclient.Signer
+	cookies    map[string]string
+	names      map[string]map[string]string
+	accounts   *accounts.Pool
+	accountID  string
+	proxyMu    sync.Mutex
+	proxyCache map[string]*httpclient.Client // proxy url -> dedicated client
 }
 
 // New builds an Engine from its wiring context.
 func New(ctx Context) *Engine {
 	e := &Engine{
-		reg:     ctx.Registry,
-		obs:     ctx.Obs,
-		signers: ctx.Signers,
-		cookies: ctx.Cookies,
-		names:   ctx.Names,
+		reg:        ctx.Registry,
+		obs:        ctx.Obs,
+		signers:    ctx.Signers,
+		cookies:    ctx.Cookies,
+		names:      ctx.Names,
+		accounts:   ctx.Accounts,
+		accountID:  ctx.AccountID,
+		proxyCache: map[string]*httpclient.Client{},
 	}
 	if ctx.HTTP != nil {
 		e.hc = ctx.HTTP
@@ -65,14 +80,50 @@ func New(ctx Context) *Engine {
 	return e
 }
 
+// accountContext resolves the effective cookie header, proxy and UA for a
+// platform/request. Without an account (or an unknown id) it returns the
+// platform-level defaults and ok=false, so callers fall back transparently.
+func (e *Engine) accountContext(platform string) (cookie, proxy, ua string, ok bool) {
+	if e.accounts == nil || e.accountID == "" {
+		return "", "", "", false
+	}
+	a, found := e.accounts.Get(e.accountID)
+	if !found || a.Platform != platform {
+		return "", "", "", false
+	}
+	return a.CookieHeader(), a.Proxy, a.UA, true
+}
+
+// clientFor returns the HTTP client to use for a request carrying the given
+// proxy. A non-empty proxy gets a dedicated client with a proxy transport,
+// cached for reuse; an empty proxy returns the shared client.
+func (e *Engine) clientFor(proxy string) *httpclient.Client {
+	if proxy == "" {
+		return e.hc
+	}
+	e.proxyMu.Lock()
+	defer e.proxyMu.Unlock()
+	if c, ok := e.proxyCache[proxy]; ok {
+		return c
+	}
+	c := httpclient.New(httpclient.Config{Proxy: proxy})
+	e.proxyCache[proxy] = c
+	return c
+}
+
 // categorySuffix maps collect category names to the conventional
 // "<platform>-<suffix>" contract naming fallback.
 var categorySuffix = map[string]string{
-	"search":   "search",
-	"comments": "comments",
-	"replies":  "replies",
-	"user":     "user",
-	"group":    "group-members",
+	"search":          "search",
+	"comments":        "comments",
+	"replies":         "replies",
+	"user":            "user",
+	"group":           "group-members",
+	"send_message":    "send-message",
+	"video_download":  "video-download",
+	"collects":        "collects",
+	"collects_videos": "collects-videos",
+	"im_unread":       "im-unread",
 }
 
 // resolveName finds the contract name for a platform collect category,
@@ -209,8 +260,22 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 	if len(body) > 0 {
 		headers["Content-Type"] = "application/json"
 	}
-	if ck, ok := e.cookies[c.Platform]; ok && ck != "" {
+	// Cookie priority: account cookie (per-identity) overrides the
+	// platform-level default. The fail-closed required-cookie check below
+	// runs against whichever cookie is set here.
+	ck, _, ua, _ := e.accountContext(c.Platform)
+	if ck == "" {
+		if def, ok := e.cookies[c.Platform]; ok && def != "" {
+			ck = def
+		}
+	}
+	if ck != "" {
 		headers["Cookie"] = ck
+	}
+	// UA priority: the account's pinned UA overrides the client's rotating
+	// pool (the shared pool UA applies when no account is selected).
+	if ua != "" {
+		headers["User-Agent"] = ua
 	}
 	if len(c.Cookie.Required) > 0 {
 		have := strings.Split(headers["Cookie"], ";")
@@ -259,7 +324,11 @@ func (e *Engine) Fetch(ctx context.Context, name string, pathParams, query map[s
 		e.fetchErr()
 		return nil, err
 	}
-	status, resp, err := e.hc.WithContract(name).Do(ctx, c.Transport.Method, full, headers, body)
+	// Route through the account's proxy client when an account is selected;
+	// otherwise use the shared client.
+	_, proxy, _, _ := e.accountContext(c.Platform)
+	hc := e.clientFor(proxy)
+	status, resp, err := hc.WithContract(name).Do(ctx, c.Transport.Method, full, headers, body)
 	if err != nil {
 		e.fetchErr()
 		return nil, err
@@ -499,14 +568,28 @@ func (e *Engine) ItemComments(ctx context.Context, platform, itemID string, cur 
 	return cmts, nxt, nil
 }
 
-// CommentReplies collects the replies of one top-level comment. No platform
-// declares a replies contract yet; the resolver returns the explicit error
-// below (a later PR adds the contracts).
+// CommentReplies collects the replies of one top-level comment, paginated.
+// The comment id travels as the contract's primary placeholder (comment_id);
+// the item id is forwarded as a static query param (aweme_id) when the
+// contract declares it.
 func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid string, cur model.Cursor, limit int) ([]model.Comment, model.Cursor, error) {
-	if _, err := e.resolveName(platform, "replies"); err != nil {
+	name, err := e.resolveName(platform, "replies")
+	if err != nil {
 		return nil, cur, err
 	}
-	return nil, cur, errors.New("replies contract not declared")
+	c, ok := e.reg.Get(name)
+	if !ok {
+		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
+	}
+	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "comment_id"): cid}, nil, cur, limit)
+	if err != nil {
+		return nil, nxt, err
+	}
+	cmts := make([]model.Comment, 0, len(recs))
+	for _, r := range recs {
+		cmts = append(cmts, bindComment(c, r))
+	}
+	return cmts, nxt, nil
 }
 
 // UserProfile resolves one author/actor profile by sec_uid.
@@ -549,4 +632,219 @@ func (e *Engine) GroupMembers(ctx context.Context, platform, groupID string, cur
 		members = append(members, bindMember(c, r, groupID))
 	}
 	return members, nxt, nil
+}
+
+// SendResult is the outcome of one direct-message send operation.
+type SendResult struct {
+	MsgID  string         `json:"msg_id"`
+	Status string         `json:"status"`
+	Raw    map[string]any `json:"raw,omitempty"`
+}
+
+// SendMessage sends one direct message to a target user (sec_uid) using the
+// platform's send-message contract. The text and target travel in the JSON
+// body. This is a single-shot action (not paginated); fail-closed on the
+// contract's signature/cookie requirements like every other fetch.
+func (e *Engine) SendMessage(ctx context.Context, platform, secUID, text string) (SendResult, error) {
+	name, err := e.resolveName(platform, "send_message")
+	if err != nil {
+		return SendResult{}, err
+	}
+	if _, ok := e.reg.Get(name); !ok {
+		return SendResult{}, fmt.Errorf("collect: contract %q not registered", name)
+	}
+	// The JSON body is assembled by buildURL from transport.Body + caller
+	// query fields (sec_user_id, text); the target and text travel in the body.
+	doc, err := e.Fetch(ctx, name, nil, map[string]string{"sec_user_id": secUID, "text": text})
+	if err != nil {
+		return SendResult{}, err
+	}
+	var res SendResult
+	res.Raw = doc
+	if doc["data"] != nil {
+		if d, ok := doc["data"].(map[string]any); ok {
+			res.MsgID, _ = d["msg_id"].(string)
+			res.Status, _ = d["status"].(string)
+		}
+	}
+	return res, nil
+}
+
+// VideoMeta is the resolved watermark-free play address of one item.
+type VideoMeta struct {
+	AwemeID string `json:"aweme_id"`
+	URL     string `json:"url"`
+	Cover   string `json:"cover"`
+	Bytes   int64  `json:"bytes,omitempty"`
+}
+
+// firstURL returns the first URL string from a nested value that is either a
+// []string, []any, or a plain string.
+func firstURL(v any) string {
+	switch t := v.(type) {
+	case string:
+		return t
+	case []any:
+		for _, el := range t {
+			if s, ok := el.(string); ok && s != "" {
+				return s
+			}
+		}
+	case []string:
+		for _, s := range t {
+			if s != "" {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
+// docField resolves a contract binding field against the whole response
+// document via the JSONPath walker (binding paths are document-level).
+func docField(c *contracts.Contract, name string, doc map[string]any) any {
+	raw := c.Binding.Fields[name]
+	if raw == "" {
+		return nil
+	}
+	p, err := contracts.ParsePath(raw)
+	if err != nil {
+		return nil
+	}
+	return p.First(doc)
+}
+
+// ResolveVideo resolves one item's watermark-free play URL from the
+// video-download contract: play URL, cover and video id all resolve through
+// the contract's binding fields (play_url / cover / aweme_id). Fail-closed:
+// a contract without a play_url binding errors instead of the engine
+// guessing platform-specific response paths.
+func (e *Engine) ResolveVideo(ctx context.Context, platform, itemID string) (VideoMeta, error) {
+	name, err := e.resolveName(platform, "video_download")
+	if err != nil {
+		return VideoMeta{}, err
+	}
+	c, ok := e.reg.Get(name)
+	if !ok {
+		return VideoMeta{}, fmt.Errorf("collect: contract %q not registered", name)
+	}
+	if c.Binding.Fields["play_url"] == "" {
+		return VideoMeta{}, fmt.Errorf("collect %s: contract declares no binding field %q", name, "play_url")
+	}
+	doc, err := e.Fetch(ctx, name, map[string]string{firstPlaceholder(c, "aweme_id"): itemID}, nil)
+	if err != nil {
+		return VideoMeta{}, err
+	}
+	var meta VideoMeta
+	meta.URL = firstURL(docField(c, "play_url", doc))
+	if meta.URL == "" {
+		return VideoMeta{}, fmt.Errorf("collect: no play URL found for %q", itemID)
+	}
+	meta.AwemeID = itemID
+	if id := asStr(docField(c, "aweme_id", doc)); id != "" {
+		meta.AwemeID = id
+	}
+	meta.Cover = firstURL(docField(c, "cover", doc))
+	return meta, nil
+}
+
+// Download streams a URL to dst using the engine's HTTP client (the actual
+// bytes are a plain GET; platform signing is irrelevant for the CDN URL).
+// The body is streamed via io.Copy, never buffered whole in memory.
+func (e *Engine) Download(ctx context.Context, url string, dst io.Writer) (int64, error) {
+	if url == "" {
+		return 0, errors.New("collect: empty download url")
+	}
+	status, stream, err := e.hc.WithContract("video_download").DoStream(ctx, http.MethodGet, url, nil, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer stream.Close()
+	if status < 200 || status >= 300 {
+		return 0, fmt.Errorf("video download: status %d", status)
+	}
+	return io.Copy(dst, stream)
+}
+
+// CollectFolders lists a user's bookmark/collects folders (cursor-paginated).
+func (e *Engine) CollectFolders(ctx context.Context, platform string, cur model.Cursor, limit int) ([]model.Item, model.Cursor, error) {
+	name, err := e.resolveName(platform, "collects")
+	if err != nil {
+		return nil, cur, err
+	}
+	c, ok := e.reg.Get(name)
+	if !ok {
+		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
+	}
+	recs, nxt, err := e.fetchPages(ctx, name, nil, nil, cur, limit)
+	if err != nil {
+		return nil, nxt, err
+	}
+	items := make([]model.Item, 0, len(recs))
+	for _, r := range recs {
+		items = append(items, bindItem(c, r))
+	}
+	return items, nxt, nil
+}
+
+// CollectVideos lists the videos inside one bookmark folder (cursor-paginated).
+func (e *Engine) CollectVideos(ctx context.Context, platform, collectsID string, cur model.Cursor, limit int) ([]model.Item, model.Cursor, error) {
+	name, err := e.resolveName(platform, "collects_videos")
+	if err != nil {
+		return nil, cur, err
+	}
+	c, ok := e.reg.Get(name)
+	if !ok {
+		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
+	}
+	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholderFrom(e.reg, name, "collects_id"): collectsID}, nil, cur, limit)
+	if err != nil {
+		return nil, nxt, err
+	}
+	items := make([]model.Item, 0, len(recs))
+	for _, r := range recs {
+		items = append(items, bindItem(c, r))
+	}
+	return items, nxt, nil
+}
+
+// IMUnread is the result of an unread-count poll.
+type IMUnread struct {
+	TotalUnread   int64            `json:"total_unread"`
+	Conversations []map[string]any `json:"conversations,omitempty"`
+}
+
+// FetchIMUnread polls the IM unread-count endpoint.
+func (e *Engine) FetchIMUnread(ctx context.Context, platform string) (IMUnread, error) {
+	name, err := e.resolveName(platform, "im_unread")
+	if err != nil {
+		return IMUnread{}, err
+	}
+	doc, err := e.Fetch(ctx, name, nil, nil)
+	if err != nil {
+		return IMUnread{}, err
+	}
+	c, _ := e.reg.Get(name)
+	var res IMUnread
+	res.TotalUnread = fieldInt(c, "total_unread", doc, []string{"unread_count", "total_unread"})
+	for _, key := range []string{"conv_list", "conversation_list"} {
+		if arr, ok := doc[key].([]any); ok {
+			for _, el := range arr {
+				if m, ok := el.(map[string]any); ok {
+					res.Conversations = append(res.Conversations, m)
+				}
+			}
+			break
+		}
+	}
+	return res, nil
+}
+
+// firstPlaceholderFrom returns the contract's first placeholder, falling back to def.
+func firstPlaceholderFrom(reg *contracts.Registry, name, def string) string {
+	c, ok := reg.Get(name)
+	if !ok {
+		return def
+	}
+	return firstPlaceholder(c, def)
 }

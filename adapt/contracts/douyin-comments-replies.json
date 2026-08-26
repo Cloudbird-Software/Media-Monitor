@@ -1,0 +1,18 @@
+{
+  "name": "douyin-comments-replies",
+  "platform": "douyin",
+  "category": "replies",
+  "version": "1",
+  "doc": "reply list of one top-level comment; each reply carries an author object whose profile fields the collector normalizes into model.UserProfile. Evidence: docs/api-formats-douyin.md 7.3.2 (/aweme/v1/web/comment/list/reply/).",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/comment/list/reply/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["comment_id"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {"comments": "$.comments"},
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}

@@ -125,6 +125,18 @@ func writeAdaptDir(t *testing.T) string {
 	  "transport": {"base_url": "https://example.test", "path": "/x", "method": "GET"},
 	  "binding": {"items": "$.data"}
 	}`)
+	// douyin-comments-replies is the declared douyin replies contract; it
+	// requires a_bogus, so an unsigned run fails closed on the signature gate.
+	mustWrite("contracts/douyin-comments-replies.json", `{
+	  "name": "douyin-comments-replies",
+	  "platform": "douyin",
+	  "category": "replies",
+	  "version": "1",
+	  "doc": "test-only douyin replies contract",
+	  "transport": {"base_url": "https://example.test", "path": "/reply", "method": "GET", "placeholders": ["comment_id"]},
+	  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+	  "binding": {"comments": "$.comments"}
+	}`)
 	mustWrite("fixtures/fixture.json", `{"data": [{"id": "1", "desc": "first"}]}`)
 	mustWrite("canaries/one.json", `{"canaries": [{"name": "test-canary", "contract": "demo-canary", "kind": "items", "fixture": "fixture.json", "expect": ["data"]}]}`)
 	return dir
@@ -134,6 +146,7 @@ func TestServerToolsAndBasics(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	m := c.call(t, "initialize", "i1", map[string]any{"protocolVersion": "2025-03-26"})
@@ -144,8 +157,8 @@ func TestServerToolsAndBasics(t *testing.T) {
 
 	m = c.call(t, "tools/list", "l1", nil)
 	toolList := m["result"].(map[string]any)["tools"].([]any)
-	if len(toolList) != 15 {
-		t.Fatalf("tool count = %d, want 15", len(toolList))
+	if len(toolList) != 20 {
+		t.Fatalf("tool count = %d, want 20", len(toolList))
 	}
 	names := map[string]bool{}
 	for _, tl := range toolList {
@@ -161,9 +174,10 @@ func TestServerToolsAndBasics(t *testing.T) {
 	}
 	for _, want := range []string{
 		"search_items", "get_comments", "get_replies", "get_user", "group_members",
+		"resolve_video", "get_collects", "get_im_unread",
 		"monitor_live", "read_live_events", "submit_task", "list_tasks",
-		"adapt_canary_offline", "contracts_list", "adb_list", "adb_shell",
-		"adb_screencap", "version",
+		"adapt_canary_offline", "contracts_list", "send_message", "accounts_list",
+		"adb_list", "adb_shell", "adb_screencap", "version",
 	} {
 		if !names[want] {
 			t.Fatalf("tool %q not registered", want)
@@ -199,9 +213,12 @@ func TestServerToolsAndBasics(t *testing.T) {
 	if !strings.Contains(msg, "keyword is required") {
 		t.Fatalf("search_items error = %q", msg)
 	}
+	// douyin now declares a replies contract; without a signer the fetch fails
+	// closed on the signature gate (a_bogus) — the contract is real, not a
+	// missing-declaration placeholder.
 	msg = c.callToolErr(t, "get_replies", map[string]any{"platform": "douyin", "item_id": "i", "cid": "c"})
-	if !strings.Contains(msg, "replies contract not declared") {
-		t.Fatalf("get_replies error = %q", msg)
+	if !strings.Contains(msg, "a_bogus") {
+		t.Fatalf("get_replies error = %q, want signature-required (a_bogus)", msg)
 	}
 }
 
@@ -209,6 +226,7 @@ func TestTasksTools(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	out := c.callTool(t, "list_tasks", map[string]any{})
@@ -241,6 +259,7 @@ func TestMonitorLiveRequiresSigner(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	msg := c.callToolErr(t, "monitor_live", map[string]any{
@@ -256,6 +275,7 @@ func TestMonitorLiveAllowUnsignedSession(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	// Redirect every live-network hop to a dead local endpoint so the session
 	// fails fast with zero external traffic.
 	t.Setenv("MEDIAMON_LIVE_PAGE_ENDPOINT", "http://127.0.0.1:1")
@@ -308,6 +328,7 @@ func TestRunFailsWithoutAdaptDir(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", filepath.Join(t.TempDir(), "missing"))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c, s := net.Pipe()
 	done := make(chan error, 1)
 	go func() { done <- run(s) }()
