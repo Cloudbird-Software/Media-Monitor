@@ -91,3 +91,34 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+// TestSaveFreshProcessKeepsExistingAccounts: a fresh Pool instance whose
+// first operation is Save must not truncate the snapshot to just the new
+// account (holdout-found defect: persist rewrote before hydrating).
+func TestSaveFreshProcessKeepsExistingAccounts(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "accounts")
+	p1, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := p1.Save(Account{ID: "old-1", Platform: "douyin"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := p1.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// Fresh process: first op is Save, no Get/Load first.
+	p2, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer p2.Close()
+	if err := p2.Save(Account{ID: "new-1", Platform: "xhs"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"old-1", "new-1"} {
+		if _, ok := p2.Get(want); !ok {
+			t.Fatalf("account %q lost after fresh-process save (snapshot truncation)", want)
+		}
+	}
+}
