@@ -15,7 +15,7 @@ import (
 // collect_m6.go — the M6 collection surfaces: watermark-free video resolve /
 // download, bookmark (collects) folders and their videos, and the IM unread
 // count. All are contract-driven via the collect engine and share the
-// account-pool / license-gate wiring of the other collect subcommands.
+// account-pool wiring of the other collect subcommands.
 
 // parseAwemeID extracts the item id from a video page URL (the last path
 // segment) or returns a bare id unchanged.

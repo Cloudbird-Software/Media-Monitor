@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 )
 
 // writeM6AdaptDir lays out the base adapt tree plus douyin M6 contracts
@@ -114,7 +112,6 @@ func TestM6Tools(t *testing.T) {
 	dataDir := filepath.Join(t.TempDir(), "data")
 	t.Setenv("MEDIAMON_DATA_DIR", dataDir)
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 
 	// Seed one pool account (cookie + pinned UA) before the server opens it.
 	pool, err := accounts.Open(filepath.Join(dataDir, "accounts"))
@@ -177,62 +174,6 @@ func TestM6Tools(t *testing.T) {
 	}
 }
 
-func TestLicenseGateMCPTools(t *testing.T) {
-	pub, _, err := license.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
-	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
-	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "true")
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", base64.StdEncoding.EncodeToString(pub))
-	c := startServer(t)
-
-	// No license file: gated collect/action tools get a structured denial.
-	for _, tool := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"search_items", map[string]any{"platform": "douyin", "keyword": "k"}},
-		{"get_comments", map[string]any{"platform": "douyin", "item_id": "i"}},
-		{"get_user", map[string]any{"platform": "douyin", "sec_uid": "s"}},
-		{"group_members", map[string]any{"platform": "douyin", "group_id": "g"}},
-		{"monitor_live", map[string]any{"room_url": "https://live.douyin.com/1", "allow_unsigned": true}},
-		{"send_message", map[string]any{"platform": "douyin", "targets": "t", "first_message": "hi"}},
-		{"resolve_video", map[string]any{"platform": "douyin", "item_id": "i"}},
-		{"get_collects", map[string]any{"platform": "douyin"}},
-		{"get_im_unread", map[string]any{"platform": "douyin"}},
-		{"adb_list", map[string]any{}},
-	} {
-		msg := c.callToolErr(t, tool.name, tool.args)
-		if !strings.Contains(msg, "license_denied") || !strings.Contains(msg, "no_license") {
-			t.Fatalf("tool %s denial = %q, want structured license_denied/no_license", tool.name, msg)
-		}
-	}
-
-	// Exempt meta surfaces stay open.
-	for _, tool := range []string{"version", "contracts_list", "accounts_list", "adapt_canary_offline"} {
-		if out := c.callTool(t, tool, map[string]any{}); out == nil {
-			t.Fatalf("exempt tool %s failed", tool)
-		}
-	}
-}
-
-func TestLicenseGateMCPDisabledByEnv(t *testing.T) {
-	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
-	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
-	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
-	c := startServer(t)
-
-	// With the gate off, a gated tool reaches its normal validation.
-	msg := c.callToolErr(t, "search_items", map[string]any{"platform": "douyin"})
-	if !strings.Contains(msg, "keyword is required") {
-		t.Fatalf("search_items error = %q, want validation error (gate off)", msg)
-	}
-}
-
 // TestLiveDecoderForPlatforms pins the monitor_live wiring: each platform
 // resolves its own <platform>-meta contract and wire decoder.
 func TestLiveDecoderForPlatforms(t *testing.T) {
@@ -281,5 +222,80 @@ func TestLiveDecoderForPlatforms(t *testing.T) {
 	// protobuf path) instead of failing.
 	if d := liveDecoderFor(reg, "nope"); d != nil {
 		t.Fatalf("unknown platform decoder = %T, want nil", d)
+	}
+}
+
+// TestCollectToolsCallableWithoutLicenseConfig: every previously gated
+// collect/action tool answers its own validation without any license
+// configuration (W1-C1 AC-4). Fail-before: with the gate in place these
+// calls were refused with a structured license_denied error.
+func TestCollectToolsCallableWithoutLicenseConfig(t *testing.T) {
+	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
+	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
+	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	c := startServer(t)
+
+	// Each tool must reach its own argument validation (or signature
+	// fail-closed path), never a license refusal.
+	for _, tool := range []struct {
+		name string
+		args map[string]any
+		want string
+	}{
+		{"search_items", map[string]any{"platform": "douyin"}, "keyword is required"},
+		{"get_comments", map[string]any{"platform": "douyin"}, "item_id is required"},
+		{"get_replies", map[string]any{"platform": "douyin", "item_id": "i", "cid": "c"}, "a_bogus"},
+		{"get_user", map[string]any{"platform": "douyin"}, "sec_uid is required"},
+		{"group_members", map[string]any{"platform": "douyin"}, "group_id is required"},
+		{"resolve_video", map[string]any{"platform": "douyin"}, "item_id is required"},
+		{"get_collects", map[string]any{"platform": "douyin"}, "not declared"},
+		{"get_im_unread", map[string]any{"platform": "douyin"}, "not declared"},
+	} {
+		msg := c.callToolErr(t, tool.name, tool.args)
+		if strings.Contains(msg, "license_denied") {
+			t.Fatalf("tool %s refused with license error: %q", tool.name, msg)
+		}
+		if tool.want != "" && !strings.Contains(msg, tool.want) {
+			t.Fatalf("tool %s error = %q, want %q", tool.name, msg, tool.want)
+		}
+	}
+
+	// send_message answers through its structured (non-error) result
+	// surface without a license refusal.
+	if out := c.callTool(t, "send_message", map[string]any{"platform": "douyin", "targets": "t", "first_message": "hi"}); out == nil {
+		t.Fatal("send_message failed")
+	}
+	// adb_list reaches the adb layer with no license refusal; the outcome
+	// itself depends on whether an adb server is reachable in this
+	// environment (structured error allowed, license_denied never).
+	m := c.call(t, "tools/call", "err-adb_list", map[string]any{"name": "adb_list", "arguments": map[string]any{}})
+	if e, ok := m["error"].(map[string]any); ok {
+		if msg := fmt.Sprint(e["message"]); strings.Contains(msg, "license_denied") {
+			t.Fatalf("adb_list refused with license error: %q", msg)
+		}
+	}
+
+	// Meta surfaces keep working (regression).
+	for _, tool := range []string{"version", "contracts_list", "accounts_list", "adapt_canary_offline"} {
+		if out := c.callTool(t, tool, map[string]any{}); out == nil {
+			t.Fatalf("meta tool %s failed", tool)
+		}
+	}
+}
+
+// TestLicenseEnvNoOp: setting the retired MEDIAMON_LICENSE_* variables
+// changes nothing (W1-C1 AC-3) — the behavior is identical to leaving them
+// unset.
+func TestLicenseEnvNoOp(t *testing.T) {
+	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
+	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
+	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_LICENSE_DIR", t.TempDir())
+	t.Setenv("MEDIAMON_LICENSE_PUBKEY", "not-a-valid-key")
+	c := startServer(t)
+
+	msg := c.callToolErr(t, "search_items", map[string]any{"platform": "douyin"})
+	if !strings.Contains(msg, "keyword is required") {
+		t.Fatalf("search_items error = %q, want validation error (env vars are no-ops)", msg)
 	}
 }

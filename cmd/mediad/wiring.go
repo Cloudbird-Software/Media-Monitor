@@ -1,26 +1,20 @@
 // wiring.go holds the mediad startup wiring that composes internal packages
-// at the cmd layer: the account-pool/UA-pool injection, the license gate, the
+// at the cmd layer: the account-pool/UA-pool injection, the
 // datacenter hub (webhook push loop + final flush) and the IM unread poller.
 package main
 
 import (
 	"context"
-	"crypto/ed25519"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/datacenter"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 )
 
@@ -63,62 +57,6 @@ func uaPoolUserAgents() []string {
 	}
 	log.Printf("ua pool: %d user-agents loaded from %s", len(doc.UAs), path)
 	return doc.UAs
-}
-
-// ---- license gate ----
-
-// loadLicenseGate builds the cmd-layer license gate. The gate is ON by
-// default and fails closed: without a verifiable license every gated
-// operation (collect/send/task-submit) is denied, while /healthz, /metrics,
-// the dashboard and read-only endpoints stay open. Setting
-// MEDIAMON_LICENSE_REQUIRED=false explicitly disables the gate (dev-only,
-// same spirit as --allow-unsigned).
-func loadLicenseGate(dataDir string) (*license.Gate, string) {
-	if strings.EqualFold(os.Getenv("MEDIAMON_LICENSE_REQUIRED"), "false") {
-		return nil, "DISABLED via MEDIAMON_LICENSE_REQUIRED=false (dev-only; collect/send actions are not gated)"
-	}
-	dir := os.Getenv("MEDIAMON_LICENSE_DIR")
-	if dir == "" {
-		dir = filepath.Join(dataDir, "license")
-	}
-	raw, err := base64.StdEncoding.DecodeString(os.Getenv("MEDIAMON_LICENSE_PUBKEY"))
-	if err != nil || len(raw) != ed25519.PublicKeySize {
-		g := license.NewGate(nil, nil, errors.New("MEDIAMON_LICENSE_PUBKEY missing or not a base64 Ed25519 public key"))
-		return g, "enabled (fail-closed): MEDIAMON_LICENSE_PUBKEY missing/invalid, all gated operations denied"
-	}
-	g, err := license.LoadGate(dir, ed25519.PublicKey(raw), nil)
-	if err != nil {
-		g = license.NewGate(nil, nil, fmt.Errorf("license verifier: %w", err))
-		return g, "enabled (fail-closed): verifier construction failed, all gated operations denied"
-	}
-	if _, ok := g.Active(); ok {
-		return g, "enabled: license active (dir " + dir + ")"
-	}
-	return g, "enabled (fail-closed): no valid license in " + dir
-}
-
-// checkGate enforces the license gate for one HTTP request. It writes the
-// 403 + structured DeniedError body and returns false when denied.
-func (d *daemon) checkGate(w http.ResponseWriter) bool {
-	if d.gate == nil {
-		return true
-	}
-	if err := d.gate.Check(""); err != nil {
-		writeLicenseDenied(w, err)
-		return false
-	}
-	return true
-}
-
-// writeLicenseDenied renders a Gate denial as 403 + structured JSON (fields
-// from license.DenialFields, shared with the MCP tool-error rendering).
-func writeLicenseDenied(w http.ResponseWriter, err error) {
-	reason, detail := license.DenialFields(err)
-	writeJSON(w, http.StatusForbidden, map[string]any{
-		"error":  "license_denied",
-		"reason": reason,
-		"detail": detail,
-	})
 }
 
 // ---- datacenter hub ----

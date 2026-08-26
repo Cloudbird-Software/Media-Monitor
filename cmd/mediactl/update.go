@@ -12,7 +12,7 @@ import (
 // update.go — `mediactl update check`: manifest-driven self-update check and
 // (optional) download. The library verifies SHA256 and never touches the
 // running binary; a checksum mismatch discards the download. This surface is
-// exempt from the license gate (like version).
+// (like version).
 
 // updatesDir resolves the update download dir: $MEDIAMON_UPDATES_DIR
 // override, default data/updates.

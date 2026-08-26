@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -16,7 +15,6 @@ import (
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/datacenter"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 )
 
 // writeM6Contracts adds the M6 demo contracts (video-download, collects,
@@ -154,79 +152,6 @@ func TestCollectAccountIDHeaders(t *testing.T) {
 	}
 	if gotCookie.Load() != "" || gotUA.Load() != "PoolUA/1.0" {
 		t.Fatalf("unknown account fell back wrong: cookie=%q UA=%q", gotCookie.Load(), gotUA.Load())
-	}
-}
-
-func TestLicenseGateREST(t *testing.T) {
-	pub, _, err := license.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "true")
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", base64.StdEncoding.EncodeToString(pub))
-
-	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.WriteString(w, `{"data":[],"has_more":false}`)
-	}))
-	defer api.Close()
-
-	// No license file in <data>/license: the gate denies with no_license.
-	_, ts := newTestDaemon(t, filepath.Join(t.TempDir(), "data"), writeDemoAdapt(t, api.URL))
-
-	resp, b := postJSON(t, ts, "/api/v1/collect/search", map[string]any{"platform": "demo", "keyword": "k"})
-	if resp.StatusCode != http.StatusForbidden {
-		t.Fatalf("collect status = %d, body = %s", resp.StatusCode, b)
-	}
-	if !strings.Contains(string(b), "license_denied") || !strings.Contains(string(b), "no_license") {
-		t.Fatalf("collect denial body = %s", b)
-	}
-	resp, b = postJSON(t, ts, "/api/v1/send", map[string]any{"platform": "demo"})
-	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(b), "no_license") {
-		t.Fatalf("send status = %d, body = %s", resp.StatusCode, b)
-	}
-	resp, b = postJSON(t, ts, "/api/v1/tasks", map[string]any{"kind": "search"})
-	if resp.StatusCode != http.StatusForbidden || !strings.Contains(string(b), "no_license") {
-		t.Fatalf("tasks POST status = %d, body = %s", resp.StatusCode, b)
-	}
-
-	// Exempt surfaces stay open.
-	for _, path := range []string{"/healthz", "/metrics", "/", "/api/v1/tasks", "/api/v1/accounts"} {
-		resp, err := http.Get(ts.URL + path)
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp.Body.Close()
-		if resp.StatusCode != http.StatusOK {
-			t.Fatalf("exempt GET %s status = %d, want 200", path, resp.StatusCode)
-		}
-	}
-}
-
-func TestLicenseGateDisabledByEnv(t *testing.T) {
-	pub, _, err := license.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", base64.StdEncoding.EncodeToString(pub))
-
-	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = io.WriteString(w, `{"data":[],"has_more":false}`)
-	}))
-	defer api.Close()
-	_, ts := newTestDaemon(t, filepath.Join(t.TempDir(), "data"), writeDemoAdapt(t, api.URL))
-
-	resp, b := postJSON(t, ts, "/api/v1/collect/search", map[string]any{"platform": "demo", "keyword": "k"})
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("collect with gate disabled status = %d, body = %s", resp.StatusCode, b)
-	}
-	resp, err = http.Post(ts.URL+"/api/v1/tasks", "application/json", strings.NewReader(`{"kind":"search","config":{}}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	resp.Body.Close()
-	if resp.StatusCode != http.StatusCreated {
-		t.Fatalf("tasks POST with gate disabled status = %d", resp.StatusCode)
 	}
 }
 
@@ -434,5 +359,33 @@ func TestIMPollOnceAndTask(t *testing.T) {
 			t.Fatalf("poll for acct-y never landed: %+v", d.im.snapshot())
 		}
 		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// TestCollectRESTWithoutLicenseConfig: collect/send/task surfaces answer
+// without any license configuration (W1-C1 AC-4) — before the gate removal
+// this was a fail-closed 403 license_denied, so the same request served as
+// the fail-before assertion.
+func TestCollectRESTWithoutLicenseConfig(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, `{"data":[],"has_more":false}`)
+	}))
+	defer api.Close()
+	_, ts := newTestDaemon(t, filepath.Join(t.TempDir(), "data"), writeDemoAdapt(t, api.URL))
+
+	resp, b := postJSON(t, ts, "/api/v1/collect/search", map[string]any{"platform": "demo", "keyword": "k"})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("collect status = %d, body = %s", resp.StatusCode, b)
+	}
+	if strings.Contains(string(b), "license_denied") {
+		t.Fatalf("collect body must not mention license_denied: %s", b)
+	}
+	resp, err := http.Post(ts.URL+"/api/v1/tasks", "application/json", strings.NewReader(`{"kind":"search","config":{}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusCreated {
+		t.Fatalf("tasks POST status = %d, want 201", resp.StatusCode)
 	}
 }

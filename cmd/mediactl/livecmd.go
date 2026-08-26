@@ -52,9 +52,6 @@ func liveMonitor(args []string) error {
 	if *room == "" {
 		return fmt.Errorf("--room is required")
 	}
-	if err := requireLicense("live"); err != nil {
-		return err
-	}
 	filter := map[string]bool{}
 	for _, e := range strings.Split(*events, ",") {
 		e = strings.TrimSpace(e)

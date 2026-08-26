@@ -47,16 +47,11 @@ func writeDemoAdapt(t *testing.T, srvURL string) string {
 }
 
 // newTestDaemon wires a daemon against the given adapt dir and returns it
-// with its routes mounted on an httptest server. The license gate is disabled
-// by default (tests that exercise the gate set MEDIAMON_LICENSE_REQUIRED
-// before calling).
+// with its routes mounted on an httptest server.
 func newTestDaemon(t *testing.T, dataDir, adaptDir string) (*daemon, *httptest.Server) {
 	t.Helper()
 	t.Setenv("MEDIAMON_ADAPT_DIR", adaptDir)
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	if os.Getenv("MEDIAMON_LICENSE_REQUIRED") == "" {
-		t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
-	}
 	st, err := store.Open(dataDir)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +59,6 @@ func newTestDaemon(t *testing.T, dataDir, adaptDir string) (*daemon, *httptest.S
 	counters := obs.NewCounterMap()
 	d := &daemon{runner: core.NewRunner(st, counters), counters: counters, im: newIMPoller()}
 	d.wireAdapt(dataDir)
-	d.wireLicense(dataDir)
 	d.wireDatacenter(dataDir)
 	ts := httptest.NewServer(d.routes())
 	t.Cleanup(func() {
