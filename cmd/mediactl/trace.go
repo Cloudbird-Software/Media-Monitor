@@ -46,9 +46,6 @@ func traceRun(args []string) error {
 	if *platform == "" || *targets == "" {
 		return fmt.Errorf("--platform and --targets are required")
 	}
-	if err := requireLicense("dm"); err != nil {
-		return err
-	}
 
 	flow, err := loadTraceFlow(*flowFile, *platform)
 	if err != nil {

@@ -38,9 +38,6 @@ func cmdSend(args []string) error {
 	if *platform == "" || *first == "" || *targets == "" {
 		return fmt.Errorf("--platform, --first and --targets are required")
 	}
-	if err := requireLicense("dm"); err != nil {
-		return err
-	}
 	eng, err := buildSendEngine(*platform, *cookieFile, *signerURL, *account)
 	if err != nil {
 		return err

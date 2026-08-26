@@ -11,9 +11,7 @@
 // collect/send request can act as a pool account via "account_id"; the UA
 // pool (MEDIAMON_UA_POOL, default data/ua-pool.json next to the executable)
 // feeds the shared HTTP client (missing file = keep built-in pool, never
-// fatal); the license gate (MEDIAMON_LICENSE_DIR / MEDIAMON_LICENSE_PUBKEY,
-// MEDIAMON_LICENSE_REQUIRED=false to disable) refuses collect/send/task
-// execution without a valid license; the datacenter hub
+// fatal); the datacenter hub
 // (MEDIAMON_DATACENTER_DIR, webhook via MEDIAMON_WEBHOOK_URL /
 // MEDIAMON_WEBHOOK_MIN_INTERVAL / MEDIAMON_WEBHOOK_MAX_INTERVAL) aggregates
 // every successful collect/send output.
@@ -45,7 +43,6 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/core"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/datacenter"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
@@ -78,8 +75,6 @@ func main() {
 	if d.adaptErr != nil {
 		log.Printf("warn: %v (collect API degraded, canary summary unavailable)", d.adaptErr)
 	}
-	d.wireLicense(*dir)
-	log.Printf("license gate: %s", d.licenseNote)
 	d.wireDatacenter(*dir)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -115,9 +110,6 @@ type daemon struct {
 	canary     *canaryStatus // computed once at startup
 	accounts   *accounts.Pool
 	store      *store.Store
-	// license gate (nil = disabled via MEDIAMON_LICENSE_REQUIRED=false).
-	gate        *license.Gate
-	licenseNote string
 	// datacenter hub + webhook push state.
 	hub          *datacenter.Hub
 	webhookDesc  string
@@ -163,11 +155,6 @@ func (d *daemon) routes() http.Handler {
 	mux.HandleFunc("/api/v1/accounts", d.accountsHandler)
 	mux.HandleFunc("/", d.dashboardHandler)
 	return mux
-}
-
-// wireLicense loads the license gate (never fatal; see loadLicenseGate).
-func (d *daemon) wireLicense(dataDir string) {
-	d.gate, d.licenseNote = loadLicenseGate(dataDir)
 }
 
 // adaptDirEnv resolves the adapt tree like the other commands
@@ -286,13 +273,10 @@ func runCanaries(reg *contracts.Registry, dir string) *canaryStatus {
 // collectHandler serves POST /api/v1/collect/{search|comments|replies|user|
 // group|video|collects|collects-videos|im-unread}. The JSON body uses the
 // same parameter names as the MCP tools; an optional "account_id" routes the
-// request through that pool account's cookie/proxy/UA. Gated by license.
+// request through that pool account's cookie/proxy/UA.
 func (d *daemon) collectHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !d.checkGate(w) {
 		return
 	}
 	op := strings.TrimPrefix(req.URL.Path, "/api/v1/collect/")
@@ -450,13 +434,10 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 // ---- send API ----
 
 // sendHandler serves POST /api/v1/send: run a direct-message broadcast job.
-// Gated by license; cfg.AccountId ("account_id") routes through the pool.
+// cfg.AccountId ("account_id") routes through the pool.
 func (d *daemon) sendHandler(w http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	if !d.checkGate(w) {
 		return
 	}
 	if d.engine == nil {
@@ -611,7 +592,7 @@ func (d *daemon) taskStats() map[string]int64 {
 
 // ---- shared handlers and helpers ----
 
-// tasksHandler serves GET/POST /api/v1/tasks. Listing is license-exempt;
+// tasksHandler serves GET/POST /api/v1/tasks.
 // submitting is gated. A submitted "im-unread-poll" task additionally starts
 // its background polling loop (config: platform, account_id,
 // interval_seconds).
@@ -625,9 +606,6 @@ func (d *daemon) tasksHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		writeJSON(w, 200, tasks)
 	case http.MethodPost:
-		if !d.checkGate(w) {
-			return
-		}
 		var body struct {
 			Kind   string        `json:"kind"`
 			Config model.JSONMap `json:"config"`

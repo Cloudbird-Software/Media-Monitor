@@ -23,7 +23,6 @@ Machine-readable index. Humans: use AGENTS.md as the entry point instead.
    - `internal/trace` — probabilistic trace/engagement engine (device-equalized, adb executor; flows: douyin + shipinhao).
    - `internal/accounts` — multi-account pool (cookies/proxy/UA, Netscape/JSON import/export).
    - `internal/datacenter` — lead data hub (dedup, cap, keyword filter, webhook push w/ retry, CSV export).
-   - `internal/license` — client-side license/activation/device-binding (Ed25519 offline verify).
    - `internal/selfupdate` — update skeleton (manifest check + SHA256 download to data/updates/).
    - `internal/netcapture` — network-capture tool (session + HAR export).
    - `internal/adb` — Android device control over the ADB protocol (shell, screencap, input, ui dump).
@@ -49,7 +48,6 @@ Machine-readable index. Humans: use AGENTS.md as the entry point instead.
 | IM unread-count polling | collect engine | implemented |
 | multi-account pool (cookies/proxy/UA, import/export, rotation) | internal/accounts | implemented |
 | data center: dedup / cap / keyword filter / webhook push / CSV export | internal/datacenter | implemented |
-| license/activation/device-binding (Ed25519 offline verify) | internal/license | implemented |
 | self-update skeleton (manifest check + SHA256 download) | internal/selfupdate | implemented |
 | network-capture tool (session + HAR export) | internal/netcapture | implemented |
 | MCP/CLI/daemon interfaces | cmd/mediad-mcp (20 tools) + mediad REST + mediactl | implemented |

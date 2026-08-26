@@ -1,17 +1,12 @@
 package main
 
 import (
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 )
 
 func TestSharedHTTPClientUAPoolInjected(t *testing.T) {
@@ -85,92 +80,5 @@ func TestAccountPoolForValidation(t *testing.T) {
 	p, err = accountPoolFor("douyin", "acc-1")
 	if err != nil || p == nil {
 		t.Fatalf("valid account = (%v, %v)", p, err)
-	}
-}
-
-// writeSignedLicense creates a license file bound to this machine, signed by
-// a fresh key, and returns the base64 public key.
-func writeSignedLicense(t *testing.T, dir string, features []string) string {
-	t.Helper()
-	pub, priv, err := license.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	now := time.Now().Unix()
-	lic := license.License{
-		Machine:   license.MachineFingerprint(),
-		NotBefore: now - 60,
-		NotAfter:  now + 3600,
-		Features:  features,
-		Issuer:    "test",
-	}
-	sig, err := license.Sign(priv, lic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	lic.Signature = sig
-	raw, err := json.Marshal(lic)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, license.LicenseFileName), raw, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	return base64.StdEncoding.EncodeToString(pub)
-}
-
-func TestRequireLicenseDisabledByEnv(t *testing.T) {
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
-	// No pubkey, no license dir: the explicit bypass wins.
-	if err := requireLicense("collect"); err != nil {
-		t.Fatalf("disabled gate denied: %v", err)
-	}
-}
-
-func TestRequireLicenseNoPubkeyFailsClosed(t *testing.T) {
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", "")
-	err := requireLicense("collect")
-	var de *license.DeniedError
-	if !errors.As(err, &de) {
-		t.Fatalf("error = %v, want *license.DeniedError", err)
-	}
-	if de.Reason != license.ReasonMalformed {
-		t.Fatalf("reason = %q, want %q", de.Reason, license.ReasonMalformed)
-	}
-}
-
-func TestRequireLicenseNoLicenseFile(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("MEDIAMON_LICENSE_DIR", dir)
-	pub, _, err := license.GenerateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", base64.StdEncoding.EncodeToString(pub))
-
-	err = requireLicense("collect")
-	var de *license.DeniedError
-	if !errors.As(err, &de) {
-		t.Fatalf("error = %v, want *license.DeniedError", err)
-	}
-	if de.Reason != license.ReasonNoLicense {
-		t.Fatalf("reason = %q, want %q", de.Reason, license.ReasonNoLicense)
-	}
-}
-
-func TestRequireLicenseSignedLicensePasses(t *testing.T) {
-	dir := t.TempDir()
-	t.Setenv("MEDIAMON_LICENSE_DIR", dir)
-	pubB64 := writeSignedLicense(t, dir, []string{"collect", "dm", "live"})
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", pubB64)
-
-	if err := requireLicense("collect"); err != nil {
-		t.Fatalf("signed license denied: %v", err)
-	}
-	// A feature the license does not enable is denied with feature_disabled.
-	err := requireLicense("vision")
-	var de *license.DeniedError
-	if !errors.As(err, &de) || de.Reason != license.ReasonFeature {
-		t.Fatalf("feature check = %v, want feature_disabled", err)
 	}
 }

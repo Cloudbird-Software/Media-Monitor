@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 )
 
 // fakePlatform is an httptest twin of the platform endpoints the M6 collect
@@ -106,13 +104,12 @@ func writeM6AdaptDir(t *testing.T, baseURL string) string {
 	return dir
 }
 
-// setupM6 wires the fake platform + temp adapt dir and disables the license
-// gate for the functional collect tests.
+// setupM6 wires the fake platform + temp adapt dir for the functional
+// collect tests.
 func setupM6(t *testing.T) *fakePlatform {
 	t.Helper()
 	fp := newFakePlatform(t)
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeM6AdaptDir(t, fp.srv.URL))
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	return fp
 }
 
@@ -278,50 +275,5 @@ func TestCollectAccountInjection(t *testing.T) {
 	// Unknown account id fails closed before any request.
 	if err := cmdCollect([]string{"search", "--platform", "douyin", "--keyword", "kw1", "--account", "ghost"}); err == nil || !strings.Contains(err.Error(), "not found") {
 		t.Fatalf("unknown account error = %v", err)
-	}
-}
-
-// TestCollectLicenseGate exercises the cmd-level gate end to end: a missing
-// license denies collect with the structured reason; a valid signed license
-// lets the same command through to the platform.
-func TestCollectLicenseGate(t *testing.T) {
-	fp := newFakePlatform(t)
-	t.Setenv("MEDIAMON_ADAPT_DIR", writeM6AdaptDir(t, fp.srv.URL))
-	licDir := t.TempDir()
-	t.Setenv("MEDIAMON_LICENSE_DIR", licDir)
-	pubB64 := writeSignedLicense(t, licDir, []string{"collect"})
-	t.Setenv("MEDIAMON_LICENSE_PUBKEY", pubB64)
-
-	// Denied: remove the license file (fail-closed, structured reason).
-	licPath := filepath.Join(licDir, license.LicenseFileName)
-	saved, err := os.ReadFile(licPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(licPath); err != nil {
-		t.Fatal(err)
-	}
-	err = cmdCollect([]string{"search", "--platform", "douyin", "--keyword", "x"})
-	var de *license.DeniedError
-	if !errors.As(err, &de) {
-		t.Fatalf("error = %v, want *license.DeniedError", err)
-	}
-	if de.Reason != license.ReasonNoLicense {
-		t.Fatalf("reason = %q, want %q", de.Reason, license.ReasonNoLicense)
-	}
-
-	// Allowed: restore the signed license and the collect reaches the fake
-	// platform.
-	if err := os.WriteFile(licPath, saved, 0o644); err != nil {
-		t.Fatal(err)
-	}
-	out, err := captureStdout(t, func() error {
-		return cmdCollect([]string{"search", "--platform", "douyin", "--keyword", "x"})
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(out, "it1") {
-		t.Fatalf("output = %q", out)
 	}
 }
