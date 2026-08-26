@@ -146,7 +146,6 @@ func TestServerToolsAndBasics(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	m := c.call(t, "initialize", "i1", map[string]any{"protocolVersion": "2025-03-26"})
@@ -226,7 +225,6 @@ func TestTasksTools(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	out := c.callTool(t, "list_tasks", map[string]any{})
@@ -259,7 +257,6 @@ func TestMonitorLiveRequiresSigner(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c := startServer(t)
 
 	msg := c.callToolErr(t, "monitor_live", map[string]any{
@@ -275,7 +272,6 @@ func TestMonitorLiveAllowUnsignedSession(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	// Redirect every live-network hop to a dead local endpoint so the session
 	// fails fast with zero external traffic.
 	t.Setenv("MEDIAMON_LIVE_PAGE_ENDPOINT", "http://127.0.0.1:1")
@@ -328,7 +324,6 @@ func TestRunFailsWithoutAdaptDir(t *testing.T) {
 	t.Setenv("MEDIAMON_ADAPT_DIR", filepath.Join(t.TempDir(), "missing"))
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	c, s := net.Pipe()
 	done := make(chan error, 1)
 	go func() { done <- run(s) }()

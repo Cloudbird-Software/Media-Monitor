@@ -103,7 +103,6 @@ func writeAdbHexFrames(w io.Writer, parts ...string) {
 // profile_url_template (not hardcoded).
 func TestTraceRunWiresProfileURLTemplate(t *testing.T) {
 	addr, fs := startFakeAdbServer(t)
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 
 	// A tiny flow: like always fires (no layout bounds => non-fatal skip on
 	// the gesture), dwell waits 1ms. The template is what we assert on.
@@ -154,7 +153,6 @@ func TestTraceRunWiresProfileURLTemplate(t *testing.T) {
 // TestTraceRunMissingTemplateFailsClosed: a flow without profile_url_template
 // is rejected before any adb traffic.
 func TestTraceRunMissingTemplateFailsClosed(t *testing.T) {
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 	flowFile := filepath.Join(t.TempDir(), "flow.json")
 	if err := os.WriteFile(flowFile, []byte(`{"platform":"douyin","actions":[{"type":"like","prob":1}]}`), 0o644); err != nil {
 		t.Fatal(err)

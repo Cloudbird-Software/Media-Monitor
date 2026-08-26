@@ -112,7 +112,6 @@ func TestM6Tools(t *testing.T) {
 	dataDir := filepath.Join(t.TempDir(), "data")
 	t.Setenv("MEDIAMON_DATA_DIR", dataDir)
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "false")
 
 	// Seed one pool account (cookie + pinned UA) before the server opens it.
 	pool, err := accounts.Open(filepath.Join(dataDir, "accounts"))
@@ -293,7 +292,6 @@ func TestLicenseEnvNoOp(t *testing.T) {
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
 	t.Setenv("MEDIAMON_LICENSE_DIR", t.TempDir())
 	t.Setenv("MEDIAMON_LICENSE_PUBKEY", "not-a-valid-key")
-	t.Setenv("MEDIAMON_LICENSE_REQUIRED", "true")
 	c := startServer(t)
 
 	msg := c.callToolErr(t, "search_items", map[string]any{"platform": "douyin"})
