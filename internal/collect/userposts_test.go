@@ -16,6 +16,7 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
 
 // fixturesDirForTest resolves the adapt/fixtures dir from this package.
@@ -33,7 +34,7 @@ func fixturesDirForTest(t *testing.T) string {
 // items binding and max_cursor paging (W2-C1 AC-1/AC-5).
 func TestDouyinUserPostsContractFields(t *testing.T) {
 	all := contracts.NewRegistry()
-	if err := contracts.LoadDir(all, contractsDirForTest(t)); err != nil {
+	if err := contracts.LoadDir(all, testkit.ContractsDir(t, 2)); err != nil {
 		t.Fatal(err)
 	}
 	c, ok := all.Get("douyin-user-posts")
@@ -119,7 +120,7 @@ func userPostsFixtureServer(t *testing.T) (*httptest.Server, *[]int64) {
 func TestDouyinUserPostsPagination(t *testing.T) {
 	srv, cursorsPtr := userPostsFixtureServer(t)
 	defer srv.Close()
-	reg := remapContractsForTest(t, contractsDirForTest(t), srv, "douyin-user-posts")
+	reg := testkit.RemapContracts(t, testkit.ContractsDir(t, 2), srv, "douyin-user-posts")
 	eng := New(Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -165,7 +166,7 @@ func TestDouyinUserPostsPagination(t *testing.T) {
 func TestDouyinUserPostsStatsBinding(t *testing.T) {
 	srv, _ := userPostsFixtureServer(t)
 	defer srv.Close()
-	reg := remapContractsForTest(t, contractsDirForTest(t), srv, "douyin-user-posts")
+	reg := testkit.RemapContracts(t, testkit.ContractsDir(t, 2), srv, "douyin-user-posts")
 	c, _ := reg.Get("douyin-user-posts")
 	eng := New(Context{
 		Registry: reg,
