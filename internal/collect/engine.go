@@ -124,6 +124,7 @@ var categorySuffix = map[string]string{
 	"collects":        "collects",
 	"collects_videos": "collects-videos",
 	"im_unread":       "im-unread",
+	"user_posts":      "user-posts",
 }
 
 // resolveName finds the contract name for a platform collect category,

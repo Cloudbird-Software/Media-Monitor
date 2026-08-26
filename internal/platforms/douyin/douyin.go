@@ -67,6 +67,7 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 			"user":         "douyin-user",
 			"group":        "douyin-group-members",
 			"send_message": "douyin-send-message",
+			"user_posts":   "douyin-user-posts",
 		},
 	}, reg, nil
 }
