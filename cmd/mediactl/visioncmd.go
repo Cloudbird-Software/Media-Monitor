@@ -184,8 +184,15 @@ func findNodeByHint(tree *adb.NodeTree, hint string) *adb.Node {
 }
 
 func numArg(args map[string]any, k string) (float64, bool) {
-	f, ok := args[k].(float64)
-	return f, ok
+	switch v := args[k].(type) {
+	case float64:
+		return v, true
+	case int:
+		return float64(v), true
+	case int64:
+		return float64(v), true
+	}
+	return 0, false
 }
 
 func xyFromArgs(args map[string]any) (int32, int32, error) {
