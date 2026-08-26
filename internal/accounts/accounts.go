@@ -37,16 +37,21 @@ const (
 // an account may carry only cookies, only a proxy, or any combination. The
 // engine merges account-level values over platform-level defaults.
 type Account struct {
-	ID        string            `json:"id"`       // opaque pool id
-	Platform  string            `json:"platform"` // douyin|kuaishou|xhs
-	Nickname  string            `json:"nickname,omitempty"`
-	Cookies   map[string]string `json:"cookies"`         // name=value pairs
-	Proxy     string            `json:"proxy,omitempty"` // http://user:pass@host:port
-	UA        string            `json:"ua,omitempty"`    // pinned User-Agent
-	Tags      []string          `json:"tags,omitempty"`
-	Status    Status            `json:"status"`
-	CreatedAt int64             `json:"created_at"`
-	UpdatedAt int64             `json:"updated_at"`
+	ID       string            `json:"id"`       // opaque pool id
+	Platform string            `json:"platform"` // douyin|kuaishou|xhs
+	Nickname string            `json:"nickname,omitempty"`
+	Cookies  map[string]string `json:"cookies"`         // name=value pairs
+	Proxy    string            `json:"proxy,omitempty"` // http://user:pass@host:port
+	UA       string            `json:"ua,omitempty"`    // pinned User-Agent
+	Tags     []string          `json:"tags,omitempty"`
+	Status   Status            `json:"status"`
+	// Probe-derived health (W4-C1): empty = never probed. Persisted with the
+	// snapshot so it survives restarts.
+	Health          Health `json:"health,omitempty"`
+	HealthCheckedAt int64  `json:"health_checked_at,omitempty"`
+	HealthDetail    string `json:"health_detail,omitempty"`
+	CreatedAt       int64  `json:"created_at"`
+	UpdatedAt       int64  `json:"updated_at"`
 }
 
 // CookieHeader renders the cookie set as a "k1=v1; k2=v2" header fragment.
@@ -82,9 +87,10 @@ func sortStrings(s []string) {
 // holds one JSON document per account (the Account struct). A Pool is safe for
 // concurrent use.
 type Pool struct {
-	mu    sync.Mutex
-	st    *store.Store
-	cache map[string]Account // id -> account (loaded on demand / write)
+	mu     sync.Mutex
+	st     *store.Store
+	cache  map[string]Account // id -> account (loaded on demand / write)
+	loaded bool               // snapshot hydrated at least once
 }
 
 // Open opens (or creates) the account pool rooted at dir.
@@ -171,6 +177,7 @@ func (p *Pool) Delete(id string) error {
 // persist writes the whole pool as a single JSON array (small N; atomic enough
 // for a local pool). Replaces the collection contents each time.
 func (p *Pool) persist() error {
+	p.loadAll() // hydrate pre-existing snapshot rows before the rewrite
 	docs := make([]Account, 0, len(p.cache))
 	for _, a := range p.cache {
 		docs = append(docs, a)
@@ -191,7 +198,7 @@ func (p *Pool) persist() error {
 // loadAll hydrates the cache from the latest snapshot row. Cheap and idempotent
 // because the pool is small; callers hold p.mu.
 func (p *Pool) loadAll() {
-	if len(p.cache) > 0 {
+	if p.loaded {
 		return
 	}
 	var latest []Account
@@ -205,6 +212,7 @@ func (p *Pool) loadAll() {
 	for _, a := range latest {
 		p.cache[a.ID] = a
 	}
+	p.loaded = true
 }
 
 func sortAccounts(s []Account) {
