@@ -1,0 +1,50 @@
+{
+  "data": {
+    "notes": [
+      {
+        "note_id": "xhs-note-0003",
+        "display_title": "示例创作者笔记003",
+        "type": "video",
+        "time": 1780499997000,
+        "user": {
+          "user_id": "xhs-creator-0001",
+          "nickname": "示例创作者",
+          "avatar": "https://example.invalid/xhs-creator.jpg"
+        },
+        "interact_info": {
+          "liked_count": 2100,
+          "comment_count": 340,
+          "collected_count": 1500,
+          "share_count": 88
+        }
+      },
+      {
+        "note_id": "xhs-note-0004",
+        "display_title": "示例创作者笔记004",
+        "type": "normal",
+        "time": 1780499996000,
+        "user": {
+          "user_id": "xhs-creator-0001",
+          "nickname": "示例创作者",
+          "avatar": "https://example.invalid/xhs-creator.jpg"
+        },
+        "interact_info": {
+          "liked_count": 150000,
+          "comment_count": 9000,
+          "collected_count": 22000,
+          "share_count": 130000
+        },
+        "images_list": [
+          {
+            "url": "https://example.invalid/note-0004-1.webp"
+          },
+          {
+            "url": "https://example.invalid/note-0004-2.webp"
+          }
+        ]
+      }
+    ],
+    "has_more": true,
+    "cursor": "exp-cursor-2"
+  }
+}

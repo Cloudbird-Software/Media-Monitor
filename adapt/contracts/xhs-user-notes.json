@@ -1,0 +1,44 @@
+{
+  "name": "xhs-user-notes",
+  "platform": "xhs",
+  "category": "user_posts",
+  "version": "1",
+  "doc": "creator note list by user_id (user_posted surface, cursor pagination, newest-first). Evidence: MediaCrawler creator mode (PR #654 matrix) /api/sns/web/v1/user_posted num/cursor/user_id param table; web_session cookie per repo xhs convention. Interact counts and note time ride the item binding; image notes expose images_list via extra.images for downstream OCR.",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v1/user_posted",
+    "method": "GET",
+    "query": {},
+    "placeholders": [
+      "user_id"
+    ]
+  },
+  "cookie": {
+    "required": [
+      "web_session"
+    ],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {
+    "items": "$.data.notes",
+    "fields": {
+      "id": "$.data.notes.note_id",
+      "desc": "$.data.notes.display_title",
+      "media_type": "$.data.notes.type",
+      "user": "$.data.notes.user",
+      "create_time": "$.data.notes.time",
+      "stats.digg": "$.data.notes.interact_info.liked_count",
+      "stats.comment": "$.data.notes.interact_info.comment_count",
+      "stats.collect": "$.data.notes.interact_info.collected_count",
+      "stats.share": "$.data.notes.interact_info.share_count",
+      "extra.images": "$.data.notes.images_list"
+    }
+  },
+  "paging": {
+    "cursor_param": "cursor",
+    "count_param": "num",
+    "count_default": 30,
+    "has_more_path": "$.data.has_more",
+    "next_cursor_path": "$.data.cursor"
+  }
+}
