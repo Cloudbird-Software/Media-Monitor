@@ -325,35 +325,47 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 		if keyword == "" {
 			return nil, errors.New("keyword is required")
 		}
-		items, cur, err := eng.SearchItems(ctx, platform, keyword, strVal(body, "media_type"), model.Cursor{}, limit)
+		cur, err := bodyCursor(body)
+		if err != nil {
+			return nil, err
+		}
+		items, next, err := eng.SearchItems(ctx, platform, keyword, strVal(body, "media_type"), cur, limit)
 		if err != nil {
 			return nil, err
 		}
 		d.hubAdd(itemRecords(platform, items)...)
-		return map[string]any{"items": items, "cursor": cur}, nil
+		return map[string]any{"items": items, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 	case "comments":
 		itemID := strVal(body, "item_id")
 		if itemID == "" {
 			return nil, errors.New("item_id is required")
 		}
-		cmts, cur, err := eng.ItemComments(ctx, platform, itemID, model.Cursor{}, limit)
+		cur, err := bodyCursor(body)
+		if err != nil {
+			return nil, err
+		}
+		cmts, next, err := eng.ItemComments(ctx, platform, itemID, cur, limit)
 		if err != nil {
 			return nil, err
 		}
 		d.hubAdd(commentRecords(platform, cmts)...)
-		return map[string]any{"comments": cmts, "cursor": cur}, nil
+		return map[string]any{"comments": cmts, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 	case "replies":
 		itemID := strVal(body, "item_id")
 		cid := strVal(body, "cid")
 		if itemID == "" || cid == "" {
 			return nil, errors.New("item_id and cid are required")
 		}
-		cmts, cur, err := eng.CommentReplies(ctx, platform, itemID, cid, model.Cursor{}, limit)
+		cur, err := bodyCursor(body)
+		if err != nil {
+			return nil, err
+		}
+		cmts, next, err := eng.CommentReplies(ctx, platform, itemID, cid, cur, limit)
 		if err != nil {
 			return nil, err
 		}
 		d.hubAdd(commentRecords(platform, cmts)...)
-		return map[string]any{"comments": cmts, "cursor": cur}, nil
+		return map[string]any{"comments": cmts, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 	case "user":
 		secUID := strVal(body, "sec_uid")
 		if secUID == "" {
@@ -632,6 +644,52 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// cursorVersion is the current pagination-cursor envelope version,
+// symmetric with cmd/mediad-mcp (IFACE-2).
+const cursorVersion = 1
+
+// bodyCursor parses the optional versioned cursor field of a collect body.
+// Absent/nil = fresh first page; a foreign version fails closed.
+func bodyCursor(body map[string]any) (model.Cursor, error) {
+	raw, ok := body["cursor"]
+	if !ok || raw == nil {
+		return model.Cursor{}, nil
+	}
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return model.Cursor{}, errors.New("cursor must be an object {v,page,has_more,source}")
+	}
+	if v, ok := m["v"]; ok {
+		f, isNum := v.(float64)
+		if !isNum || int64(f) != cursorVersion {
+			return model.Cursor{}, fmt.Errorf("cursor version %v unsupported (want %d)", v, cursorVersion)
+		}
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return model.Cursor{}, errors.New("cursor: " + err.Error())
+	}
+	var cur model.Cursor
+	if err := json.Unmarshal(b, &cur); err != nil {
+		return model.Cursor{}, errors.New("cursor: " + err.Error())
+	}
+	return cur, nil
+}
+
+// cursorOut wraps an engine cursor in the versioned output envelope.
+func cursorOut(cur model.Cursor) map[string]any {
+	b, err := json.Marshal(cur)
+	if err != nil {
+		return map[string]any{"v": cursorVersion}
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		m = map[string]any{}
+	}
+	m["v"] = cursorVersion
+	return m
 }
 
 // strVal / intVal coerce JSON values decoded into map[string]any.
