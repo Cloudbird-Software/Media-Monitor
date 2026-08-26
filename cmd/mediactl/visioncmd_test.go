@@ -227,3 +227,23 @@ func TestVisionRunStepBudget(t *testing.T) {
 		t.Fatalf("err = %v, want budget exhausted", err)
 	}
 }
+
+// TestAdbExecutorPromptKeyAliases: the provider prompt's own key names
+// (node_hint / ms) drive the bridge exactly like the canonical keys — a
+// schema-faithful endpoint must never dead-end (holdout H6 regression).
+func TestAdbExecutorPromptKeyAliases(t *testing.T) {
+	dev := &fakeDevice{uidTree: &adb.NodeTree{Root: &adb.Node{Text: "Search", Bounds: "[0,0][100,100]", Children: []*adb.Node{}}}}
+	ex := adbExecutor{dev: dev}
+	if _, err := ex.Execute(vision.Action{Type: vision.ActionUIAction, Args: map[string]any{"node_hint": "search"}}); err != nil {
+		t.Fatalf("node_hint alias: %v", err)
+	}
+	if _, err := ex.Execute(vision.Action{Type: vision.ActionSwipe, Args: map[string]any{"x0": 1, "y0": 2, "x1": 3, "y1": 4, "ms": 120}}); err != nil {
+		t.Fatalf("ms alias: %v", err)
+	}
+	dev.mu.Lock()
+	sw := append([]string(nil), dev.swipes...)
+	dev.mu.Unlock()
+	if len(sw) != 1 || sw[0] != "1,2->3,4@120" {
+		t.Fatalf("swipes = %v (ms alias must win over the 300 default)", sw)
+	}
+}

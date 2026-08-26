@@ -109,6 +109,8 @@ func (e adbExecutor) Execute(a vision.Action) (string, error) {
 		ms := 300
 		if f, ok := numArg(a.Args, "duration_ms"); ok {
 			ms = int(f)
+		} else if f, ok := numArg(a.Args, "ms"); ok {
+			ms = int(f) // the provider prompt's alias
 		}
 		return "swipe", e.dev.Swipe(x0, y0, x1, y1, ms)
 	case vision.ActionTypeText:
@@ -125,9 +127,15 @@ func (e adbExecutor) Execute(a vision.Action) (string, error) {
 		out, err := e.dev.Shell("input keyevent " + s)
 		return out, err
 	case vision.ActionUIAction:
+		// Accept both "hint" and the provider prompt's "node_hint" key so a
+		// schema-faithful endpoint drives the bridge without a translation
+		// layer (holdout H6 finding).
 		hint, _ := a.Args["hint"].(string)
 		if hint == "" {
-			return "", errors.New("ui_action: missing hint arg")
+			hint, _ = a.Args["node_hint"].(string)
+		}
+		if hint == "" {
+			return "", errors.New("ui_action: missing hint/node_hint arg")
 		}
 		tree, err := e.dev.UIDump()
 		if err != nil {
@@ -217,7 +225,7 @@ func visionRun(ctx context.Context, p vision.Provider, ex vision.Executor, goal 
 		}
 		if act.Type == vision.ActionDone {
 			if distillPath != "" {
-				flow := vision.Distill(goal, "", "", log)
+				flow := vision.Distill(goal, "android", "vision-run", log)
 				b, merr := json.MarshalIndent(flow, "", "  ")
 				if merr == nil {
 					_ = os.WriteFile(distillPath, b, 0o644)
@@ -265,7 +273,7 @@ func visionRunCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	client, err := adb.Connect("")
+	client, err := adb.Connect(visionADBAddr())
 	if err != nil {
 		return err
 	}
@@ -276,4 +284,13 @@ func visionRunCmd(args []string) error {
 		fmt.Printf("{\"action\":%q,\"observed\":%q}\n", t.Action.Type, t.Observed)
 	}
 	return err
+}
+
+// visionADBAddr resolves the adb server address (MEDIAMON_ADB_ADDR override,
+// default 127.0.0.1:5037 — same convention as mediad-mcp).
+func visionADBAddr() string {
+	if a := os.Getenv("MEDIAMON_ADB_ADDR"); a != "" {
+		return a
+	}
+	return "127.0.0.1:5037"
 }
