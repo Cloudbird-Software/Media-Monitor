@@ -1,0 +1,21 @@
+{
+  "name": "douyin-user-posts",
+  "platform": "douyin",
+  "category": "user_posts",
+  "version": "1",
+  "doc": "creator post list by sec_user_id (newest-first, max_cursor pagination). Evidence: f2 #435 log /aweme/v1/web/aweme/post/?device_platform=webapp&aid=6383&...&max_cursor=0&count=20&sec_user_id=...&a_bogus=...; MediaCrawler creator mode (PR #654) same-endpoint cross-check. verifyFp/fp are account/UA-pool state, deliberately NOT contract query (MediaCrawler #895 lesson).",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/aweme/post/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["sec_user_id"]
+  },
+  "signature": {"params": ["a_bogus"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "items": "$.aweme_list",
+    "fields": {"extra.play": "$.statistics.play_count"}
+  },
+  "paging": {"cursor_param": "max_cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.max_cursor"}
+}

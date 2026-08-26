@@ -1,0 +1,46 @@
+{
+  "aweme_list": [
+    {
+      "aweme_id": "766100000000000001",
+      "desc": "示例创作者作品001",
+      "create_time": 1780499999,
+      "type": 1,
+      "statistics": {
+        "digg_count": 150000,
+        "comment_count": 9000,
+        "collect_count": 22000,
+        "share_count": 130000,
+        "play_count": 5200000
+      },
+      "author": {
+        "sec_uid": "MS4wLjABAAAA-example-creator-0000000001",
+        "nickname": "示例创作者"
+      }
+    },
+    {
+      "aweme_id": "766100000000000002",
+      "desc": "示例创作者作品002",
+      "create_time": 1780499998,
+      "type": 68,
+      "statistics": {
+        "digg_count": 150000,
+        "comment_count": 9000,
+        "collect_count": 22000,
+        "share_count": 130000,
+        "play_count": 5200000
+      },
+      "author": {
+        "sec_uid": "MS4wLjABAAAA-example-creator-0000000001",
+        "nickname": "示例创作者"
+      },
+      "image_infos": [
+        {},
+        {}
+      ]
+    }
+  ],
+  "has_more": true,
+  "max_cursor": 1780499998000,
+  "min_cursor": 0,
+  "status_code": 0
+}

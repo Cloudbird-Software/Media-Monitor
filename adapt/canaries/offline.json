@@ -4,6 +4,7 @@
     {"name": "douyin-comments-fixture", "contract": "douyin-comments", "kind": "comments", "fixture": "douyin-comments.1.json", "expect": ["comments", "has_more", "cursor"]},
     {"name": "douyin-comments-replies-fixture", "contract": "douyin-comments-replies", "kind": "comments", "fixture": "douyin-comments-replies.1.json", "expect": ["comments", "has_more", "cursor"]},
     {"name": "douyin-user-fixture", "contract": "douyin-user", "kind": "users", "fixture": "douyin-user.1.json", "expect": ["user_list"]},
+    {"name": "douyin-user-posts-fixture", "contract": "douyin-user-posts", "kind": "items", "fixture": "douyin-user-posts.1.json", "expect": ["aweme_list", "has_more", "max_cursor"]},
     {"name": "douyin-group-fixture", "contract": "douyin-group-members", "kind": "members", "fixture": "douyin-group.1.json", "expect": ["members"]},
     {"name": "douyin-meta-fixture", "contract": "douyin-meta", "kind": "meta", "fixture": "douyin-meta.1.json", "expect": ["room_id"]},
     {"name": "kuaishou-meta-fixture", "contract": "kuaishou-meta", "kind": "meta", "fixture": "kuaishou-meta.1.json", "expect": ["room_id"]},
