@@ -5,6 +5,9 @@ name: CI
 # same SHA must be passed via ciw-ref inputs (ADR-0043). Do not bump without
 # a coordinated CI-Workflows release note.
 on:
+  merge_group:
+    # ADR-0042: merge queue subscription (governance alignment follow-up)
+    types: [checks_requested]
   pull_request:
     # edited so that adding/removing an ADR reference in title/body re-runs
     # the adr-required check (same semantics as template-service).
@@ -196,6 +199,7 @@ jobs:
           case "$EVENT" in
             pull_request) EXPECTED_SKIP="deps-audit" ;;
             push)         EXPECTED_SKIP="deps adr-required" ;;
+            merge_group)  EXPECTED_SKIP="deps deps-audit adr-required" ;;   # ADR-0042: PR-only/push-only jobs structurally skipped
             *)            EXPECTED_SKIP="" ;;
           esac
           BAD=$(echo "$NEEDS" | jq -r --arg skip "$EXPECTED_SKIP" '

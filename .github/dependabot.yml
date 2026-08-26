@@ -12,5 +12,5 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "weekly"   # SC-3 对齐（治理跟修：monthly→weekly，与其余 active 仓一致）
     open-pull-requests-limit: 5
