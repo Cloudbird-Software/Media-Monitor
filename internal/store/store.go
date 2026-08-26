@@ -40,6 +40,12 @@ func Open(dir string) (*Store, error) {
 // fileLocked returns the append handle for collection, opening it on first
 // use. Callers must hold s.mu.
 func (s *Store) fileLocked(collection string) (*os.File, error) {
+	if s.files == nil {
+		// Closed store (Close nils the map): fail closed with an explicit
+		// error — a late writer (e.g. a leaked poll goroutine outliving its
+		// daemon) must get an error, never a nil-map panic.
+		return nil, fmt.Errorf("store: closed (collection %q append dropped)", collection)
+	}
 	if f, ok := s.files[collection]; ok {
 		return f, nil
 	}
