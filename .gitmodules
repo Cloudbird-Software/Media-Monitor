@@ -1,0 +1,12 @@
+[submodule "upstream/vendor/f2"]
+	path = upstream/vendor/f2
+	url = https://github.com/Johnserf-Seed/f2.git
+[submodule "upstream/vendor/wx_channels_download"]
+	path = upstream/vendor/wx_channels_download
+	url = https://github.com/ltaoo/wx_channels_download.git
+[submodule "upstream/vendor/MediaCrawler"]
+	path = upstream/vendor/MediaCrawler
+	url = https://github.com/NanmiCoder/MediaCrawler.git
+[submodule "upstream/vendor/UI-TARS"]
+	path = upstream/vendor/UI-TARS
+	url = https://github.com/bytedance/UI-TARS.git
