@@ -17,7 +17,7 @@ import (
 // toolbox.go — the local content tools: zero-width text steganography
 // (encrypt embed/extract), phone-number stylization (stylize), and the
 // WeChat multi-open helper (wechat-multi). All transformations are local
-// (no platform endpoint); the toolbox is exempt from the license gate.
+// (no platform endpoint).
 
 func cmdToolbox(args []string) error {
 	if len(args) == 0 {

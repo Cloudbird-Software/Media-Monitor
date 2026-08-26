@@ -172,13 +172,6 @@ commands:
                                    export datacenter records (CSV) with keyword filter
   webhook test|retry --data <dir>  test a webhook endpoint or retry failed pushes
 
-license gate (fail-closed, on by default):
-  collect / send / trace / live monitor check $MEDIAMON_LICENSE_DIR/license.json
-  (default data/license) against $MEDIAMON_LICENSE_PUBKEY (base64 ed25519
-  public key) before running; a denial prints a structured reason and exits
-  non-zero. MEDIAMON_LICENSE_REQUIRED=false disables the gate explicitly
-  (dev-only — same explicit-bypass convention as --allow-unsigned).
-
 environment:
   MEDIAMON_ADAPT_DIR        adapt dir (default ./adapt)
   MEDIAMON_ACCOUNTS_DIR     account pool dir (default data/accounts)
@@ -475,12 +468,6 @@ type collectOptions struct {
 }
 
 func cmdCollect(args []string) error {
-	// License gate: collection is a gated surface (fail-closed). Exempt
-	// surfaces (accounts/version/contracts/adapt/update/toolbox/netcapture/
-	// export/webhook/upstream) never call requireLicense.
-	if err := requireLicense("collect"); err != nil {
-		return err
-	}
 	fs := flag.NewFlagSet("collect", flag.ExitOnError)
 	fs.Usage = func() {
 		fmt.Fprint(fs.Output(), "use: collect search|comments|replies|user|group|collects|collects-videos|video|im-unread (see mediactl help)\n")

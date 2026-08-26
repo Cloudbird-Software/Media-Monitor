@@ -20,16 +20,11 @@
 //	MEDIAMON_KUAISHOU_COOKIES  "(optional)"
 //	MEDIAMON_XHS_COOKIES   "(optional)"
 //	MEDIAMON_ADB_ADDR      default adb server address (default 127.0.0.1:5037)
-//	MEDIAMON_LICENSE_DIR   license dir (default <data>/license)
-//	MEDIAMON_LICENSE_PUBKEY  base64 Ed25519 public key used to verify the
-//	                       license; without it the gate denies everything
-//	MEDIAMON_LICENSE_REQUIRED  "false" disables the license gate (dev-only;
-//	                       default is fail-closed, same spirit as the
-//	                       --allow-unsigned convention)
 package main
 
 import (
 	"context"
+	"crypto/md5"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/hex"
@@ -40,6 +35,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -53,7 +49,6 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/core"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/live"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/mcpio"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
@@ -95,9 +90,6 @@ func run(rw io.ReadWriter) error {
 		return err
 	}
 	defer a.store.Close()
-	a.gate, a.licenseNote = loadLicenseGate(dataDir)
-	// Protocol lives on stdout; operational notes go to stderr.
-	fmt.Fprintf(os.Stderr, "mediad-mcp: license gate: %s\n", a.licenseNote)
 
 	srv := mcpio.NewServer(rw)
 	srv.Name = "mediad-mcp"
@@ -131,9 +123,6 @@ type app struct {
 	lob      *lobbyRegistry
 	store    *store.Store
 	accounts *accounts.Pool
-	// license gate (nil = disabled via MEDIAMON_LICENSE_REQUIRED=false).
-	gate        *license.Gate
-	licenseNote string
 }
 
 // newApp loads the contract registry, assembles the collect engine and the
@@ -223,30 +212,6 @@ func (a *app) engineFor(accountID string) *collect.Engine {
 	ctx := a.baseCtx
 	ctx.AccountID = accountID
 	return collect.New(ctx)
-}
-
-// gatedTools are the collect/action tools that require a valid license.
-// Read-only/meta surfaces (version, contracts_list, accounts_list,
-// adapt_canary_offline, task listing, live event reads) stay exempt.
-var gatedTools = map[string]bool{
-	"search_items": true, "get_comments": true, "get_replies": true,
-	"get_user": true, "group_members": true, "monitor_live": true,
-	"send_message": true, "resolve_video": true, "get_collects": true,
-	"get_im_unread": true,
-	"adb_list":      true, "adb_shell": true, "adb_screencap": true,
-}
-
-// gateWrap refuses a gated tool call with a structured license error when
-// the gate denies; with no gate (disabled) it passes through.
-func (a *app) gateWrap(h func(ctx context.Context, args map[string]any) (any, error)) func(ctx context.Context, args map[string]any) (any, error) {
-	return func(ctx context.Context, args map[string]any) (any, error) {
-		if a.gate != nil {
-			if err := a.gate.Check(""); err != nil {
-				return nil, license.DenialMessage(err)
-			}
-		}
-		return h(ctx, args)
-	}
 }
 
 // ---- argument coercion helpers ----
@@ -494,14 +459,6 @@ func buildTools(a *app) []mcpio.Tool {
 				return map[string]any{"name": "mediad-mcp", "version": version}, nil
 			},
 		},
-	}
-	// License gate: collect/action tools are wrapped; meta/read-only tools
-	// (version, contracts_list, accounts_list, adapt_canary_offline, task
-	// listing, live event reads) stay exempt.
-	for i := range tools {
-		if gatedTools[tools[i].Name] {
-			tools[i].Handler = a.gateWrap(tools[i].Handler)
-		}
 	}
 	return tools
 }
@@ -844,7 +801,7 @@ func (a *app) monitorLive(_ context.Context, args map[string]any) (any, error) {
 	case allowUnsigned:
 		// Dev-only deterministic stub; NOT a real signature. Production must
 		// always configure MEDIAMON_SIGNER_URL (see docs/HARDENING.md).
-		signer = live.MD5StubSigner
+		signer = md5StubSigner
 	default:
 		return nil, errors.New("no signature signer configured: set MEDIAMON_SIGNER_URL, or pass allow_unsigned=true for dev-only unsigned monitoring")
 	}
@@ -942,6 +899,24 @@ func liveDecoderFor(reg *contracts.Registry, platform string) live.Decoder {
 		return live.NewKuaishouDecoder(c.ProtoMethods)
 	}
 	return live.NewXhsDecoder(c.ProtoMethods)
+}
+
+// md5StubSigner is an explicitly non-production signature placeholder for
+// local development (same stub as cmd/mediactl live monitor).
+func md5StubSigner(urlQuery string, params map[string]string) (string, error) {
+	keys := make([]string, 0, len(params))
+	for k := range params {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	var b strings.Builder
+	for _, k := range keys {
+		b.WriteString(k)
+		b.WriteString("=")
+		b.WriteString(params[k])
+	}
+	sum := md5.Sum([]byte(b.String()))
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // ---- tasks, canary, contracts, adb ----

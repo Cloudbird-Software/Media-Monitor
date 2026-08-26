@@ -1,21 +1,16 @@
 // wiring.go holds the mediad-mcp startup wiring that composes internal
-// packages at the cmd layer: account-pool/UA-pool injection and the license
-// gate. (Kept parallel to cmd/mediad/wiring.go; the shared denial rendering
-// lives in internal/license.)
+// packages at the cmd layer: account-pool/UA-pool injection. (Kept
+// parallel to cmd/mediad/wiring.go; cmd packages cannot share code without a
+// new internal package.)
 package main
 
 import (
-	"crypto/ed25519"
-	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/license"
 )
 
 // accountsDirEnv resolves the account pool dir: MEDIAMON_ACCOUNTS_DIR wins,
@@ -55,34 +50,4 @@ func uaPoolUserAgents() []string {
 	}
 	fmt.Fprintf(os.Stderr, "mediad-mcp: ua pool: %d user-agents loaded from %s\n", len(doc.UAs), path)
 	return doc.UAs
-}
-
-// loadLicenseGate builds the cmd-layer license gate. The gate is ON by
-// default and fails closed: without a verifiable license every gated tool
-// (collect/action class) is denied, while meta surfaces (version,
-// contracts_list, accounts_list, adapt_canary_offline) stay open. Setting
-// MEDIAMON_LICENSE_REQUIRED=false explicitly disables the gate (dev-only,
-// same spirit as --allow-unsigned).
-func loadLicenseGate(dataDir string) (*license.Gate, string) {
-	if strings.EqualFold(os.Getenv("MEDIAMON_LICENSE_REQUIRED"), "false") {
-		return nil, "DISABLED via MEDIAMON_LICENSE_REQUIRED=false (dev-only; collect/action tools are not gated)"
-	}
-	dir := os.Getenv("MEDIAMON_LICENSE_DIR")
-	if dir == "" {
-		dir = filepath.Join(dataDir, "license")
-	}
-	raw, err := base64.StdEncoding.DecodeString(os.Getenv("MEDIAMON_LICENSE_PUBKEY"))
-	if err != nil || len(raw) != ed25519.PublicKeySize {
-		g := license.NewGate(nil, nil, errors.New("MEDIAMON_LICENSE_PUBKEY missing or not a base64 Ed25519 public key"))
-		return g, "enabled (fail-closed): MEDIAMON_LICENSE_PUBKEY missing/invalid, all gated tools denied"
-	}
-	g, err := license.LoadGate(dir, ed25519.PublicKey(raw), nil)
-	if err != nil {
-		g = license.NewGate(nil, nil, fmt.Errorf("license verifier: %w", err))
-		return g, "enabled (fail-closed): verifier construction failed, all gated tools denied"
-	}
-	if _, ok := g.Active(); ok {
-		return g, "enabled: license active (dir " + dir + ")"
-	}
-	return g, "enabled (fail-closed): no valid license in " + dir
 }
