@@ -85,7 +85,10 @@ func (c *Client) Sign(ctx context.Context, contractName, url string, params map[
 	if len(sr.Params) == 0 {
 		return c.degrade(params, fmt.Errorf("signclient: empty params in success response"))
 	}
-	out := make(map[string]string, len(params)+len(sr.Params))
+	// Pre-size with the trusted caller count only; the untrusted response
+	// params merge in incrementally (no length arithmetic on mixed-trust
+	// inputs, no overflow-shaped allocation).
+	out := make(map[string]string, len(params))
 	for k, v := range params {
 		out[k] = v
 	}
