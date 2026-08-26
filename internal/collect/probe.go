@@ -169,18 +169,3 @@ func (e *Engine) ProbeAndStore(ctx context.Context, pool *accounts.Pool, account
 	}
 	return out, nil
 }
-
-// forAccount clones the engine with a specific account selected (its
-// cookie/proxy/UA ride every probe request).
-func (e *Engine) forAccount(accountID string) *Engine {
-	return New(Context{
-		Registry:  e.reg,
-		HTTP:      e.hc,
-		Obs:       e.obs,
-		Signers:   e.signers,
-		Cookies:   e.cookies,
-		Names:     e.names,
-		Accounts:  e.accounts,
-		AccountID: accountID,
-	})
-}

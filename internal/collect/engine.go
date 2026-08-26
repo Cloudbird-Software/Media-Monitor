@@ -55,6 +55,7 @@ type Engine struct {
 	names      map[string]map[string]string
 	accounts   *accounts.Pool
 	accountID  string
+	autoBase   *Engine // non-nil while rotating in auto mode
 	proxyMu    sync.Mutex
 	proxyCache map[string]*httpclient.Client // proxy url -> dedicated client
 }
@@ -339,7 +340,11 @@ func (e *Engine) Fetch(ctx context.Context, name string, pathParams, query map[s
 		if len(snippet) > 200 {
 			snippet = snippet[:200]
 		}
-		return nil, fmt.Errorf("collect %s: %s status %d: %s", name, c.Transport.Method, status, snippet)
+		err := fmt.Errorf("collect %s: %s status %d: %s", name, c.Transport.Method, status, snippet)
+		if status == 401 || status == 403 {
+			err = fmt.Errorf("%w%w", ErrAuthWall, err) // rotation-eligible
+		}
+		return nil, err
 	}
 	var doc map[string]any
 	if err := json.Unmarshal(resp, &doc); err != nil {
@@ -352,10 +357,18 @@ func (e *Engine) Fetch(ctx context.Context, name string, pathParams, query map[s
 	}
 	if err := checkBindings(c, doc); err != nil {
 		e.fetchErr()
-		return nil, fmt.Errorf("collect %s: %w", name, err)
+		return nil, fmt.Errorf("collect %s: %w%w", name, ErrEmptyPage, err) // rotation-eligible
 	}
 	return doc, nil
 }
+
+// ErrAuthWall marks 401/403 responses (expired cookie / risk control) —
+// rotation-eligible under auto account mode.
+var ErrAuthWall = errors.New("auth wall: ")
+
+// ErrEmptyPage marks a 2xx response whose primary binding is absent — the
+// half-dead-cookie shape; rotation-eligible under auto account mode.
+var ErrEmptyPage = errors.New("empty page: ")
 
 // mainBindingRaw returns the primary list binding (items/comments/users/
 // members) declared by a contract.
