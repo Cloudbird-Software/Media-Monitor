@@ -35,7 +35,24 @@ type upstreamEntry struct {
 		SPDX    string `json:"spdx"`
 		Verdict string `json:"verdict"`
 	} `json:"license"`
+	Pin struct {
+		Type string `json:"type"`
+		Ref  string `json:"ref"`
+	} `json:"pin"`
 	TrackedPaths []string `json:"tracked_paths"`
+}
+
+// loadUpstreamRegistry reads the on-disk registry.
+func loadUpstreamRegistry() (*upstreamRegistry, error) {
+	raw, err := os.ReadFile(defaultRegistryPath)
+	if err != nil {
+		return nil, fmt.Errorf("registry %s: %w", defaultRegistryPath, err)
+	}
+	var reg upstreamRegistry
+	if err := json.Unmarshal(raw, &reg); err != nil {
+		return nil, fmt.Errorf("registry %s: %w", defaultRegistryPath, err)
+	}
+	return &reg, nil
 }
 
 // upstreamRegistry is the top-level registry document.
@@ -46,11 +63,12 @@ type upstreamRegistry struct {
 
 // upstreamHit reports one entry with matching upstream activity.
 type upstreamHit struct {
-	Slug         string   `json:"slug"`
-	Role         string   `json:"role"`
-	MatchedFiles []string `json:"matched_files"`
-	FirstSHA     string   `json:"first_sha"`
-	Title        string   `json:"title"`
+	Slug         string       `json:"slug"`
+	Role         string       `json:"role"`
+	MatchedFiles []string     `json:"matched_files"`
+	FirstSHA     string       `json:"first_sha"`
+	Title        string       `json:"title"`
+	Diff         *DiffSummary `json:"diff_summary,omitempty"` // pin..first-matching-sha digest (W5-C2)
 }
 
 // upstreamError reports one entry that could not be scanned.
@@ -71,11 +89,13 @@ type upstreamSummary struct {
 
 func cmdUpstream(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("use: upstream scan [--window-hours N] [--out FILE]")
+		return fmt.Errorf("use: upstream scan | upstream diff-summary <slug>")
 	}
 	switch args[0] {
 	case "scan":
 		return upstreamScan(args[1:])
+	case "diff-summary":
+		return upstreamDiffSummary(args[1:])
 	default:
 		return fmt.Errorf("unknown upstream subcommand %q", args[0])
 	}
@@ -132,6 +152,16 @@ func runUpstreamScan(ctx context.Context, entries []upstreamEntry, windowHours i
 		}
 		sum.Scanned++
 		if hit != nil {
+			// W5-C2: attach the pin..first-matching-sha digest so the
+			// alert body carries the file-level diff summary directly.
+			if e.Pin.Ref != "" && hit.FirstSHA != "" && e.Pin.Ref != hit.FirstSHA {
+				if cmp, cerr := fetchCompare(ctx, hc, e.Slug, e.Pin.Ref, hit.FirstSHA, token); cerr == nil {
+					hit.Diff = RenderDigest(e.Slug, e.Pin.Ref, hit.FirstSHA, cmp, e.TrackedPaths)
+				} else {
+					hit.Diff = &DiffSummary{Slug: e.Slug, From: e.Pin.Ref, To: hit.FirstSHA,
+						Note: "digest unavailable: " + cerr.Error()}
+				}
+			}
 			sum.Hits = append(sum.Hits, *hit)
 		}
 	}
