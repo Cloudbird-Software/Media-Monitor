@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -446,57 +445,13 @@ func (e *Engine) nextCursor(c *contracts.Contract, doc map[string]any, cur model
 }
 
 // fetchPages runs the pagination loop for one contract: cursor and count
-// params per page (limit → count), has_more driven continuation, and final
+// params per page (limit -> count), has_more driven continuation, and final
 // limit truncation. Pages stop when the contract declares no next-cursor
-// path (single page) or has_more is false.
+// path (single page) or has_more is false. The optional backtrack predicate
+// lives in predicate.go (fetchPagesWith); this entry point keeps the
+// predicate-free legacy behavior.
 func (e *Engine) fetchPages(ctx context.Context, name string, pathParams, baseQuery map[string]string, cur model.Cursor, limit int) ([]map[string]any, model.Cursor, error) {
-	c, ok := e.reg.Get(name)
-	if !ok {
-		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
-	}
-	_, raw := mainBindingRaw(c)
-	if raw == "" {
-		return nil, cur, fmt.Errorf("collect %s: no list binding (items/comments/users/members) declared", name)
-	}
-	bp, err := contracts.ParsePath(raw)
-	if err != nil {
-		return nil, cur, fmt.Errorf("collect %s: bad binding %q: %w", name, raw, err)
-	}
-	var out []map[string]any
-	ccur := cur
-	pages := 0
-	for {
-		if limit > 0 && len(out) >= limit {
-			break
-		}
-		query := make(map[string]string, len(baseQuery)+2)
-		for k, v := range baseQuery {
-			query[k] = v
-		}
-		if c.Paging.CursorParam != "" && ccur.Source != nil {
-			if v, ok := ccur.Source["cursor"]; ok && v != nil {
-				query[c.Paging.CursorParam] = asStr(v)
-			}
-		}
-		if c.Paging.CountParam != "" && limit > 0 {
-			query[c.Paging.CountParam] = strconv.Itoa(limit)
-		}
-		doc, err := e.Fetch(ctx, name, pathParams, query)
-		if err != nil {
-			return nil, ccur, err
-		}
-		out = append(out, selectRecords(bp, doc)...)
-		next := e.nextCursor(c, doc, ccur)
-		pages++
-		if !next.HasMore || c.Paging.NextCursorPath == "" {
-			return truncate(out, limit), next, nil
-		}
-		if pages >= maxPages {
-			return nil, next, fmt.Errorf("collect %s: pagination exceeded %d pages (cursor did not settle)", name, maxPages)
-		}
-		ccur = next
-	}
-	return truncate(out, limit), ccur, nil
+	return e.fetchPagesWith(ctx, name, pathParams, baseQuery, cur, limit, nil)
 }
 
 func truncate(recs []map[string]any, limit int) []map[string]any {
