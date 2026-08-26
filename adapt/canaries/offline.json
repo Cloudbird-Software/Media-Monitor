@@ -21,6 +21,7 @@
     {"name": "xhs-comments-fixture", "contract": "xhs-comments", "kind": "comments", "fixture": "xhs-comments.1.json", "expect": ["data"]},
     {"name": "xhs-comments-replies-fixture", "contract": "xhs-comments-replies", "kind": "comments", "fixture": "xhs-comments-replies.1.json", "expect": ["data"]},
     {"name": "xhs-user-fixture", "contract": "xhs-user", "kind": "users", "fixture": "xhs-user.1.json", "expect": ["user_list"]},
+    {"name": "xhs-user-notes-fixture", "contract": "xhs-user-notes", "kind": "items", "fixture": "xhs-user-notes.1.json", "expect": ["data"]},
     {"name": "xhs-group-fixture", "contract": "xhs-group-members", "kind": "members", "fixture": "xhs-group.1.json", "expect": ["members"]}
   ]
 }
