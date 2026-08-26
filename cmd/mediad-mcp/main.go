@@ -123,6 +123,7 @@ type app struct {
 	lob      *lobbyRegistry
 	store    *store.Store
 	accounts *accounts.Pool
+	dataDir  string
 }
 
 // newApp loads the contract registry, assembles the collect engine and the
@@ -199,6 +200,7 @@ func newApp(adaptDir, dataDir string) (*app, error) {
 		lob:      newLobbyRegistry(),
 		store:    st,
 		accounts: pool,
+		dataDir:  dataDir,
 	}, nil
 }
 
@@ -388,6 +390,17 @@ func buildTools(a *app) []mcpio.Tool {
 				"account_id":             accountProp,
 			}),
 			Handler: a.getUserPosts,
+		},
+		{
+			Name:        "download_video",
+			Description: "Download one video to disk and get {path, bytes, sha256} (the video bytes never ride the MCP channel). Resolves the watermark-free play URL via the platform's video-download contract, then streams to <data>/artifacts/<platform>/<item_id>.mp4 by default (out_dir overrides the root). Atomic write: no half file on failure. Use resolve_video when you only need the URL.",
+			InputSchema: objSchema([]string{"platform", "item_id"}, map[string]any{
+				"platform":   platformProp,
+				"item_id":    sProp("item id to download"),
+				"out_dir":    sProp("artifact root override (default <data>/artifacts)"),
+				"account_id": accountProp,
+			}),
+			Handler: a.downloadVideo,
 		},
 		{
 			Name:        "get_user",
@@ -1175,4 +1188,24 @@ func (a *app) getUserPosts(ctx context.Context, args map[string]any) (any, error
 		return nil, err
 	}
 	return map[string]any{"items": items, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
+}
+
+// downloadVideo is the download_video atom (IR AC-7 / IFACE-3): resolve +
+// stream to <data>/artifacts/<platform>/<item>.mp4 (out_dir override),
+// atomic write, {path, bytes, sha256} return — the bytes never ride the
+// MCP channel.
+func (a *app) downloadVideo(ctx context.Context, args map[string]any) (any, error) {
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	itemID := argStr(args, "item_id")
+	if itemID == "" {
+		return nil, errors.New("item_id is required")
+	}
+	outDir := argStr(args, "out_dir")
+	if outDir == "" {
+		outDir = filepath.Join(a.dataDir, "artifacts")
+	}
+	return a.engineFor(argStr(args, "account_id")).DownloadVideoTo(ctx, platform, itemID, outDir)
 }
