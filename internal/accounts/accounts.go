@@ -87,9 +87,10 @@ func sortStrings(s []string) {
 // holds one JSON document per account (the Account struct). A Pool is safe for
 // concurrent use.
 type Pool struct {
-	mu    sync.Mutex
-	st    *store.Store
-	cache map[string]Account // id -> account (loaded on demand / write)
+	mu     sync.Mutex
+	st     *store.Store
+	cache  map[string]Account // id -> account (loaded on demand / write)
+	loaded bool               // snapshot hydrated at least once
 }
 
 // Open opens (or creates) the account pool rooted at dir.
@@ -176,6 +177,7 @@ func (p *Pool) Delete(id string) error {
 // persist writes the whole pool as a single JSON array (small N; atomic enough
 // for a local pool). Replaces the collection contents each time.
 func (p *Pool) persist() error {
+	p.loadAll() // hydrate pre-existing snapshot rows before the rewrite
 	docs := make([]Account, 0, len(p.cache))
 	for _, a := range p.cache {
 		docs = append(docs, a)
@@ -196,7 +198,7 @@ func (p *Pool) persist() error {
 // loadAll hydrates the cache from the latest snapshot row. Cheap and idempotent
 // because the pool is small; callers hold p.mu.
 func (p *Pool) loadAll() {
-	if len(p.cache) > 0 {
+	if p.loaded {
 		return
 	}
 	var latest []Account
@@ -210,6 +212,7 @@ func (p *Pool) loadAll() {
 	for _, a := range latest {
 		p.cache[a.ID] = a
 	}
+	p.loaded = true
 }
 
 func sortAccounts(s []Account) {
