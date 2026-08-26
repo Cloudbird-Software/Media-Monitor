@@ -4,53 +4,17 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/collect"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
-
-// contractsDir resolves the repository adapt/contracts dir from this test
-// package (three levels up: douyin → platforms → internal → root).
-func contractsDir(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(wd, "..", "..", "..", "adapt", "contracts")
-}
-
-// remapContracts loads the real contracts from dir and re-registers the
-// listed ones with the httptest server as base URL (zero external network).
-func remapContracts(t *testing.T, dir string, srv *httptest.Server, names ...string) *contracts.Registry {
-	t.Helper()
-	all := contracts.NewRegistry()
-	if err := contracts.LoadDir(all, dir); err != nil {
-		t.Fatal(err)
-	}
-	reg := contracts.NewRegistry()
-	for _, n := range names {
-		c, ok := all.Get(n)
-		if !ok {
-			t.Fatalf("contract %q not found in %s", n, dir)
-		}
-		cp := *c
-		cp.Transport.BaseURL = srv.URL
-		if err := reg.Add(&cp); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return reg
-}
 
 // TestDouyinCommentsRealContract: the actual douyin-comments contract
 // drives a two-page mocked flow through the engine; default field paths bind
@@ -97,7 +61,7 @@ func TestDouyinCommentsRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, err := Defaults(dir)
 	if err != nil {
 		t.Fatalf("Defaults: %v", err)
@@ -107,7 +71,7 @@ func TestDouyinCommentsRealContract(t *testing.T) {
 	d.Signer = func(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "ab-" + contractName, "msToken": "tok-1"}, nil
 	}
-	reg := remapContracts(t, dir, srv, "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -159,9 +123,9 @@ func TestDouyinSignatureRequiredFailClosed(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
-	reg := remapContracts(t, dir, srv, "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -182,12 +146,12 @@ func TestDouyinCookieRequiredFailClosed(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
 	d.Signer = func(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "ab-" + contractName, "msToken": "tok-1"}, nil
 	}
-	reg := remapContracts(t, dir, srv, "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -211,7 +175,7 @@ func TestDouyinSignerHook(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
 	d.Signer = func(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "sig-from-hook", "msToken": "tok-1"}, nil
@@ -219,7 +183,7 @@ func TestDouyinSignerHook(t *testing.T) {
 	if d.SignerAs() == nil {
 		t.Fatal("SignerAs() = nil for populated hook")
 	}
-	reg := remapContracts(t, dir, srv, "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -238,7 +202,7 @@ func TestDouyinSignerHook(t *testing.T) {
 // TestDouyinDefaultsSmoke: default assembly resolves against the real
 // contract registry.
 func TestDouyinDefaultsSmoke(t *testing.T) {
-	d, reg, err := Defaults(contractsDir(t))
+	d, reg, err := Defaults(testkit.ContractsDir(t, 3))
 	if err != nil {
 		t.Fatalf("Defaults: %v", err)
 	}
@@ -290,7 +254,7 @@ func TestDouyinRepliesRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, err := Defaults(dir)
 	if err != nil {
 		t.Fatalf("Defaults: %v", err)
@@ -298,7 +262,7 @@ func TestDouyinRepliesRealContract(t *testing.T) {
 	d.Signer = func(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "ab-" + contractName, "msToken": "tok-1"}, nil
 	}
-	reg := remapContracts(t, dir, srv, "douyin-comments-replies")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments-replies")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -337,11 +301,11 @@ func TestDouyinRepliesContractNotDeclared(t *testing.T) {
 		t.Error("server must not be called for undeclared replies")
 	}))
 	defer srv.Close()
-	dir := contractsDir(t)
+	dir := testkit.ContractsDir(t, 3)
 	d, _, _ := Defaults(dir)
 	// Force replies undeclared to exercise the resolver error path.
 	d.Names["replies"] = ""
-	reg := remapContracts(t, dir, srv, "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-comments")
 	eng := collect.New(collect.Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),

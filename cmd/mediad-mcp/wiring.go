@@ -1,7 +1,7 @@
 // wiring.go holds the mediad-mcp startup wiring that composes internal
 // packages at the cmd layer: account-pool/UA-pool injection and the license
-// gate. (Kept parallel to cmd/mediad/wiring.go; cmd packages cannot share
-// code without a new internal package.)
+// gate. (Kept parallel to cmd/mediad/wiring.go; the shared denial rendering
+// lives in internal/license.)
 package main
 
 import (
@@ -85,24 +85,4 @@ func loadLicenseGate(dataDir string) (*license.Gate, string) {
 		return g, "enabled: license active (dir " + dir + ")"
 	}
 	return g, "enabled (fail-closed): no valid license in " + dir
-}
-
-// licenseDeniedErr renders a Gate denial as a structured tool error: the
-// message is a JSON object the caller can parse for reason/detail.
-func licenseDeniedErr(err error) error {
-	reason := "unknown"
-	detail := err.Error()
-	var de *license.DeniedError
-	if errors.As(err, &de) {
-		reason = string(de.Reason)
-		if de.Detail != "" {
-			detail = de.Detail
-		}
-	}
-	raw, _ := json.Marshal(map[string]any{
-		"error":  "license_denied",
-		"reason": reason,
-		"detail": detail,
-	})
-	return errors.New(string(raw))
 }

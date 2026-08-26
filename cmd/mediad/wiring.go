@@ -110,41 +110,15 @@ func (d *daemon) checkGate(w http.ResponseWriter) bool {
 	return true
 }
 
-// writeLicenseDenied renders a Gate denial as 403 + structured JSON.
+// writeLicenseDenied renders a Gate denial as 403 + structured JSON (fields
+// from license.DenialFields, shared with the MCP tool-error rendering).
 func writeLicenseDenied(w http.ResponseWriter, err error) {
-	reason := "unknown"
-	detail := err.Error()
-	var de *license.DeniedError
-	if errors.As(err, &de) {
-		reason = string(de.Reason)
-		if de.Detail != "" {
-			detail = de.Detail
-		}
-	}
+	reason, detail := license.DenialFields(err)
 	writeJSON(w, http.StatusForbidden, map[string]any{
 		"error":  "license_denied",
 		"reason": reason,
 		"detail": detail,
 	})
-}
-
-// licenseDeniedErr renders a Gate denial as a structured tool error (MCP).
-func licenseDeniedErr(err error) error {
-	reason := "unknown"
-	detail := err.Error()
-	var de *license.DeniedError
-	if errors.As(err, &de) {
-		reason = string(de.Reason)
-		if de.Detail != "" {
-			detail = de.Detail
-		}
-	}
-	raw, _ := json.Marshal(map[string]any{
-		"error":  "license_denied",
-		"reason": reason,
-		"detail": detail,
-	})
-	return errors.New(string(raw))
 }
 
 // ---- datacenter hub ----

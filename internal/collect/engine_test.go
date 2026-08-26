@@ -20,6 +20,7 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
 
 func addContracts(t *testing.T, cs ...*contracts.Contract) *contracts.Registry {
@@ -31,17 +32,6 @@ func addContracts(t *testing.T, cs ...*contracts.Contract) *contracts.Registry {
 		}
 	}
 	return reg
-}
-
-// contractsDirForTest resolves the adapt/contracts dir from this package
-// (collect → internal → root).
-func contractsDirForTest(t *testing.T) string {
-	t.Helper()
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return filepath.Join(wd, "..", "..", "adapt", "contracts")
 }
 
 // sendMsgAssembly loads the real douyin assembly (Names + Signer) from dir.
@@ -64,28 +54,6 @@ func loadSendMsgAssembly(t *testing.T, dir string) *sendMsgAssembly {
 		}
 	}
 	return &sendMsgAssembly{Names: names}
-}
-
-// remapContractsForTest re-registers the named contracts with srv as base URL.
-func remapContractsForTest(t *testing.T, dir string, srv *httptest.Server, names ...string) *contracts.Registry {
-	t.Helper()
-	all := contracts.NewRegistry()
-	if err := contracts.LoadDir(all, dir); err != nil {
-		t.Fatal(err)
-	}
-	reg := contracts.NewRegistry()
-	for _, n := range names {
-		c, ok := all.Get(n)
-		if !ok {
-			t.Fatalf("contract %q not found", n)
-		}
-		cp := *c
-		cp.Transport.BaseURL = srv.URL
-		if err := reg.Add(&cp); err != nil {
-			t.Fatal(err)
-		}
-	}
-	return reg
 }
 
 // mockEngine wires a registry + httptest-backed HTTP client into an engine.
@@ -711,11 +679,11 @@ func TestResolveVideoRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDirForTest(t)
+	dir := testkit.ContractsDir(t, 2)
 	signer := httpclient.StaticSigner{Fn: func(_ context.Context, contractName, _ string, _ map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "ab-" + contractName}, nil
 	}}
-	reg := remapContractsForTest(t, dir, srv, "douyin-video-download")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-video-download")
 	eng := New(Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -931,12 +899,12 @@ func TestSendMessageRealContract(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	dir := contractsDirForTest(t)
+	dir := testkit.ContractsDir(t, 2)
 	asm := loadSendMsgAssembly(t, dir)
 	signer := httpclient.StaticSigner{Fn: func(_ context.Context, contractName, _ string, _ map[string]string) (map[string]string, error) {
 		return map[string]string{"a_bogus": "ab-" + contractName}, nil
 	}}
-	reg := remapContractsForTest(t, dir, srv, "douyin-send-message")
+	reg := testkit.RemapContracts(t, dir, srv, "douyin-send-message")
 	eng := New(Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"test-ua"}}),
@@ -972,10 +940,10 @@ func TestSendMessageRealContract(t *testing.T) {
 // TestSendMessageContractNotDeclared: without a send_message contract the
 // resolver surfaces the explicit error.
 func TestSendMessageContractNotDeclared(t *testing.T) {
-	dir := contractsDirForTest(t)
+	dir := testkit.ContractsDir(t, 2)
 	asm := loadSendMsgAssembly(t, dir)
 	asm.Names["send_message"] = ""
-	reg := remapContractsForTest(t, dir, httptest.NewServer(nil), "douyin-comments")
+	reg := testkit.RemapContracts(t, dir, httptest.NewServer(nil), "douyin-comments")
 	eng := New(Context{Registry: reg, Names: map[string]map[string]string{"douyin": asm.Names}})
 	_, err := eng.SendMessage(context.Background(), "douyin", "sec", "hi")
 	if err == nil || !strings.Contains(err.Error(), "send_message") {
