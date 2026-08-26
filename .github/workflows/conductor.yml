@@ -1,0 +1,597 @@
+name: conductor
+# 状态机路由器（IR-0001 W0-C3 / ADR-0049）。事件面=组织活跃仓（ADR-0097 仓位无关
+# 部署：issues/issue_comment 事件只在 workflow 文件所在仓触发、org required
+# workflows 不支持 issue 事件——故本文件以同一字节部署 .github + 8 产品仓 +
+# template-service；治理真源不复制，经 sparse-checkout 从 .github 仓就地取用）。
+# 全部状态标签写操作以 cloudbrid-agent App 令牌执行（INV-02：GITHUB_TOKEN 身份
+# 不持有状态写权；令牌按事件仓铸造单仓作用域）。
+# W4-C1（ADR-0079 / ISSUE-263 AC-12）：T5/T6 路由增强——suite 就绪谓词 +
+# 三元组 survived 记录校验 + needs-human 不可直跳 wave-planned 断言。
+# W1-C3（ADR-0055 决策 6）：写入类 front-desk 命令（/claim /release）前置转介
+# arbiter 裁决（宪法 §11 唤醒矩阵事件行"仲裁请求处理（/claim 等，转 arbiter）"）；
+# 仲裁是叠加授权层，transitions.yaml 转移表语义不变。三态：0=allow 继续原动作、
+# 1=deny 审计 no-op（对齐 silent-drop）、2=infra run 红灯 fail-closed 不放行。
+on:
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+  # W4-C1：跨仓触发面——adversary 完成 survived 后经 repository_dispatch 通知 conductor
+  repository_dispatch:
+    types: [conductor]
+  # W4-C1：adversary 完成后经 repository_dispatch 触发 T6 评估（zizmor: workflow_run 不安全）
+
+# INV-09：每 issue 一个 concurrency group、cancel-in-progress=false——重复投递
+# 排队串行而非并发竞态；幂等由 from_state 匹配承担（重复事件=当前态已变=no-op）。
+# 同卡两次 /claim 并发的双层防线（ADR-0055）：本串行化使第二个 run 排队、届时
+# from_state 已不匹配=no-op（第一层）；事件乱序时 arbiter CAS（422=lost-race）
+# 兜底恰一胜者（第二层，ADR-0054）
+concurrency:
+  group: conductor-issue-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read # checkout 事件仓（T5/T9 specs 谓词）+ .github 治理真源（sparse）+ arbiter（adjudicate.sh，ADR-0055）
+
+jobs:
+  route:
+    if: github.repository_owner == 'Cloudbird-Software' # ADR-0097：仓位无关（.github + 产品仓同字节部署）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      invoke: ${{ steps.route.outputs.invoke }}
+      issue: ${{ steps.route.outputs.issue }}
+      ir_ref: ${{ steps.route.outputs.ir_ref }}
+      verdict: ${{ steps.route.outputs.verdict }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # 治理真源 sparse-checkout（ADR-0097）：transitions.yaml 与 gh-app-token.sh
+      # 的唯一真源在 .github 仓——产品仓部署不携带副本，每次运行取 main 最新
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Cloudbird-Software/.github
+          path: gov
+          sparse-checkout: |
+            governance/transitions.yaml
+            scripts/gh-app-token.sh
+          persist-credentials: false
+      # arbiter 受信 checkout（ADR-0055）：conductor 只在 main 上下文运行事件路由，
+      # arbiter main 与治理真源 transitions.yaml 同级信任——裁决内核不落本仓副本
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Cloudbird-Software/arbiter
+          path: arbiter
+          persist-credentials: false
+      - name: 铸 App 令牌（AG-2：事件仓 + arbiter 各一枚单仓作用域）
+        id: tokens
+        env:
+          CB_APP_ID: ${{ secrets.CB_APP_ID }}
+          AGENT_APP_SECRET: ${{ secrets.AGENT_APP_SECRET }}
+          EVENT_REPO: ${{ github.event.repository.name }}
+        run: |
+          set -euo pipefail
+          # ADR-0097：按事件仓铸造（REPO=裸仓名——gh-app-token.sh 单仓作用域契约，
+          # .github 自身部署时 EVENT_REPO=.github，行为不变）
+          TOKEN=$(REPO="$EVENT_REPO" CB_APP_ID="$CB_APP_ID" AGENT_APP_SECRET="$AGENT_APP_SECRET" \
+                  bash gov/scripts/gh-app-token.sh)
+          # 用 step output 传递（避免 GITHUB_ENV 的 zizmor github-env 告警）
+          echo "app_token=$TOKEN" >>"$GITHUB_OUTPUT"
+          # 第二枚（ADR-0055）：REPO=arbiter 单仓作用域（租约宿主仓，installation
+          # #154584760）——adjudicate.sh 优先取 env 令牌、免二次铸币
+          ATOKEN=$(REPO=arbiter CB_APP_ID="$CB_APP_ID" AGENT_APP_SECRET="$AGENT_APP_SECRET" \
+                  bash gov/scripts/gh-app-token.sh)
+          echo "arbiter_token=$ATOKEN" >>"$GITHUB_OUTPUT"
+      # 事件路由与守卫：transitions.yaml 是唯一转移定义；guard 受限求值
+      # （变量白名单注入、无内建）；非授权=静默丢弃（回退标签、不评论、审计进
+      # run 日志——AC-11）。注释/标签正文绝不进入任何求值（命令白名单精确匹配）。
+      # W1-C3：/claim（T3）/release 前置转介 arbiter（ADR-0055；参数以 arbiter 仓
+      # cli.py 为准）；delivery-id=comment node_id（稳定幂等键，重投→arbiter noop）。
+      - name: route（INV-02/09/AC-12）
+        id: route
+        env:
+          APP_TOKEN: ${{ steps.tokens.outputs.app_token }}
+          ARBITER_TOKEN: ${{ steps.tokens.outputs.arbiter_token }}
+          GOV_TOKEN: ${{ secrets.GOVERNANCE_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          LABEL_NAME: ${{ github.event.label.name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_ASSOC: ${{ github.event.comment.author_association }}
+          COMMENT_NODE_ID: ${{ github.event.comment.node_id }}
+          ACTOR: ${{ github.actor }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          # W4-C1：repository_dispatch / workflow_run 载荷
+          EVENT_PAYLOAD: ${{ toJson(github.event) }}
+        run: |
+          python3 - <<'PYEOF'
+          import json, os, re, subprocess, urllib.parse, urllib.request, urllib.error, yaml
+
+          E = os.environ
+          ORG, REPO = "Cloudbird-Software", E["REPO"]
+          ISSUE = E["ISSUE_NUMBER"]
+          # issue 输出最先落盘：后续任何失败路径（读 issue 失败/仲裁 infra/状态写失败）
+          # 都会触发 on-failure，届时 needs.route.outputs.issue 必须非空（BEH-01 通知要求）
+          if E.get("GITHUB_OUTPUT"):
+              with open(E["GITHUB_OUTPUT"], "a", encoding="utf-8") as _o:
+                  _o.write(f"issue={ISSUE}\n")
+          def api(token, path, method="GET", body=None):
+              data = json.dumps(body).encode() if body is not None else None
+              req = urllib.request.Request(f"https://api.github.com{path}", data=data, method=method,
+                  headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                           "User-Agent": "conductor"})
+              try:
+                  with urllib.request.urlopen(req) as r:
+                      raw = r.read()
+                      # 204（DELETE label 等）响应体为空——json.load 空体必抛
+                      # JSONDecodeError，状态码拿不到就 fail-closed 不成立
+                      return r.status, (json.loads(raw) if raw.strip() else {})
+              except urllib.error.HTTPError as e:
+                  return e.code, {}
+
+          def audit(msg):
+              # 审计面 = 本 run 日志（AC-11；不评论、不写 issue——防评论轰炸）
+              print(f"AUDIT | issue=#{ISSUE} | actor={E.get('ACTOR')} | {msg}", flush=True)
+
+          # ---- 事件规范化（白名单精确匹配，正文不进任何求值）----
+          ev = None
+          dispatch_payload = None
+          if E["EVENT_NAME"] == "issues" and E["ACTION"] == "labeled":
+              ln = E.get("LABEL_NAME") or ""
+              if ln.startswith("state:"):
+                  ev = f"label:{ln}"
+              else:
+                  audit(f"event=label(non-state:{ln}) verdict=noop"); raise SystemExit(0)
+          elif E["EVENT_NAME"] == "issue_comment" and E["ACTION"] == "created":
+              head = (E.get("COMMENT_BODY") or "").strip().split()
+              token = head[0] if head else ""
+              if token in ("/start", "/claim", "/retry", "/release"):
+                  ev = f"comment:{token}"
+              else:
+                  raise SystemExit(0)  # 普通评论：无审计面（噪音）
+          elif E["EVENT_NAME"] == "repository_dispatch" and E["ACTION"] == "conductor":
+              # W4-C1：跨仓 conductor 事件——载荷含 event_type 白名单精确匹配
+              raw_payload = E.get("EVENT_PAYLOAD") or "{}"
+              try:
+                  dispatch_payload = json.loads(raw_payload)
+              except Exception:
+                  audit("event=repository_dispatch verdict=noop payload=unparseable"); raise SystemExit(0)
+              etype = (dispatch_payload.get("event_type") or "").strip()
+              # 白名单精确匹配：只接受 adversary-survived / adversary-insufficient 等
+              if etype == "adversary-survived":
+                  ev = "dispatch:adversary-survived"
+              elif etype == "adversary-insufficient":
+                  ev = "dispatch:adversary-insufficient"
+              elif etype == "adversary-needs-human":
+                  ev = "dispatch:adversary-needs-human"
+              else:
+                  audit(f"event=repository_dispatch event_type={etype} verdict=noop（白名单外）")
+                  raise SystemExit(0)
+          elif E["EVENT_NAME"] == "workflow_run":
+              # W4-C1：workflow_run 完成事件——仅处理 adversary workflow 的 T6 路由
+              raw_payload = E.get("EVENT_PAYLOAD") or "{}"
+              try:
+                  wr_payload = json.loads(raw_payload)
+              except Exception:
+                  audit("event=workflow_run verdict=noop payload=unparseable"); raise SystemExit(0)
+              wf_name = (wr_payload.get("workflow_run") or {}).get("name", "")
+              conclusion = (wr_payload.get("workflow_run") or {}).get("conclusion", "")
+              if "adversary" not in wf_name.lower():
+                  audit(f"event=workflow_run workflow={wf_name} verdict=noop（非 adversary）")
+                  raise SystemExit(0)
+              # workflow_run 触发 T6 评估（redteam→wave-planned）
+              ev = "workflow_run:adversary-completed"
+              dispatch_payload = {"workflow_run": wr_payload.get("workflow_run", {}),
+                                  "conclusion": conclusion}
+          if ev is None:
+              audit("event=unrecognized verdict=noop"); raise SystemExit(0)
+
+          # ---- sender_role（INV-02：API 判定，不硬编码用户名）----
+          # 两级解析（W1-C3 e2e .github#206 实测教训：GOVERNANCE_TOKEN 读
+          # /orgs/{org}/memberships 拿不到 200，role 曾静默落 none——旧 T3 guard
+          # 靠 author_association 兜底掩盖了该单点，arbiter 转介按 role 判权后
+          # 把 owner 也拒了【run 32500211932 role-not-allowed】）：
+          #   ① GOV_TOKEN org 成员资格 role==admin → owner（首选，组织级语义）
+          #   ② 失败时 APP_TOKEN 读仓级协作者权限 ==admin → owner（兜底；
+          #     与 drift-check §9 vcs-admin 唯一性同源——受管仓 admin 唯 owner）
+          # 两路全败=none（arbiter 默认拒绝）。均 API 判定，无硬编码用户名。
+          actor = E.get("ACTOR") or ""
+          role = "none"
+          role_src = "none"
+          if actor == "cloudbrid-agent[bot]":
+              role = "agent"
+              role_src = "app-slug"
+          else:
+              st, m = api(E["GOV_TOKEN"], f"/orgs/{ORG}/memberships/{actor}")
+              if st == 200 and m.get("role") == "admin":
+                  role = "owner"
+                  role_src = "org-membership"
+              else:
+                  st, p = api(E["APP_TOKEN"], f"/repos/{REPO}/collaborators/{actor}/permission")
+                  if st == 200 and p.get("permission") == "admin":
+                      role = "owner"
+                      role_src = "repo-collab-admin(gov-membership HTTP %s)" % st
+          assoc = E.get("COMMENT_ASSOC") or "NONE"  # label 事件无此字段→NONE（guard 用 role）
+
+          # ---- 当前状态与标签集 ----
+          st, iss = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}")
+          if st != 200:
+              audit(f"verdict=abort 读取 issue 失败 HTTP {st}"); raise SystemExit(1)
+          labels = {l["name"] for l in iss.get("labels", [])}
+          states = [n[len("state:"):] for n in labels if n.startswith("state:")]
+          current = states[0] if states else "ir-draft"
+          if len(states) > 1:
+              # 标签写序现实（ADR-0085，T8 首次实走实测 2026-08-25）：actor 置新态时
+              # 旧态仍在——labeled 事件天然携带 [旧,新] 双态窗口，先 abort 则标签触发
+              # 的转移全族（T5/T7/T8/T9）不可达。收敛规则：事件标签=新态、另一态=
+              # 转移前态（from_state 候选）；swap_state 随后移旧置新，终态单态。
+              # 非 label:state: 事件或两态均非事件标签 → 维持 abort（真并存/未知写序）。
+              ev_label_name = ev[len("label:"):] if ev.startswith("label:") else ""
+              others = [s for s in states if f"state:{s}" != ev_label_name]
+              if ev.startswith("label:state:") and len(others) == 1:
+                  current = others[0]
+                  audit(f"双态窗口收敛: {states} → 转移前态={current}（事件标签={ev_label_name}；ADR-0085 写序语义）")
+              else:
+                  audit(f"verdict=abort 多状态标签并存: {states}"); raise SystemExit(1)
+
+          # ---- W4-C1：needs-human 不可直跳 wave-planned 断言（AC-12）----
+          # 任何试图从 needs-human 直接进入 wave-planned 的转移一律拒绝
+          if current == "needs-human" and ev in ("label:state:wave-planned", "workflow_run:adversary-completed"):
+              audit(f"verdict=DENIED-needs-human-bypass 当前态=needs-human 不可直跳 wave-planned（AC-12）")
+              # 回退标签
+              api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3Awave-planned", "DELETE")
+              raise SystemExit(0)
+
+          # ---- 转移表匹配（幂等：from_state 不符=no-op）----
+          # /release 不在表内（transitions.yaml 未列该事件）——纯租约面命令：
+          # 直达 arbiter 裁决，不产生任何标签转移（ADR-0055 决策 6）
+          table = yaml.safe_load(open("gov/governance/transitions.yaml", encoding="utf-8"))
+          cands = [t for t in table["transitions"] if t["event"] == ev]
+          t = next((x for x in cands if x["from_state"] == current), None)
+          if t is None and ev != "comment:/release":
+              audit(f"event={ev} from={current} verdict=noop（无匹配转移——跳态/重复/未列组合）")
+              raise SystemExit(0)
+
+          # ---- arbiter 前置裁决（ADR-0055：/claim /release 转介；退出码三态）----
+          # cwd 必须是 arbiter checkout 根（python -m arbiter.cli 的包根在那里）
+          ARBITER_DIR = os.path.join(os.getcwd(), "arbiter")
+          def adjudicate(command, delivery_id=None):
+              # delivery_id 缺省=评论 node_id（重投幂等键）；补偿调用必须传独立 id——
+              # arbiter seen_ref 只按 sha1(delivery_id) 判重放（kernel §2，与命令无关），
+              # 复用原 id 的补偿 /release 会被判 replay no-op，租约释放不掉
+              argv = ["bash", os.path.join(ARBITER_DIR, "scripts", "adjudicate.sh"), command,
+                      "--card", f"{REPO}#{ISSUE}", "--sender", actor,
+                      "--sender-role", role,
+                      "--delivery-id", delivery_id or (E.get("COMMENT_NODE_ID") or f"run-{E.get('RUN_ID', 'unknown')}"),
+                      "--event", "created", "--current-state", current, "--backend", "github"]
+              return subprocess.call(argv, cwd=ARBITER_DIR)
+
+          if ev == "comment:/release":
+              rc = adjudicate("/release")
+              if rc == 0:
+                  audit(f"event={ev} from={current} sender_role={role}({role_src}) arbiter=allow "
+                        f"verdict=ALLOWED release（租约已释放——无标签转移定义，纯租约面）")
+                  raise SystemExit(0)
+              if rc == 1:
+                  audit(f"event={ev} sender_role={role}({role_src}) verdict=DENIED-by-arbiter "
+                        f"（非 holder/无租约/过期——无租约变更、无标签变更）")
+                  raise SystemExit(0)
+              audit(f"event={ev} arbiter=infra rc={rc} verdict=ABORT "
+                f"（fail-closed——仲裁器失明不放行；delivery 幂等可安全重投）")
+              raise SystemExit(1)
+
+          # ---- guard 受限求值 ----
+          env_vars = {"sender_role": role, "author_association": assoc, "label_set": labels}
+          ok = False
+          try:
+              ok = bool(eval(t["guard"], {"__builtins__": {}}, dict(env_vars)))
+          except Exception as e:
+              audit(f"verdict=abort guard 求值失败 {t['id']}: {e}"); raise SystemExit(1)
+
+          def swap_state(frm, to):
+              # 写结果逐项检查（ADR-0055）：标签写失败=状态面失真——不许“路由记 allow
+              # 但卡未变更”静默成功，抛 WriteFail 交上层 fail-closed/租约补偿。
+              # DELETE 容 404：标签已不在=目标态已达成（幂等删/补偿恢复场景）
+              st_del, _ = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3A{frm}", "DELETE")
+              if st_del not in (200, 204, 404):
+                  raise WriteFail(f"删标签 state:{frm} HTTP {st_del}")
+              st_add, _ = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels",
+                              "POST", {"labels": [f"state:{to}"]})
+              if st_add not in (200, 201):
+                  raise WriteFail(f"加标签 state:{to} HTTP {st_add}")
+
+          if not ok:
+              # 静默丢弃（AC-11）：回退标签、不评论、不启动
+              if ev.startswith("label:"):
+                  api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/"
+                      + urllib.parse.quote(ev[len("label:"):], safe=""), "DELETE")
+                  audit(f"event={ev} transition={t['id']} sender_role={role} assoc={assoc} "
+                    f"verdict=DENIED-silent-drop（标签已回退，无评论，无阶段启动）")
+              raise SystemExit(0)
+
+          # ---- /claim 前置裁决（guard 先行——为注定拒绝的请求不建租约；ADR-0055）----
+          if ev == "comment:/claim":
+              rc = adjudicate("/claim")
+              if rc == 1:
+                  audit(f"event={ev} transition={t['id']} sender_role={role} assoc={assoc} "
+                    f"verdict=DENIED-by-arbiter（无标签变更、无 assignee——对齐 silent-drop）")
+                  raise SystemExit(0)
+              if rc != 0:
+                  audit(f"event={ev} transition={t['id']} arbiter=infra rc={rc} verdict=ABORT "
+                    f"（fail-closed——不许绕过仲裁；delivery 幂等可安全重投）")
+                  raise SystemExit(1)
+              audit(f"event={ev} transition={t['id']} sender_role={role}({role_src}) arbiter=allow "
+                    f"（租约已建——T3 落地；TTL 到期由下一 /claim 原子接管，ADR-0054）")
+
+          # ---- W4-C1：T5 suite 就绪谓词（AC-12）----
+          # suite 就绪 = 确定性谓词：suite/ 存在 + 含非空测试文件 + 可解析
+          # 不信任 dispatch 载荷——conductor 侧重新断言
+          def check_suite_ready(issue_number):
+              """检查卡对应的 suite/ 是否就绪（存在+非空+可解析）。返回 (ready, reason)。"""
+              # 从 issue body 中提取 spec 路径或 suite 路径
+              body = iss.get("body") or ""
+              # 默认 suite 路径：specs/<taskId>/suite/
+              m = re.search(r"(IR-\d+|ISSUE-\d+)", iss.get("title") or "")
+              task_id = m.group(1) if m else f"ISSUE-{issue_number}"
+              suite_rel = f"specs/{task_id}/suite"
+              # 检查 suite 目录是否存在且含非空测试文件
+              suite_abs = os.path.join(os.getcwd(), suite_rel)
+              if not os.path.isdir(suite_abs):
+                  return False, f"suite 目录不存在: {suite_rel}"
+              test_files = []
+              for root, _dirs, files in os.walk(suite_abs):
+                  for fn in files:
+                      if fn.startswith("test_") and fn.endswith(".py"):
+                          fpath = os.path.join(root, fn)
+                          # 非空检查
+                          if os.path.getsize(fpath) > 0:
+                              test_files.append(fpath)
+              if not test_files:
+                  return False, f"suite 目录无有效测试文件: {suite_rel}"
+              # 可解析检查：python ast.parse
+              import ast
+              for tf in test_files:
+                  try:
+                      with open(tf, encoding="utf-8") as f:
+                          ast.parse(f.read())
+                  except SyntaxError as e:
+                      return False, f"测试文件不可解析 {tf}: {e}"
+              return True, f"suite 就绪: {len(test_files)} 个有效测试文件"
+
+          if t["id"] == "T5":
+              ready, reason = check_suite_ready(ISSUE)
+              audit(f"T5 suite 就绪谓词: ready={ready} reason={reason}")
+              if not ready:
+                  audit(f"verdict=DENIED-suite-not-ready T5 拒绝——{reason}")
+                  # 回退标签
+                  api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3Aredteam", "DELETE")
+                  raise SystemExit(0)
+
+          # ---- W4-C1：T6 三元组 survived 记录校验（AC-12）----
+          # 进入 wave-planned 必须存在该卡本次生命周期内、卡 ID+specVersion+审计 run ID
+          # 三元组对应的 survived 审计记录（禁止跨卡/历史记录短路）
+          def check_triple_survived(issue_number, payload):
+              """校验三元组 survived 记录。返回 (ok, reason, triple)。"""
+              # 从 issue 提取卡 ID 与 specVersion
+              body = iss.get("body") or ""
+              m_card = re.search(r"Card:\s*(\S+)", body)
+              card_id = m_card.group(1) if m_card else f"{REPO}#{issue_number}"
+              m_spec = re.search(r"[Ss]pec[Vv]ersion:\s*(\d+)", body)
+              spec_version = m_spec.group(1) if m_spec else None
+              # 从 adversary 审计记录中提取 run ID
+              # 优先取 payload 中的 run_id，否则从 issue 注释中查找
+              run_id = None
+              verdict_from_dispatch = None
+              if payload:
+                  run_id = (payload.get("client_payload") or {}).get("run_id") or payload.get("run_id")
+                  verdict_from_dispatch = (payload.get("client_payload") or {}).get("verdict")
+              # 三元组完整性检查
+              if not spec_version:
+                  return False, "缺少 specVersion（issue body 未含 specVersion 字段）", None
+              if not run_id:
+                  return False, "缺少审计 run ID（adversary 记录未含 run_id）", None
+              triple = {"card_id": card_id, "specVersion": spec_version, "audit_run_id": run_id}
+              # 验证 survived 语义：verdict 必须是 survived
+              if verdict_from_dispatch and verdict_from_dispatch != "survived":
+                  return False, f"adversary verdict={verdict_from_dispatch}（非 survived）", triple
+              # 验证 run ID 未被跨卡复用（检查 issue 注释中是否有该 run ID 的 survived 记录）
+              st_com, comments = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{issue_number}/comments")
+              if st_com == 200:
+                  survived_runs = set()
+                  for c in comments:
+                      cb = c.get("body", "")
+                      if "adversary:survived" in cb or "verdict=survived" in cb:
+                          # 提取 run id
+                          m_run = re.search(r"run[_-]?id[=:]\s*([A-Za-z0-9_\-]+)", cb, re.I)
+                          if m_run:
+                              survived_runs.add(m_run.group(1))
+                  if survived_runs and run_id not in survived_runs:
+                      return False, f"run ID {run_id} 不在本卡 survived 记录中（防跨卡短路）", triple
+              return True, f"三元组校验通过: {triple}", triple
+
+          if t["id"] == "T6":
+              ok_triple, triple_reason, triple = check_triple_survived(ISSUE, dispatch_payload)
+              audit(f"T6 三元组校验: ok={ok_triple} reason={triple_reason}")
+              if not ok_triple:
+                  audit(f"verdict=DENIED-triple-mismatch T6 拒绝——{triple_reason}")
+                  # 回退标签
+                  api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3Awave-planned", "DELETE")
+                  raise SystemExit(0)
+
+          # ---- ADR-0085：T8 卡完成谓词（存在绑定本卡且已合并的 PR）----
+          def check_merged_pr(issue_number):
+              """卡完成谓词：存在 body 含 Card: <repo>#<n> 绑定行且已合并的 PR。
+              gate 绿由 PR required checks 承担（合并事实即全 gate 绿的载体）；
+              不信任标签事件载荷——API 重查（fail-closed：读取失败=拒绝）。"""
+              target = f"{REPO}#{issue_number}"
+              # 跨仓检索（ADR-0085 实走教训：卡在治理仓、PR 可落在任意仓——
+              # archive#17/cnb-bridge#1 均为跨仓绑定，本仓清单法漏判）。
+              # search 索引分钟级延迟：命中即真（合并事实不可伪造），未命中再回退
+              # 本仓 pulls 双查，两通道皆空才判未完成（重置 done 标签即重放，幂等）。
+              q = urllib.parse.quote(f'"{target}" is:pr is:merged org:{ORG}')
+              st, hits = api(E["APP_TOKEN"], f"/search/issues?q={q}&per_page=20")
+              search_ok = st == 200
+              if search_ok:
+                  for it in hits.get("items") or []:
+                      if target in (it.get("body") or ""):
+                          return True, f"跨仓 PR 已合并：{it.get('html_url')} 绑定 {target}"
+              st, prs = api(E["APP_TOKEN"], f"/repos/{REPO}/pulls?state=closed&per_page=100")
+              if st != 200 and not search_ok:
+                  return False, f"PR 检索双通道均不可用（search={search_ok} pulls HTTP {st}——fail-closed）"
+              for pr in prs or []:
+                  if pr.get("merged_at") and target in (pr.get("body") or ""):
+                      return True, f"PR #{pr['number']} 已合并（{pr['merged_at']}）绑定 {target}"
+              return False, f"无绑定 {target} 且已合并的 PR（跨仓 search{'OK' if search_ok else 'FAIL'} + 本仓 closed PR 双查均空）"
+
+          if t["id"] == "T8":
+              okp, reason = check_merged_pr(ISSUE)
+              audit(f"T8 合并 PR 谓词: ok={okp} reason={reason}")
+              if not okp:
+                  audit(f"verdict=DENIED-no-merged-pr T8 拒绝——{reason}")
+                  api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3Adone", "DELETE")
+                  raise SystemExit(0)
+
+          # ---- ADR-0085：T9 IR 验收谓词（全部子卡收口 + 验收报告存在）----
+          def check_ir_acceptance(issue_number, title):
+              """IR 验收谓词（Gate 4）：①无 open 子卡引用本 IR（子卡=body 含
+              "父意图: #<n>"；全部收口=done+closed）②specs/<IR-NNNN>/acceptance.md
+              存在于本仓工作区（=事件时点默认分支）。子卡曾存在性由验收报告自证
+              （报告须列子卡清单与逐 AC 证据）。"""
+              st, cards = api(E["APP_TOKEN"], f"/repos/{REPO}/issues?state=open&per_page=100&labels=type%3Acard")
+              if st != 200:
+                  return False, f"子卡清单读取失败 HTTP {st}（fail-closed）"
+              pending = [c["number"] for c in cards or []
+                         if f"父意图: #{issue_number}" in (c.get("body") or "")]
+              if pending:
+                  return False, f"尚有 open 子卡未收口: {pending}"
+              m = re.search(r"(IR-\d+)", title or "")
+              task_id = m.group(1) if m else f"ISSUE-{issue_number}"
+              acc = os.path.join(os.getcwd(), "specs", task_id, "acceptance.md")
+              if not os.path.isfile(acc):
+                  return False, f"验收报告缺失: specs/{task_id}/acceptance.md"
+              return True, f"全部子卡收口 + 验收报告存在（{task_id}）"
+
+          if t["id"] == "T9":
+              okp, reason = check_ir_acceptance(ISSUE, iss.get("title") or "")
+              audit(f"T9 IR 验收谓词: ok={okp} reason={reason}")
+              if not okp:
+                  audit(f"verdict=DENIED-acceptance-incomplete T9 拒绝——{reason}")
+                  api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/labels/state%3Adone", "DELETE")
+                  raise SystemExit(0)
+
+          # ---- 执行转移（状态标签写=App 身份，INV-02；写失败=fail-closed，
+          # /claim 已建租约时先补偿回滚——杜绝"租约在、卡未变"的不一致面，ADR-0055）----
+          class WriteFail(Exception):
+              pass
+
+          out = open(E["GITHUB_OUTPUT"], "a", encoding="utf-8")
+          try:
+              action = t["action"]
+              if action == "invoke:spec-author":
+                  m = re.match(r"(IR-\d+)", iss.get("title") or "")
+                  task_id = m.group(1) if m else f"ISSUE-{ISSUE}"
+                  swap_state(t["from_state"], t["to_state"])
+                  out.write(f"invoke=spec-author\nir_ref={task_id} {REPO}#{ISSUE}\n")
+                  audit(f"event={ev} transition={t['id']} sender_role={role} verdict=ALLOWED "
+                        f"{t['from_state']}->{t['to_state']} action=invoke:spec-author")
+              elif action == "claim":
+                  lease_created = ev == "comment:/claim"  # 裁决 allow 时租约已建
+                  try:
+                      swap_state(t["from_state"], t["to_state"])
+                      st_as, _ = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{ISSUE}/assignees",
+                                     "POST", {"assignees": [actor]})
+                      if st_as not in (200, 201):
+                          raise WriteFail(f"置 assignee HTTP {st_as}")
+                  except WriteFail as e:
+                      if lease_created:
+                          # 补偿双面：状态标签（宪法 §12 真相源——先恢复，卡回到
+                          # 可重试态）+ 租约（独立 delivery id：复用原 id 会被
+                          # arbiter seen_ref 判 replay no-op）。每步结果都入审计，
+                          # 任一失败仍 fail-closed 退出（delivery 幂等可安全重投）。
+                          audit(f"event={ev} transition={t['id']} write-fail {e}——开始补偿回滚")
+                          try:
+                              swap_state(t["to_state"], t["from_state"])
+                          except WriteFail as e2:
+                              audit(f"compensate 状态恢复失败 {e2}——人工置回 state:{t['from_state']}")
+                          comp_id = f"{E.get('COMMENT_NODE_ID') or E.get('RUN_ID', 'run')}-compensate-release"
+                          rc = adjudicate("/release", comp_id)
+                          audit(f"compensate /release rc={rc}"
+                                f"（0=租约已释放；非 0=TTL 到期自然回收或人工 /release）")
+                      raise
+                  out.write("invoke=none\n")
+                  audit(f"event={ev} transition={t['id']} sender_role={role} verdict=ALLOWED "
+                        f"claim->in-progress assignee={actor}")
+              else:
+                  swap_state(t["from_state"], t["to_state"])
+                  out.write("invoke=none\n")
+                  audit(f"event={ev} transition={t['id']} sender_role={role} verdict=ALLOWED "
+                        f"{t['from_state']}->{t['to_state']} action=noop")
+              # W4-C1：输出 conductor 路由结果供下游消费
+              out.write(f"verdict=allowed\ntransition={t['id']}\n")
+          except WriteFail as e:
+              audit(f"event={ev} verdict=ABORT 状态写失败 {e}（fail-closed；delivery 幂等可安全重投）")
+              raise SystemExit(1)
+          finally:
+              out.close()
+          PYEOF
+      - name: 幂等键落盘（{issue, from, to}——重复投递复核凭据）
+        if: steps.route.outputs.invoke == 'spec-author'
+        run: |
+          echo "transition-key: {issue: ${{ steps.route.outputs.issue }}, to: spec} @ $(date -u +%FT%TZ)"
+
+  spec:
+    # spec-author 钉发布 tag 的 commit SHA（供应链；ADR-0049/0050）
+    needs: route
+    if: needs.route.outputs.invoke == 'spec-author'
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/spec-author.yml@4676c98047f816f7c888591eb882bf941e5c9fe0 # v1.4.3（irRef/taskId 事件真值覆写修复）
+    with:
+      issue_number: ${{ fromJson(needs.route.outputs.issue) }}
+      target_repo: ${{ github.repository }} # ADR-0097：IR 所在仓=spec PR 目标仓
+      ir_ref: ${{ needs.route.outputs.ir_ref }}
+      ciw_ref: "4676c98047f816f7c888591eb882bf941e5c9fe0" # 与上方 uses 钉点同值（ADR-0043 钉源）
+    # 显式传递（zizmor secrets-inherit：调用方 secrets 必须显式点名）
+    secrets:
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      CB_APP_ID: ${{ secrets.CB_APP_ID }}
+      AGENT_APP_SECRET: ${{ secrets.AGENT_APP_SECRET }}
+
+  on-failure:
+    # BEH-01：启动失败在原 issue 评论原因（人类只看 issue 就能知道卡在哪）
+    # ADR-0097：评论回事件仓 issue（令牌按事件仓铸造）；gh 经 GH_TOKEN 取 App 令牌
+    needs: [route, spec]
+    if: always() && (needs.route.result == 'failure' || needs.spec.result == 'failure')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Cloudbird-Software/.github
+          path: gov
+          sparse-checkout: |
+            scripts/gh-app-token.sh
+          persist-credentials: false
+      - name: 评论失败原因
+        env:
+          CB_APP_ID: ${{ secrets.CB_APP_ID }}
+          AGENT_APP_SECRET: ${{ secrets.AGENT_APP_SECRET }}
+          EVENT_REPO: ${{ github.event.repository.name }}
+          ISSUE: ${{ needs.route.outputs.issue }}
+          ROUTE_RC: ${{ needs.route.result }}
+          SPEC_RC: ${{ needs.spec.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          TOKEN=$(REPO="$EVENT_REPO" CB_APP_ID="$CB_APP_ID" AGENT_APP_SECRET="$AGENT_APP_SECRET" \
+                  bash gov/scripts/gh-app-token.sh)
+          export GH_TOKEN="$TOKEN"   # INV-02：App 身份评论（GITHUB_TOKEN 无 issues:write）
+          gh api "repos/${{ github.repository }}/issues/$ISSUE/comments" \
+            -f body="**conductor：spec 阶段启动失败**（BEH-01，须人类介入）
+          route=${ROUTE_RC} spec=${SPEC_RC}
+          run：${RUN_URL}
+          状态已停于当前态；修复后 owner 评论 /start 或重打 state:ir-signed 重试。" \
+            && echo "AUDIT | issue=#$ISSUE | verdict=failure-notified"
