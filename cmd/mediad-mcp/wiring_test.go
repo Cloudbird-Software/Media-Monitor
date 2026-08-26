@@ -261,17 +261,18 @@ func TestCollectToolsCallableWithoutLicenseConfig(t *testing.T) {
 		}
 	}
 
-	// send_message and adb_list answer without a license refusal too, but
-	// through their structured (non-error) result surfaces.
-	for _, tool := range []struct {
-		name string
-		args map[string]any
-	}{
-		{"send_message", map[string]any{"platform": "douyin", "targets": "t", "first_message": "hi"}},
-		{"adb_list", map[string]any{}},
-	} {
-		if out := c.callTool(t, tool.name, tool.args); out == nil {
-			t.Fatalf("tool %s failed", tool.name)
+	// send_message answers through its structured (non-error) result
+	// surface without a license refusal.
+	if out := c.callTool(t, "send_message", map[string]any{"platform": "douyin", "targets": "t", "first_message": "hi"}); out == nil {
+		t.Fatal("send_message failed")
+	}
+	// adb_list reaches the adb layer with no license refusal; the outcome
+	// itself depends on whether an adb server is reachable in this
+	// environment (structured error allowed, license_denied never).
+	m := c.call(t, "tools/call", "err-adb_list", map[string]any{"name": "adb_list", "arguments": map[string]any{}})
+	if e, ok := m["error"].(map[string]any); ok {
+		if msg := fmt.Sprint(e["message"]); strings.Contains(msg, "license_denied") {
+			t.Fatalf("adb_list refused with license error: %q", msg)
 		}
 	}
 
