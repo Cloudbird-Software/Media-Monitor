@@ -221,6 +221,138 @@ class L4Consistency(unittest.TestCase):
         # 跨仓引用形态：DECISION-5 引用 VR 仓 IR-0001（承接口径）
         self.assertIn("IR-0001", s, "缺跨仓 IR-0001 引用（DECISION-5 承接口径）")
 
+class ACDecidability(unittest.TestCase):
+    """S1' 摆拍式 AC 防御（红队 run 32972226384 钻洞归因补强）：
+    AC 的 then 必须含可机检谓词锚——否则任何实现都能被宣称满足。"""
+
+    # then 段合法的谓词锚类别（工具名/数值/枚举/错误码/路径/协议形态）
+    THEN_ANCHOR_POOL = [
+        "internal/license", "wiring", "hygiene", "zizmor", "gitleaks",
+        "/aweme/v1/web/aweme/post/", "sec_user_id", "max_cursor", "a_bogus",
+        "stats", "digg", "comment", "share", "collect", "play", "create_time",
+        "≥3 页", "canary", "fixture",
+        "window_months", "min_engagement", "stop_after_consecutive", "默认 5",
+        "连续", "stats 缺失", "逐字节一致",
+        "model.Cursor", "JSON", "limit",
+        "platform", "sec_uid", "cursor", "account_id", "IF-1",
+        "artifacts/", "path", "bytes", "sha256", "16MiB", "tmp+rename",
+        "healthy", "degraded", "expired", "accounts_list", "HTTP 200",
+        "≤2", "3 次", "banned", "/metrics", "auto",
+        "type:drift", "幂等",
+        "submodule", "arch-check", "internal/", "upstream/",
+        "diff", "hunk", "tracked_paths",
+        "成功率/新鲜度/许可", "C1 PR",
+        "UI-TARS", "MEDIAMON_VISION_ENDPOINT", "tap", "swipe", "screencap",
+        "uidump", "fail-closed", "adb",
+        "HAR", "cookie/token", "JSON patch", "issue",
+        "skipped≠success", "drift JSON", "脱敏",
+        "ghcb", "1 个 canary 周期 + 1 个工作日", "time-to-detect",
+        "time-to-repair", "dashboard", "/metrics", "SLA",
+        "TESTING.md", "干净成功", "文档化跳过", "错误码", "12 字段", "≥90%",
+        "uid", "short_id", "nickname", "avatar_url", "signature", "ip_label",
+        "gender", "follower_count", "following_count", "aweme_count",
+        "total_favorited", "24h",
+        "MCP", "VR", "证据",
+        "verdict", "survived", "AC-1 至 AC-20",
+    ]
+
+    def _ac_then_blocks(self, text):
+        """抽取每条 AC 的 then 段文本（frontmatter 内 AC 值均单行）。"""
+        blocks = re.findall(
+            r"- id: AC-(\d+)\n\s+given: [^\n]+\n\s+when: [^\n]+\n\s+then: ([^\n]+)", text)
+        return [(int(n), t.strip()) for n, t in blocks]
+
+    def test_every_ac_then_has_predicate_anchor(self):
+        """每条 AC 的 then 至少含 1 个谓词锚——无锚 then = 摆拍面。"""
+        s = read(SPEC)
+        blocks = self._ac_then_blocks(s)
+        self.assertEqual(len(blocks), 21, f"AC then 块应为 21（实际 {len(blocks)}）")
+        hollow = [n for n, t in blocks
+                  if not any(a in t for a in self.THEN_ANCHOR_POOL)]
+        self.assertEqual(hollow, [],
+                         f"AC-{hollow} 的 then 无任何谓词锚（摆拍式 AC——任何实现都能被宣称满足）")
+
+    def test_then_not_pure_restatement(self):
+        """then 不得是 when 的重述（空洞回环）。"""
+        s = read(SPEC)
+        m = re.findall(r"- id: AC-(\d+)\n\s+given: (.+)\n\s+when: (.+)\n\s+then: (.+)", s)
+        for n, g, w, t in m:
+            # 归一化比较：then 与 when 完全同文 = 空洞
+            self.assertNotEqual(t.strip(), w.strip(),
+                                f"AC-{n} then 与 when 同文（空洞回环）")
+
+
+class NegativeControl(unittest.TestCase):
+    """负控制（红队 run 32972226384 补强）：程序化构造偷懒 spec 变体，
+    断言套件锚逻辑必然拒绝——证明锚"杀得死"摆拍，而非仅"摆在那里"。
+    每个变体对应一类已知攻击（S1' 摆拍/S2 义务降级/S4 数值漂移/S5 字段缩水/空洞化）。"""
+
+    def _anchors_hit(self, text, anchors):
+        return [a for a in anchors if a not in text]
+
+    def _ac_then_of(self, text, ac_id):
+        m = re.search(rf"- id: {ac_id}\n\s+given: [^\n]+\n\s+when: [^\n]+\n\s+then: ([^\n]+)", text)
+        return m.group(1) if m else ""
+
+    def test_variant_hollow_then_caught(self):
+        """T1 摆拍变体：把 then 空洞化（删机制短语）→ 谓词锚断言必红。"""
+        s = read(SPEC)
+        variant = re.sub(r"(- id: AC-7\n\s+given: [^\n]+\n\s+when: [^\n]+\n\s+then: )[^\n]+",
+                         r"\1工具正确处理下载请求并返回结果", s)
+        dec = ACDecidability()
+        blocks = dec._ac_then_blocks(variant)
+        hollow = [n for n, t in blocks
+                  if not any(a in t for a in ACDecidability.THEN_ANCHOR_POOL)]
+        self.assertIn(7, hollow, "空洞化 then 未被谓词锚断言抓到（套件杀不死摆拍）")
+
+    def test_variant_obligation_weakening_caught(self):
+        """T2 义务降级变体：BEH 的「必须」→「可以」→ 义务强度断言必红。"""
+        s = read(SPEC)
+        variant = s.replace("系统必须", "系统可以", 5)
+        beh_section = re.search(r"## BEH 行为\n(.*?)\n## ", variant, re.S)
+        behs = re.findall(r"- BEH-\d+（[^）]*）(.+)", beh_section.group(1))
+        weak = [b[:20] for b in behs if "必须" not in b]
+        self.assertTrue(weak, "义务降级变体未被「必须」断言抓到")
+
+    def test_variant_numeric_drift_caught(self):
+        """T4 数值漂移变体：≤2→≤8、16MiB→64KiB → 语义锚断言必红。"""
+        s = read(SPEC)
+        variant = s.replace("≤2", "≤8").replace("16MiB", "64KiB")
+        # 变体上锚丢失（套件锚逻辑对变体必红）
+        missing_on_variant = self._anchors_hit(variant, ["≤2", "16MiB"])
+        self.assertTrue(missing_on_variant,
+                        "数值漂移变体未丢锚（变形器失效）")
+        # 正控：原 spec 锚在位（套件接受原文）
+        self.assertEqual(self._anchors_hit(s, ["≤2", "16MiB"]), [])
+
+    def test_variant_field_shrink_caught(self):
+        """T5 字段缩水变体：12 字段清单删 3 个 → AC-19 防缩水断言必红。"""
+        s = read(SPEC)
+        variant = s.replace(
+            "uid, sec_uid, short_id, nickname, avatar_url, signature, ip_label, "
+            "gender, follower_count, following_count, aweme_count, total_favorited",
+            "uid, sec_uid, nickname, avatar_url, gender, follower_count, "
+            "following_count, aweme_count, total_favorited")
+        self.assertNotIn("short_id", variant, "变形器未删字段（负控制失效）")
+        # 12 字段计数锚对变体必红：变体 then 段字段名 < 12
+        then_text = self._ac_then_of(variant, "AC-19")
+        field_names = ["uid", "sec_uid", "short_id", "nickname", "avatar_url",
+                       "signature", "ip_label", "gender", "follower_count",
+                       "following_count", "aweme_count", "total_favorited"]
+        hits = [f for f in field_names if f in then_text]
+        self.assertLess(len(hits), 12, "字段缩水变体仍通过 12 字段断言（套件杀不死缩水）")
+
+    def test_variant_gwt_hollow_caught(self):
+        """T3 空洞 then（重述 when）→ 非重述断言必红。"""
+        s = read(SPEC)
+        variant = re.sub(r"(- id: AC-3\n\s+given: [^\n]+\n\s+when: )([^\n]+)(\n\s+then: )[^\n]+",
+                         r"\1\2\3\2", s)
+        m = re.search(r"- id: AC-3\n\s+given: [^\n]+\n\s+when: ([^\n]+)\n\s+then: ([^\n]+)", variant)
+        self.assertEqual(m.group(1).strip(), m.group(2).strip(),
+                         "变形器未构造重述（负控制失效）")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
