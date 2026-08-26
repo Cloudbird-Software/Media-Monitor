@@ -233,6 +233,66 @@ func argInt(args map[string]any, key string, def int) int {
 	return def
 }
 
+// cursorProp is the shared pagination-cursor input schema (object form,
+// IFACE-2): pass back the previous call's next_cursor to continue paging.
+var cursorProp = map[string]any{
+	"type":        "object",
+	"description": "pagination cursor from the previous call's next_cursor — pass it back to continue paging instead of restarting (omit for a fresh first page)",
+	"properties": map[string]any{
+		"v":        map[string]any{"type": "integer", "description": "cursor envelope version (currently 1; omitted = 1)"},
+		"page":     map[string]any{"type": "integer"},
+		"has_more": map[string]any{"type": "boolean"},
+		"source":   map[string]any{"type": "object", "description": "opaque per-contract cursor state"},
+	},
+}
+
+// cursorVersion is the current cursor envelope version (IFACE-2).
+const cursorVersion = 1
+
+// argCursor parses the optional versioned cursor argument. Absent/nil
+// returns the zero cursor (fresh first page); a foreign version fails
+// closed with an explicit error.
+func argCursor(args map[string]any) (model.Cursor, error) {
+	raw, ok := args["cursor"]
+	if !ok || raw == nil {
+		return model.Cursor{}, nil
+	}
+	m, ok := raw.(map[string]any)
+	if !ok {
+		return model.Cursor{}, errors.New("cursor must be an object {v,page,has_more,source}")
+	}
+	if v, ok := m["v"]; ok {
+		f, isNum := v.(float64)
+		if !isNum || int64(f) != cursorVersion {
+			return model.Cursor{}, fmt.Errorf("cursor version %v unsupported (want %d)", v, cursorVersion)
+		}
+	}
+	b, err := json.Marshal(m)
+	if err != nil {
+		return model.Cursor{}, errors.New("cursor: " + err.Error())
+	}
+	var cur model.Cursor
+	if err := json.Unmarshal(b, &cur); err != nil {
+		return model.Cursor{}, errors.New("cursor: " + err.Error())
+	}
+	return cur, nil
+}
+
+// cursorOut wraps an engine cursor in the versioned output envelope
+// (symmetric with argCursor's input form; v always present).
+func cursorOut(cur model.Cursor) map[string]any {
+	b, err := json.Marshal(cur)
+	if err != nil {
+		return map[string]any{"v": cursorVersion}
+	}
+	var m map[string]any
+	if err := json.Unmarshal(b, &m); err != nil {
+		m = map[string]any{}
+	}
+	m["v"] = cursorVersion
+	return m
+}
+
 func argBool(args map[string]any, key string) bool {
 	switch v := args[key].(type) {
 	case bool:
@@ -277,6 +337,7 @@ func buildTools(a *app) []mcpio.Tool {
 				"media_type": sProp("media type filter: video|image"),
 				"limit":      limitProp,
 				"account_id": accountProp,
+				"cursor":     cursorProp,
 			}),
 			Handler: a.searchItems,
 		},
@@ -288,6 +349,7 @@ func buildTools(a *app) []mcpio.Tool {
 				"item_id":    sProp("item id"),
 				"limit":      limitProp,
 				"account_id": accountProp,
+				"cursor":     cursorProp,
 			}),
 			Handler: a.getComments,
 		},
@@ -300,6 +362,7 @@ func buildTools(a *app) []mcpio.Tool {
 				"cid":        sProp("top-level comment id"),
 				"limit":      limitProp,
 				"account_id": accountProp,
+				"cursor":     cursorProp,
 			}),
 			Handler: a.getReplies,
 		},
@@ -484,11 +547,15 @@ func (a *app) searchItems(ctx context.Context, args map[string]any) (any, error)
 	if keyword == "" {
 		return nil, errors.New("keyword is required")
 	}
-	items, cur, err := a.engineFor(argStr(args, "account_id")).SearchItems(ctx, platform, keyword, argStr(args, "media_type"), model.Cursor{}, argInt(args, "limit", 20))
+	cur, err := argCursor(args)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"items": items, "cursor": cur}, nil
+	items, next, err := a.engineFor(argStr(args, "account_id")).SearchItems(ctx, platform, keyword, argStr(args, "media_type"), cur, argInt(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"items": items, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 }
 
 func (a *app) getComments(ctx context.Context, args map[string]any) (any, error) {
@@ -500,11 +567,15 @@ func (a *app) getComments(ctx context.Context, args map[string]any) (any, error)
 	if itemID == "" {
 		return nil, errors.New("item_id is required")
 	}
-	cmts, cur, err := a.engineFor(argStr(args, "account_id")).ItemComments(ctx, platform, itemID, model.Cursor{}, argInt(args, "limit", 20))
+	cur, err := argCursor(args)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"comments": cmts, "cursor": cur}, nil
+	cmts, next, err := a.engineFor(argStr(args, "account_id")).ItemComments(ctx, platform, itemID, cur, argInt(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"comments": cmts, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 }
 
 func (a *app) getReplies(ctx context.Context, args map[string]any) (any, error) {
@@ -517,11 +588,15 @@ func (a *app) getReplies(ctx context.Context, args map[string]any) (any, error) 
 	if itemID == "" || cid == "" {
 		return nil, errors.New("item_id and cid are required")
 	}
-	cmts, cur, err := a.engineFor(argStr(args, "account_id")).CommentReplies(ctx, platform, itemID, cid, model.Cursor{}, argInt(args, "limit", 20))
+	cur, err := argCursor(args)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{"comments": cmts, "cursor": cur}, nil
+	cmts, next, err := a.engineFor(argStr(args, "account_id")).CommentReplies(ctx, platform, itemID, cid, cur, argInt(args, "limit", 20))
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"comments": cmts, "cursor": cursorOut(next), "next_cursor": cursorOut(next)}, nil
 }
 
 // resolveVideo resolves a video's watermark-free play address (M6).

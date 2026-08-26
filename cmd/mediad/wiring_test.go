@@ -3,12 +3,14 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -387,5 +389,76 @@ func TestCollectRESTWithoutLicenseConfig(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("tasks POST status = %d, want 201", resp.StatusCode)
+	}
+}
+
+// TestCollectRESTCursorPassthrough: the REST collect surface accepts the
+// versioned cursor body field and passes it through to the engine — the
+// platform mock receives the caller's cursor on the second call and the
+// response carries a versioned next_cursor envelope (W3-C1 AC-5).
+func TestCollectRESTCursorPassthrough(t *testing.T) {
+	var mu sync.Mutex
+	var received []string
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cur := r.URL.Query().Get("cursor")
+		mu.Lock()
+		received = append(received, cur)
+		mu.Unlock()
+		w.Header().Set("Content-Type", "application/json")
+		if cur == "" {
+			fmt.Fprint(w, `{"comments":[{"cid":"p1-0","text":"a"},{"cid":"p1-1","text":"b"}],"has_more":true,"cursor":"p2"}`)
+			return
+		}
+		fmt.Fprint(w, `{"comments":[{"cid":"p2-0","text":"c"}],"has_more":false,"cursor":""}`)
+	}))
+	defer api.Close()
+
+	dir := t.TempDir()
+	cdir := filepath.Join(dir, "contracts")
+	if err := os.MkdirAll(cdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	contract := `{
+	  "name": "demo-comments", "platform": "demo", "category": "comments", "version": "1",
+	  "doc": "test-only cursor contract",
+	  "transport": {"base_url": "` + api.URL + `", "path": "/cmt/", "method": "GET", "placeholders": ["item_id"]},
+	  "binding": {"comments": "$.comments"},
+	  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+	}`
+	if err := os.WriteFile(filepath.Join(cdir, "demo-comments.json"), []byte(contract), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, ts := newTestDaemon(t, filepath.Join(t.TempDir(), "data"), dir)
+	resp, b := postJSON(t, ts, "/api/v1/collect/comments", map[string]any{"platform": "demo", "item_id": "i1", "limit": 2})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("first status = %d body = %s", resp.StatusCode, b)
+	}
+	var doc struct {
+		NextCursor struct {
+			V      int `json:"v"`
+			Source struct {
+				Cursor string `json:"cursor"`
+			} `json:"source"`
+		} `json:"next_cursor"`
+	}
+	if err := json.Unmarshal(b, &doc); err != nil {
+		t.Fatal(err)
+	}
+	if doc.NextCursor.V != 1 || doc.NextCursor.Source.Cursor != "p2" {
+		t.Fatalf("next_cursor = %+v, want v=1 source.cursor=p2", doc.NextCursor)
+	}
+	resp, b = postJSON(t, ts, "/api/v1/collect/comments", map[string]any{
+		"platform": "demo", "item_id": "i1", "limit": 2,
+		"cursor": map[string]any{"v": 1, "page": 1, "has_more": true, "source": map[string]any{"cursor": "p2"}},
+	})
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("second status = %d body = %s", resp.StatusCode, b)
+	}
+	mu.Lock()
+	got := append([]string(nil), received...)
+	mu.Unlock()
+	if len(got) != 2 || got[0] != "" || got[1] != "p2" {
+		t.Fatalf("platform cursors = %v, want [\"\", p2]", got)
 	}
 }
