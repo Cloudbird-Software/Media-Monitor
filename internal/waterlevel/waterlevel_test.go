@@ -154,3 +154,29 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+// TestAllExpiredStaysAlarmed: a platform whose every account expired is the
+// most severe low water — it must open (fresh pool) and never read as
+// "recovered" (holdout-found defect regression).
+func TestAllExpiredStaysAlarmed(t *testing.T) {
+	pool := poolWith(t, accounts.Account{ID: "solo", Platform: "douyin"})
+	if err := pool.SetHealth("solo", accounts.HealthExpired, "f2 #435 shape"); err != nil {
+		t.Fatal(err)
+	}
+	n := newFake()
+	opened, closed, err := Run(pool, n, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opened) != 1 || len(closed) != 0 || n.opened[0].Usable != 0 {
+		t.Fatalf("all-expired fresh pool: opened=%v closed=%v alert=%+v", opened, closed, n.opened[0])
+	}
+	// second cycle: still alarmed, no false recovery, no duplicate
+	opened, closed, err = Run(pool, n, 2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opened) != 0 || len(closed) != 0 {
+		t.Fatalf("all-expired steady state: opened=%v closed=%v (false recovery)", opened, closed)
+	}
+}

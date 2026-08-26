@@ -48,7 +48,12 @@ func Check(pool *accounts.Pool, threshold int) []Alert {
 		return nil
 	}
 	usable := map[string][]string{}
+	platforms := map[string]bool{}
 	for _, a := range pool.List() {
+		if a.Platform == "" {
+			continue
+		}
+		platforms[a.Platform] = true
 		if a.Status != accounts.StatusActive {
 			continue
 		}
@@ -57,8 +62,13 @@ func Check(pool *accounts.Pool, threshold int) []Alert {
 			usable[a.Platform] = append(usable[a.Platform], a.ID)
 		}
 	}
+	// The alert base is every platform present in the pool — not only the
+	// ones with usable accounts: a platform whose accounts ALL expired is
+	// the most severe low water and must stay/become alarmed (holdout
+	// finding: usable-only iteration misreported it as "recovered").
 	var out []Alert
-	for platform, ids := range usable {
+	for platform := range platforms {
+		ids := usable[platform]
 		if len(ids) < threshold {
 			sort.Strings(ids)
 			out = append(out, Alert{Platform: platform, Usable: len(ids), Threshold: threshold, IDs: ids})
