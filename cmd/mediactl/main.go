@@ -56,6 +56,8 @@ func main() {
 		err = cmdUpstream(os.Args[2:])
 	case "accounts":
 		err = cmdAccounts(os.Args[2:])
+	case "vision":
+		err = cmdVision(os.Args[2:])
 	case "send":
 		err = cmdSend(os.Args[2:])
 	case "trace":
@@ -137,6 +139,8 @@ commands:
   accounts export --id <id> --file <out> [--format netscape|json] [--domain d]
                                    export an account's cookies
   accounts list [--platform <p>]   list accounts in the pool
+  vision run --goal <g> --serial <s> [--max-steps N] [--distill <flow.json>]
+                                   vision-driven device run (MEDIAMON_VISION_ENDPOINT required)
   accounts delete --id <id>        remove an account
   send --platform <p> --first <text> --targets <sec_uid,...> [--second <text>]
                                    [--second-delay-ms N] [--cap N] [--account <id>]
