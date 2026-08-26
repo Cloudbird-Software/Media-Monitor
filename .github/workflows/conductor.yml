@@ -31,11 +31,11 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read   # checkout 事件仓（T5/T9 specs 谓词）+ .github 治理真源（sparse）+ arbiter（adjudicate.sh，ADR-0055）
+  contents: read # checkout 事件仓（T5/T9 specs 谓词）+ .github 治理真源（sparse）+ arbiter（adjudicate.sh，ADR-0055）
 
 jobs:
   route:
-    if: github.repository_owner == 'Cloudbird-Software'   # ADR-0097：仓位无关（.github + 产品仓同字节部署）
+    if: github.repository_owner == 'Cloudbird-Software' # ADR-0097：仓位无关（.github + 产品仓同字节部署）
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -550,9 +550,9 @@ jobs:
     uses: Cloudbird-Software/CI-Workflows/.github/workflows/spec-author.yml@4676c98047f816f7c888591eb882bf941e5c9fe0 # v1.4.3（irRef/taskId 事件真值覆写修复）
     with:
       issue_number: ${{ fromJson(needs.route.outputs.issue) }}
-      target_repo: ${{ github.repository }}   # ADR-0097：IR 所在仓=spec PR 目标仓
+      target_repo: ${{ github.repository }} # ADR-0097：IR 所在仓=spec PR 目标仓
       ir_ref: ${{ needs.route.outputs.ir_ref }}
-      ciw_ref: '4676c98047f816f7c888591eb882bf941e5c9fe0'   # 与上方 uses 钉点同值（ADR-0043 钉源）
+      ciw_ref: "4676c98047f816f7c888591eb882bf941e5c9fe0" # 与上方 uses 钉点同值（ADR-0043 钉源）
     # 显式传递（zizmor secrets-inherit：调用方 secrets 必须显式点名）
     secrets:
       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
