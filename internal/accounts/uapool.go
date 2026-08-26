@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"math/rand"
@@ -9,6 +10,9 @@ import (
 	"sync"
 	"time"
 )
+
+//go:embed ua-pool.json
+var bundledUAPoolJSON []byte
 
 // UAPool is a thread-safe User-Agent rotation pool. UAs are loaded from a
 // JSON data file (data/ua-pool.json) that lists the original software's UA
@@ -56,7 +60,9 @@ func DefaultUAPoolPath() (string, error) {
 }
 
 // LoadUAPoolDefault loads the production UA pool: explicitPath when
-// non-empty, otherwise the executable-relative data/ua-pool.json.
+// non-empty, otherwise the executable-relative data/ua-pool.json. If no file
+// is present (the data/ dir is gitignored in source), it falls back to the
+// ua-pool.json compiled into the binary via go:embed.
 func LoadUAPoolDefault(explicitPath string) (*UAPool, error) {
 	path := explicitPath
 	if path == "" {
@@ -66,7 +72,24 @@ func LoadUAPoolDefault(explicitPath string) (*UAPool, error) {
 			return nil, err
 		}
 	}
-	return LoadUAPool(path)
+	if _, err := os.Stat(path); err == nil {
+		return LoadUAPool(path)
+	}
+	return BundledUAPool()
+}
+
+// BundledUAPool returns the UA pool compiled into the binary (the 44-entry
+// pool extracted verbatim from the original software's ua.js). This is the
+// guaranteed-available fallback when no data/ua-pool.json exists next to the
+// executable.
+func BundledUAPool() (*UAPool, error) {
+	var doc struct {
+		UAs []string `json:"uas"`
+	}
+	if err := json.Unmarshal(bundledUAPoolJSON, &doc); err != nil {
+		return nil, fmt.Errorf("accounts: parse bundled ua-pool: %w", err)
+	}
+	return NewUAPool(doc.UAs), nil
 }
 
 // Next returns the next UA in rotation, avoiding an immediate repeat when the

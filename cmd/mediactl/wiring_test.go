@@ -40,14 +40,17 @@ func TestSharedHTTPClientUAPoolInjected(t *testing.T) {
 	}
 }
 
-func TestSharedHTTPClientUAPoolMissingKeepsDefault(t *testing.T) {
+func TestSharedHTTPClientUAPoolMissingFallsBackToBundled(t *testing.T) {
+	// With the ua-pool.json compiled in via go:embed, a missing data/ file no
+	// longer leaves the pool empty: LoadUAPoolDefault falls back to the bundled
+	// 44-entry pool, so the shared client always rotates over a real pool.
 	t.Setenv("MEDIAMON_UA_POOL", filepath.Join(t.TempDir(), "no-such-file.json"))
-	if uas := uaPoolUserAgents(); uas != nil {
-		t.Fatalf("missing pool file should keep defaults, got %v", uas)
+	if uas := uaPoolUserAgents(); len(uas) == 0 {
+		t.Fatal("missing pool file should fall back to the bundled pool, got empty")
 	}
 	c := sharedHTTPClient()
 	if c.UA() == "" {
-		t.Fatal("client without pool must fall back to the built-in UA rotation")
+		t.Fatal("client with bundled pool must rotate over a non-empty UA list")
 	}
 }
 

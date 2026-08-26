@@ -266,14 +266,12 @@ func TestDefaultUAPoolPath(t *testing.T) {
 	}
 }
 
-// TestBundledUAPool: the shipped data/ua-pool.json loads and holds the
-// 44-entry pool extracted verbatim from the original software's ua.js.
+// TestBundledUAPool: the ua-pool.json compiled into the binary (via go:embed)
+// holds the 44-entry pool extracted verbatim from the original software's
+// ua.js. This is the guaranteed-available source in CI, where the data/ dir is
+// gitignored.
 func TestBundledUAPool(t *testing.T) {
-	wd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	pool, err := LoadUAPool(filepath.Join(wd, "..", "..", "data", "ua-pool.json"))
+	pool, err := BundledUAPool()
 	if err != nil {
 		t.Fatal(err)
 	}

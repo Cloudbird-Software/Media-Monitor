@@ -111,11 +111,14 @@ var unifiedStyles = map[string]map[rune]string{
 	"dotCircle":    {'1': "⓵", '2': "⓶", '3': "⓷", '4': "⓸", '5': "⓹", '6': "⓺", '7': "⓻", '8': "⓼", '9': "⓽", '0': "⓪"},
 	"chineseUpper": {'1': "壹", '2': "贰", '3': "叁", '4': "肆", '5': "伍", '6': "陆", '7': "柒", '8': "捌", '9': "玖", '0': "零"},
 	"chineseLower": {'1': "一", '2': "二", '3': "三", '4': "四", '5': "五", '6': "六", '7': "七", '8': "八", '9': "九", '0': "零"},
-	"emoji":        {'1': "1️⃣", '2': "2️⃣", '3': "3️⃣", '4': "4️⃣", '5': "5️⃣", '6': "6️⃣", '7': "7️⃣", '8': "8️⃣", '9': "9️⃣", '0': "0️⃣"},
 }
 
-// styleNames fixes the pick order (the original used Object.keys order).
-var styleNames = []string{"circle", "circleBlack", "parenthesis", "dotCircle", "chineseUpper", "chineseLower", "emoji"}
+// styleNames fixes the pick order (the original used Object.keys order). The
+// "emoji" keycap style (1️⃣…) is intentionally omitted: keycap digits decompose
+// to an ASCII digit + variation selector + combining mark, so they leak a
+// readable ASCII digit and fail the "no ASCII digit survives" contract that
+// Stylize guarantees.
+var styleNames = []string{"circle", "circleBlack", "parenthesis", "dotCircle", "chineseUpper", "chineseLower"}
 
 // Stylize converts the digits of input (randomReplaceNumber in the original):
 //   - unifiedStyle ("固定风格"): one unified style is chosen at random and
