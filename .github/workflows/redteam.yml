@@ -43,19 +43,19 @@ jobs:
           fi
           # 3) high-entropy region count (source binary should be low-entropy)
           ENTROPY=$(python3 - "$(stat -c%s /tmp/mediactl-audit)" /tmp/mediactl-audit <<'PYEOF'
-import sys, math, collections
-size = int(sys.argv[1])
-data = open(sys.argv[2], 'rb').read()
-count = 0
-W = 8
-for i in range(0, len(data) - W + 1, 64):
-    c = collections.Counter(data[i:i+W])
-    H = -sum((n / W) * math.log2(n / W) for n in c.values())
-    if H > 7.5:
-        count += 1
-print(count)
-PYEOF
-)
+          import sys, math, collections
+          size = int(sys.argv[1])
+          data = open(sys.argv[2], 'rb').read()
+          count = 0
+          W = 8
+          for i in range(0, len(data) - W + 1, 64):
+              c = collections.Counter(data[i:i+W])
+              H = -sum((n / W) * math.log2(n / W) for n in c.values())
+              if H > 7.5:
+                  count += 1
+          print(count)
+          PYEOF
+          )
           echo "high-entropy window count: $ENTROPY"
           echo "redteam scorecard: endpoint_leaks=$HITS entropy_windows=$ENTROPY"
           if [ "$SCORE" -ne 0 ]; then

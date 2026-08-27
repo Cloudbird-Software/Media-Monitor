@@ -56,5 +56,5 @@ jobs:
             --title "upstream radar hits: $(date -u +%F)" \
             --body "## upstream watch hits
 
-Machine-filed by upstream-watch.yml (docs/UPSTREAM.md). See the run summary for the hit list; triage via adapt/playbook/AGENTS.md swap-test bench." \
+          Machine-filed by upstream-watch.yml (docs/UPSTREAM.md). See the run summary for the hit list; triage via adapt/playbook/AGENTS.md swap-test bench." \
             --label "type:upstream" || echo "::warning::upstream issue filing failed"
