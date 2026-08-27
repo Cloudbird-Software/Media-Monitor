@@ -289,7 +289,7 @@ func (d *daemon) collectHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	op := strings.TrimPrefix(req.URL.Path, "/api/v1/collect/")
 	switch op {
-	case "search", "comments", "replies", "user", "user-posts", "group", "video", "collects", "collects-videos", "im-unread":
+	case "search", "comments", "replies", "user", "user-posts", "group", "video", "video-download", "collects", "collects-videos", "im-unread":
 	default:
 		http.NotFound(w, req)
 		return
@@ -437,6 +437,26 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 		// The watermark-free address is returned; downloading the bytes is
 		// left to mediactl / the caller.
 		return map[string]any{"video": meta}, nil
+	case "video-download":
+		itemID := strVal(body, "item_id")
+		if itemID == "" {
+			return nil, errors.New("item_id is required")
+		}
+		// out_dir default: the daemon data root's artifacts/ dir (IFACE-3);
+		// the engine appends <platform>/<item>.mp4. The override is accepted
+		// only as the canonical root — a request must not point artifact
+		// writes anywhere else.
+		def := filepath.Join(d.dataDir, "artifacts")
+		outDir := strVal(body, "out_dir")
+		if outDir != "" && filepath.Clean(outDir) != def {
+			return nil, errors.New("out_dir may only be empty or the configured artifacts root " + def)
+		}
+		outDir = def
+		res, err := eng.DownloadVideoTo(ctx, platform, itemID, outDir)
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"download": res}, nil
 	case "collects":
 		folders, cur, err := eng.CollectFolders(ctx, platform, model.Cursor{}, limit)
 		if err != nil {

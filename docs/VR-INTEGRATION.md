@@ -16,7 +16,7 @@ Status legend: ✅ = tool on MM's current MCP surface; ⚠️ = see note.
 | replies         | `get_replies`    | ✅     |
 | profile         | `get_user`       | ✅     |
 | play address    | `resolve_video`  | ✅     |
-| media bytes     | `download_video` | ⚠️ restoration of the W3-C3 surface pending (IFACE-3 shape unchanged); until it lands, bytes flow through the artifact convention below via `mediactl`/lab tooling |
+| media bytes     | `download_video` | ✅ restored — the W3-C3 surface landed again with the exact IFACE-3 shape below (incident recovery, byte-identical to its accepted merge) |
 
 ## 0. Transport
 
@@ -128,8 +128,8 @@ Writer-side guarantees: tmp-file + atomic rename publish (a half-written
 mp4 is never visible under the final name), streaming write (no whole-file
 buffering), hash computed while streaming.
 
-When the restored `download_video` tool returns, its result keeps this
-exact `{path, bytes, sha256}` shape; nothing above changes for VR.
+The restored `download_video` tool returns exactly this `{path, bytes,
+sha256}` shape; nothing above changes for VR.
 
 MM-side proof: `mediactl lab vr-slice` segment 3 resolves through the mock
 contract, streams 64 KiB to `artifacts/douyin/<item>.mp4` in the run dir,
