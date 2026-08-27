@@ -81,3 +81,27 @@ monitor`, `mediad-mcp` tools, and the adapt harness playbook.
 ## Artifacts per run
 adapt/reports/*.json (drift), store JSONL exports, obs metrics snapshot, pprof
 snapshots, and a short triage note per failed row (adapt playbook format).
+
+## Offline matrix lane (`mediactl lab`)
+
+The groups above mix live-device rows with offline-assertable ones. The lab
+commands execute the offline portion against the repository's own golden
+fixtures served by an in-process mock platform (contracts remapped onto a
+loopback listener — the same pattern the engine tests use), and record a
+three-valued judgment per row: `clean_success`, `documented_skip`, or
+`fail_closed` with its documented code (success criterion 5). Rows that
+need the owner environment (live accounts ENV-REQ-1, real devices
+ENV-REQ-2, vision endpoint ENV-REQ-3) end as documented skips here with
+their environment code; live evidence stays owner-side (INV-4).
+
+    mediactl lab matrix <a|b|e|user_posts>     # report to adapt/reports/matrix-<group>-<ts>.json
+    mediactl lab audit-comments --store <dir>  # AC-19: comment-author 12-field completeness
+
+The user_posts group drives the IR-new backtrack atom end to end: depth
+(3 fixture pages, newest-first descending max_cursor chain),
+min_engagement early stop inside the engine, window cutoff from both
+sides of the live clock, BEH-4 cursor resumption without refetching page
+one, and the undeclared-contract fail-closed demo (kuaishou). Real
+account/device execution of A/B/E remains the release-gating owner run;
+this lane keeps those builds honest between runs and catches contract or
+binding regressions at PR time.
