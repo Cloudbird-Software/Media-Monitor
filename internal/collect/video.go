@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // DownloadResult is the download_video atom's return shape (IFACE-3).
@@ -18,6 +19,26 @@ type DownloadResult struct {
 	Path   string `json:"path"`
 	Bytes  int64  `json:"bytes"`
 	SHA256 string `json:"sha256"`
+}
+
+// safeSegment reports whether s may stand alone as one path segment:
+// non-empty, bounded length, no separators, no dot-only forms and no
+// control bytes. Request-derived components (platform / item id) are
+// validated here so a crafted id can never alter the artifacts layout
+// outside outDir/<platform>/<name>.mp4 (fail closed).
+func safeSegment(s string) bool {
+	if s == "" || len(s) > 200 || s == "." || s == ".." {
+		return false
+	}
+	if strings.ContainsAny(s, `/\`) {
+		return false
+	}
+	for _, r := range s {
+		if r < 0x20 || r == 0x7f {
+			return false
+		}
+	}
+	return true
 }
 
 // DownloadVideoTo resolves one item's play URL (ResolveVideo) and streams
@@ -29,6 +50,9 @@ func (e *Engine) DownloadVideoTo(ctx context.Context, platform, itemID, outDir s
 	if itemID == "" {
 		return DownloadResult{}, fmt.Errorf("collect: item_id is required")
 	}
+	if !safeSegment(platform) {
+		return DownloadResult{}, fmt.Errorf("collect: invalid platform segment %q", platform)
+	}
 	meta, err := e.ResolveVideo(ctx, platform, itemID)
 	if err != nil {
 		return DownloadResult{}, err
@@ -37,12 +61,27 @@ func (e *Engine) DownloadVideoTo(ctx context.Context, platform, itemID, outDir s
 	if name == "" {
 		name = itemID
 	}
-	dir := filepath.Join(outDir, platform)
+	if !safeSegment(name) {
+		return DownloadResult{}, fmt.Errorf("collect: item id %q is not a safe artifact name", name)
+	}
+	root := filepath.Clean(outDir)
+	dir := filepath.Join(root, platform)
+	final := filepath.Join(dir, name+".mp4")
+	tmp := final + ".tmp"
+	// Containment post-condition (defense in depth): the resolved absolute
+	// artifact path must stay inside the cleaned root; any escape is a
+	// fail-closed error, never a write.
+	if absRoot, aerr := filepath.Abs(root); aerr == nil {
+		if absFinal, ferr := filepath.Abs(final); ferr == nil {
+			cut := absRoot + string(os.PathSeparator)
+			if absFinal != absRoot && !strings.HasPrefix(absFinal+string(os.PathSeparator), cut) {
+				return DownloadResult{}, fmt.Errorf("collect: artifact path escapes artifacts root: %s", final)
+			}
+		}
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return DownloadResult{}, fmt.Errorf("collect: artifact dir: %w", err)
 	}
-	final := filepath.Join(dir, name+".mp4")
-	tmp := final + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
 		return DownloadResult{}, fmt.Errorf("collect: artifact create: %w", err)
