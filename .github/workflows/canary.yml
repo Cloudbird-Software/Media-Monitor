@@ -70,7 +70,7 @@ jobs:
             --title "canary drift: $(date -u +%F)" \
             --body "## canary drift report (scheduled run)
 
-Offline canary reported issues — see Actions run for this date.
+          Offline canary reported issues — see Actions run for this date.
 
-ADR-0075 (canary dual-track) — machine-filed drift subject, triage = adapt playbook (adapt/playbook/AGENTS.md)." \
+          ADR-0075 (canary dual-track) — machine-filed drift subject, triage = adapt playbook (adapt/playbook/AGENTS.md)." \
             --label "$LABEL" || echo "::warning::drift issue filing failed"
