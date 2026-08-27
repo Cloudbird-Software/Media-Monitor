@@ -79,6 +79,8 @@ type rowCtx struct {
 	regAll  *contracts.Registry
 	regErr  error
 
+	artRoot string // artifact root for slice runs (rowCtx is also the vr-slice session)
+
 	mu      sync.Mutex
 	names   map[string]map[string]string // platform -> category names
 	engines map[string]*collect.Engine
@@ -181,6 +183,13 @@ func (rc *rowCtx) contractName(platform, category string) (string, error) {
 	if name := nm[category]; name != "" {
 		return name, nil
 	}
+	// Categories outside the Names map may still exist under the engine's
+	// conventional "<platform>-<suffix>" naming (video_download etc.);
+	// genuinely undeclared pairs surface when the registry lookup misses.
+	conventional := platform + "-" + categoryFallbackSuffix(category)
+	if _, ok := rc.regAll.Get(conventional); ok {
+		return conventional, nil
+	}
 	return "", fmt.Errorf("matrix: %s %s contract not declared", platform, category)
 }
 
@@ -203,7 +212,14 @@ func (rc *rowCtx) engineFor(platform string) (*collect.Engine, error) {
 		"group", "user_posts", "video_download"} {
 		name := nm[cat]
 		if name == "" {
-			continue // undeclared category on this platform (fail-closed upstream)
+			// Categories absent from the platform Names map may still exist
+			// under the engine's conventional "<platform>-<suffix>" naming
+			// (douyin's video-download); truly undeclared pairs are skipped —
+			// resolveName fails closed on them upstream, never here.
+			name = platform + "-" + categoryFallbackSuffix(cat)
+			if _, exists := rc.regAll.Get(name); !exists {
+				continue
+			}
 		}
 		raw, ok := rc.regAll.Get(name)
 		if !ok {
@@ -240,6 +256,20 @@ func (rc *rowCtx) engineFor(platform string) (*collect.Engine, error) {
 func (rc *rowCtx) ensureRegistry() error {
 	rc.regOnce.Do(rc.loadRegistry)
 	return rc.regErr
+}
+
+// categoryFallbackSuffix mirrors internal/collect's conventional
+// "<platform>-<suffix>" naming for categories missing from a platform's
+// Names map.
+func categoryFallbackSuffix(category string) string {
+	m := map[string]string{
+		"search": "search", "comments": "comments", "replies": "replies",
+		"user": "user", "group": "group-members", "send_message": "send-message",
+		"video_download": "video-download", "collects": "collects",
+		"collects_videos": "collects-videos", "im_unread": "im-unread",
+		"user_posts": "user-posts",
+	}
+	return m[category]
 }
 
 func (rc *rowCtx) loadRegistry() {

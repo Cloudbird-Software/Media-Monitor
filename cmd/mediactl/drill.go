@@ -186,6 +186,8 @@ func cmdLab(args []string) error {
 		return cmdLabMatrix(args[1:])
 	case "audit-comments":
 		return cmdLabAuditComments(args[1:])
+	case "vr-slice":
+		return cmdLabVRSlice(args[1:])
 	case "help", "-h", "--help":
 		labUsage(os.Stdout)
 		return nil
@@ -200,6 +202,7 @@ func labUsage(w *os.File) {
 	fmt.Fprint(w, `use: lab drill [--contract <name>] [--out DIR]
      lab matrix <a|b|e|user_posts> [flags]
      lab audit-comments --store <dir> [flags]
+     lab vr-slice --sec-uid <id> [--mock=true]
 
 matrix  run one TESTING.md matrix group offline via fixture-driven mock
         platforms; three-valued judgment report per row lands under
