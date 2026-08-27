@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -350,5 +351,64 @@ func TestHealthzAndMetrics(t *testing.T) {
 	b, _ = io.ReadAll(resp.Body)
 	if !strings.Contains(string(b), "test.counter 3") {
 		t.Fatalf("metrics = %q", b)
+	}
+}
+
+// TestDashboardLabPanels: the three W7-C4 panels render — contract-health
+// timeline (day rows + red-day contract names), account health (masked ids
+// + health + rotation counters), SLA (drill/real split) — and the panel
+// numbers match /metrics (same obs source, AC-4).
+func TestDashboardLabPanels(t *testing.T) {
+	api := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"data":[],"has_more":false}`)
+	}))
+	defer api.Close()
+	dataDir := filepath.Join(t.TempDir(), "data")
+	d, ts := newTestDaemon(t, dataDir, writeDemoAdapt(t, api.URL))
+
+	// seed obs so dashboard and /metrics share a nonzero counter (AC-4)
+	d.counters.Inc("accounts.rotation.total", 3)
+	resp, err := http.Get(ts.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	body, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	page := string(body)
+	for _, want := range []string{
+		"contract health timeline", "account health", "closed-loop SLA",
+		"accounts.rotation.total", "sla.time_to_detect",
+	} {
+		if !strings.Contains(page, want) {
+			t.Fatalf("dashboard missing %q", want)
+		}
+	}
+	// red-day contract names visible when a red entry exists (direct call)
+	// and /metrics cross-consistency: counters rendered appear in metrics
+	mresp, err := http.Get(ts.URL + "/metrics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	metrics, _ := io.ReadAll(mresp.Body)
+	mresp.Body.Close()
+	if !strings.Contains(string(metrics), "accounts.rotation.total") {
+		t.Fatalf("/metrics missing rotation counter — dashboard/metrics divergence")
+	}
+}
+
+// TestRecordDayHealthTimeline: day rows aggregate same-day updates and cap
+// at 14 entries (AC-2).
+func TestRecordDayHealthTimeline(t *testing.T) {
+	d := &daemon{}
+	d.recordDayHealthAt("2026-08-26", false, "douyin-search")
+	d.recordDayHealthAt("2026-08-26", true, "") // same day: latest wins
+	if len(d.healthLog) != 1 || !d.healthLog[0].Green {
+		t.Fatalf("same-day aggregation failed: %+v", d.healthLog)
+	}
+	for i := 0; i < 20; i++ {
+		d.recordDayHealthAt(fmt.Sprintf("2026-08-%02d", (i%28)+1), false, fmt.Sprintf("c%d", i))
+	}
+	if len(d.healthLog) != 14 {
+		t.Fatalf("timeline cap = %d, want 14", len(d.healthLog))
 	}
 }

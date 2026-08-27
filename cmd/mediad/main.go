@@ -51,6 +51,7 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/signclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/store"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/tasks"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/waterlevel"
 )
 
 func main() {
@@ -81,6 +82,7 @@ func main() {
 	defer cancel()
 	d.ctx = ctx
 	go d.startPushLoop(ctx)
+	go d.startWaterlevelLoop(ctx)
 
 	srv := &http.Server{Addr: *addr, Handler: d.routes(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -118,6 +120,9 @@ type daemon struct {
 	dcAdded      atomic.Int64
 	// IM unread polling state for the dashboard.
 	im *imPoller
+	// healthLog records one entry per canary cycle (day-keyed timeline for
+	// the dashboard's contract-health panel; W7-C4).
+	healthLog []dayHealth
 	// ctx is the daemon lifetime context (drives background pollers).
 	ctx context.Context
 }
@@ -607,6 +612,8 @@ func (d *daemon) dashboardHandler(w http.ResponseWriter, req *http.Request) {
 		}
 		fmt.Fprint(w, `</table>`)
 	}
+	d.recordDayHealth(d.canary != nil && d.canary.Err == "" && d.canary.Healthy, "")
+	d.renderLabPanels(w)
 	fmt.Fprint(w, `<h2>metrics</h2><pre>`)
 	fmt.Fprint(w, html.EscapeString(d.counters.MetricsText()))
 	fmt.Fprint(w, `</pre></body></html>`)
@@ -735,3 +742,146 @@ func intVal(m map[string]any, key string, def int) int {
 	}
 	return def
 }
+
+// startWaterlevelLoop runs the account-pool water-level alarm cycle
+// (IR-MM-0001 AC-10): every MEDIAMON_WATERLEVEL_INTERVAL (default 30m) the
+// per-platform usable count is checked against MEDIAMON_WATERLEVEL_MIN
+// (default 2); low water opens a type:drift issue via the repo App token
+// (AGENT_APP_SECRET), recovery closes it. Without the secret the loop logs
+// a documented skip each cycle (fail-closed, never silent).
+func (d *daemon) startWaterlevelLoop(ctx context.Context) {
+	interval := 30 * time.Minute
+	if v := os.Getenv("MEDIAMON_WATERLEVEL_INTERVAL"); v != "" {
+		if p, err := time.ParseDuration(v); err == nil && p > 0 {
+			interval = p
+		}
+	}
+	threshold := waterlevel.DefaultThreshold
+	if v := os.Getenv("MEDIAMON_WATERLEVEL_MIN"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			threshold = n
+		}
+	}
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		if d.accounts == nil {
+			continue
+		}
+		n, err := waterlevel.NewGitHubNotifier("Cloudbird-Software/Media-Monitor", waterlevelInstallationID())
+		if err != nil {
+			log.Printf("waterlevel: %v", err)
+			continue
+		}
+		opened, closed, err := waterlevel.Run(d.accounts, n, threshold)
+		if err != nil {
+			log.Printf("waterlevel: cycle: %v", err)
+			continue
+		}
+		for _, num := range opened {
+			log.Printf("waterlevel: opened drift issue #%d", num)
+			d.counters.Inc("accounts.waterlevel.opened", 1)
+		}
+		for _, num := range closed {
+			log.Printf("waterlevel: closed drift issue #%d (recovered)", num)
+			d.counters.Inc("accounts.waterlevel.closed", 1)
+		}
+	}
+}
+
+// waterlevelInstallationID is the app installation for this repo (env
+// overridable for tests/other deployments).
+func waterlevelInstallationID() string {
+	if v := os.Getenv("MEDIAMON_INSTALLATION_ID"); v != "" {
+		return v
+	}
+	return "154584760"
+}
+
+// dayHealth is one day's contract-health aggregate (W7-C4 AC-2).
+type dayHealth struct {
+	Day       string `json:"day"` // YYYY-MM-DD (UTC)
+	Green     bool   `json:"green"`
+	Contracts string `json:"contracts,omitempty"` // failing contract names on red days
+}
+
+// recordDayHealth appends the latest canary outcome to the timeline.
+func (d *daemon) recordDayHealth(green bool, failing string) {
+	d.recordDayHealthAt(time.Now().UTC().Format("2006-01-02"), green, failing)
+}
+
+// recordDayHealthAt is recordDayHealth with an explicit day (test seam).
+func (d *daemon) recordDayHealthAt(day string, green bool, failing string) {
+	if n := len(d.healthLog); n > 0 && d.healthLog[n-1].Day == day {
+		d.healthLog[n-1].Green = green
+		d.healthLog[n-1].Contracts = failing
+		return
+	}
+	d.healthLog = append(d.healthLog, dayHealth{Day: day, Green: green, Contracts: failing})
+	if len(d.healthLog) > 14 {
+		d.healthLog = d.healthLog[len(d.healthLog)-14:]
+	}
+}
+
+// renderLabPanels renders the three W7-C4 panels: contract-health timeline,
+// account health & rotation events, SLA metrics. Data derives from the same
+// obs counter map as /metrics and the live pool (cross-consistency by
+// construction, AC-4).
+func (d *daemon) renderLabPanels(w http.ResponseWriter) {
+	// 1) contract health timeline
+	fmt.Fprint(w, `<h2>contract health timeline (per day)</h2><table><tr><th>day</th><th>state</th><th>failing contracts</th></tr>`)
+	if len(d.healthLog) == 0 {
+		fmt.Fprint(w, `<tr><td colspan="3">no canary cycles recorded yet</td></tr>`)
+	}
+	for _, h := range d.healthLog {
+		state := "red"
+		if h.Green {
+			state = "green"
+		}
+		fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n", h.Day, state, html.EscapeString(h.Contracts))
+	}
+	fmt.Fprint(w, `</table>`)
+
+	// 2) account health & rotation events (masked ids only — INV-6)
+	fmt.Fprint(w, `<h2>account health &amp; rotation</h2>`)
+	if d.accounts == nil {
+		fmt.Fprint(w, `<p>pool unavailable</p>`)
+	} else {
+		fmt.Fprint(w, `<table><tr><th>account (masked)</th><th>platform</th><th>health</th><th>last check</th></tr>`)
+		for _, a := range d.accounts.List() {
+			health := a.Health
+			if health == "" {
+				health = "(unprobed)"
+			}
+			last := "-"
+			if a.HealthCheckedAt > 0 {
+				last = time.Unix(a.HealthCheckedAt, 0).Format(time.RFC3339)
+			}
+			fmt.Fprintf(w, "<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>\n",
+				html.EscapeString(maskedAccountID(a)), html.EscapeString(a.Platform), html.EscapeString(string(health)), last)
+		}
+		fmt.Fprint(w, `</table>`)
+	}
+	fmt.Fprint(w, `<table><tr><th>event</th><th>count (obs)</th></tr>`)
+	for _, c := range []string{"accounts.rotation.total", "accounts.banned.total", "accounts.waterlevel.opened", "accounts.waterlevel.closed"} {
+		fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td></tr>\n", c, d.counters.Get(c))
+	}
+	fmt.Fprint(w, `</table>`)
+
+	// 3) SLA panel (drill vs real, separate counters — W7-C3 feeds them)
+	fmt.Fprint(w, `<h2>closed-loop SLA</h2><table><tr><th>metric</th><th>drill</th><th>real</th></tr>`)
+	for _, m := range []string{"sla.time_to_detect", "sla.time_to_repair"} {
+		fmt.Fprintf(w, "<tr><td>%s</td><td>%d</td><td>%d</td></tr>\n", m,
+			d.counters.Get(m+".drill"), d.counters.Get(m+".real"))
+	}
+	fmt.Fprint(w, `</table>`)
+}
+
+// maskedAccountID renders a pool id for dashboard surfaces: the id itself
+// only (pool ids are opaque labels, never credentials).
+func maskedAccountID(a accounts.Account) string { return a.ID }

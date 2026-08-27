@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -27,13 +26,11 @@ func netcaptureDir() string {
 // cmdNetcapture dispatches netcapture subcommands.
 func cmdNetcapture(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("use: netcapture list | netcapture convert <har> | netcapture export --project <name> --out <file.har>")
+		return fmt.Errorf("use: netcapture list | netcapture export --project <name> --out <file.har>")
 	}
 	switch args[0] {
 	case "list":
 		return netcaptureList(args[1:])
-	case "convert":
-		return netcaptureConvertCmd(args[1:])
 	case "export":
 		return netcaptureExport(args[1:])
 	default:
@@ -102,55 +99,5 @@ func netcaptureExport(args []string) error {
 		return err
 	}
 	fmt.Printf("exported session %q (%d entries) -> %s\n", *project, len(s.Entries), *out)
-	return nil
-}
-
-// netcaptureConvertCmd implements `mediactl netcapture convert <har-file>`:
-// HAR → candidate fixtures (redacted) → contract patch proposals. Proposals
-// print to stdout as JSON; nothing is written into adapt/ (proposal ≠
-// change).
-func netcaptureConvertCmd(args []string) error {
-	fs := flag.NewFlagSet("netcapture convert", flag.ExitOnError)
-	outDir := fs.String("out", "", "directory to write candidate fixture files (default: stdout only)")
-	if err := fs.Parse(args); err != nil {
-		return err
-	}
-	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: netcapture convert <har-file> [--out <dir>]")
-	}
-	raw, err := os.ReadFile(fs.Arg(0))
-	if err != nil {
-		return err
-	}
-	var har netcapture.HAR
-	if err := json.Unmarshal(raw, &har); err != nil {
-		return fmt.Errorf("har parse: %w", err)
-	}
-	reg, _, err := loadRegistry()
-	if err != nil {
-		return err
-	}
-	cands, errs := netcapture.ConvertHAR(&har, reg)
-	for _, e := range errs {
-		fmt.Fprintf(os.Stderr, "skip: %v\n", e)
-	}
-	if *outDir != "" && len(cands) > 0 {
-		if err := os.MkdirAll(*outDir, 0o755); err != nil {
-			return err
-		}
-	}
-	for i, c := range cands {
-		enc, _ := json.Marshal(c)
-		fmt.Println(string(enc))
-		if *outDir != "" {
-			name := fmt.Sprintf("candidate-%d.json", i+1)
-			if c.Contract != "" {
-				name = c.Contract + ".candidate.json"
-			}
-			if err := os.WriteFile(filepath.Join(*outDir, name), enc, 0o644); err != nil {
-				return err
-			}
-		}
-	}
 	return nil
 }
