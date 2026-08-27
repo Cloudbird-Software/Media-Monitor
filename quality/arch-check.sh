@@ -50,6 +50,17 @@ if [ -n "$mods" ]; then
   fail=1
 fi
 
+# 4) internal/ must never import upstream/ (INV-3: submodules are diffable
+#    observation copies, not dependencies — ADR-0099). The check scans
+#    import declarations textually so it also catches references that would
+#    not compile.
+bad_upstream=$(grep -rn --include='*.go' -E 'Media-Monitor/(upstream|vendor)' internal/ cmd/ 2>/dev/null || true)
+if [ -n "$bad_upstream" ]; then
+  echo "arch: internal/cmd imports upstream/ (INV-3, ADR-0099):" >&2
+  echo "$bad_upstream" >&2
+  fail=1
+fi
+
 if [ "$fail" -ne 0 ]; then
   echo "arch-check FAIL" >&2
   exit 1
