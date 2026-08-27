@@ -443,11 +443,15 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 			return nil, errors.New("item_id is required")
 		}
 		// out_dir default: the daemon data root's artifacts/ dir (IFACE-3);
-		// the engine appends <platform>/<item>.mp4.
+		// the engine appends <platform>/<item>.mp4. The override is accepted
+		// only as the canonical root — a request must not point artifact
+		// writes anywhere else.
+		def := filepath.Join(d.dataDir, "artifacts")
 		outDir := strVal(body, "out_dir")
-		if outDir == "" {
-			outDir = filepath.Join(d.dataDir, "artifacts")
+		if outDir != "" && filepath.Clean(outDir) != def {
+			return nil, errors.New("out_dir may only be empty or the configured artifacts root " + def)
 		}
+		outDir = def
 		res, err := eng.DownloadVideoTo(ctx, platform, itemID, outDir)
 		if err != nil {
 			return nil, err

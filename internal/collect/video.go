@@ -73,6 +73,16 @@ func (e *Engine) DownloadVideoTo(ctx context.Context, platform, itemID, outDir s
 	if !safeSegment(name) {
 		return DownloadResult{}, fmt.Errorf("collect: item id %q is not a safe artifact name", name)
 	}
+	// CWE-022 separator / parent-reference barrier: any segment that carries
+	// its own separators or climbs directories is rejected before paths are
+	// assembled, so the artifact layout below is reached only by segments
+	// that cannot alter it.
+	if strings.Contains(platform, "/") || strings.Contains(platform, "\\") || strings.Contains(platform, "..") {
+		return DownloadResult{}, fmt.Errorf("collect: invalid platform segment %q", platform)
+	}
+	if strings.Contains(name, "/") || strings.Contains(name, "\\") || strings.Contains(name, "..") {
+		return DownloadResult{}, fmt.Errorf("collect: item id %q is not a safe artifact name", name)
+	}
 	root := filepath.Clean(outDir)
 	dir := filepath.Join(root, platform)
 	final := filepath.Join(dir, name+".mp4")

@@ -1204,8 +1204,14 @@ func (a *app) downloadVideo(ctx context.Context, args map[string]any) (any, erro
 		return nil, errors.New("item_id is required")
 	}
 	outDir := argStr(args, "out_dir")
+	def := filepath.Join(a.dataDir, "artifacts")
+	// The override is accepted only as the canonical artifacts root (or
+	// omitted) — a request must not point artifact writes anywhere else.
+	if outDir != "" && filepath.Clean(outDir) != def {
+		return nil, errors.New("out_dir may only be empty or the configured artifacts root " + def)
+	}
 	if outDir == "" {
-		outDir = filepath.Join(a.dataDir, "artifacts")
+		outDir = def
 	}
 	return a.engineFor(argStr(args, "account_id")).DownloadVideoTo(ctx, platform, itemID, outDir)
 }
