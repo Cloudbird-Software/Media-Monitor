@@ -202,3 +202,42 @@ func (g *GitHubNotifier) CloseIssue(num int, comment string) error {
 	}
 	return nil
 }
+
+// CreateDriftIssueFull files a type:drift issue with an explicit title/body
+// through the App token (AGENT_APP_SECRET env). Shared by the live canary
+// driver (W7-C1) and other drift filers.
+func CreateDriftIssueFull(installationID, repo, title, body string) (int, error) {
+	pemRaw := os.Getenv("AGENT_APP_SECRET")
+	if strings.TrimSpace(pemRaw) == "" {
+		return 0, fmt.Errorf("AGENT_APP_SECRET not set — drift-issue filing disabled (fail-closed)")
+	}
+	key, err := parseRSAPrivateKey([]byte(pemRaw))
+	if err != nil {
+		return 0, err
+	}
+	jwtTok, err := appJWT(key)
+	if err != nil {
+		return 0, err
+	}
+	tok, err := installationToken(jwtTok, installationID)
+	if err != nil {
+		return 0, err
+	}
+	g := &GitHubNotifier{Repo: repo, InstallToken: tok, Client: &http.Client{Timeout: 30 * time.Second}}
+	code, b, err := g.gh(http.MethodPost, fmt.Sprintf("/repos/%s/issues", repo), map[string]any{
+		"title": title, "body": body, "labels": []string{"type:drift"},
+	})
+	if err != nil {
+		return 0, err
+	}
+	if code != http.StatusCreated {
+		return 0, fmt.Errorf("drift issue: status %d: %s", code, b)
+	}
+	var out struct {
+		Number int `json:"number"`
+	}
+	if err := json.Unmarshal(b, &out); err != nil || out.Number == 0 {
+		return 0, fmt.Errorf("drift issue: bad response")
+	}
+	return out.Number, nil
+}
