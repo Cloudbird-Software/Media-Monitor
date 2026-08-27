@@ -6,6 +6,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -170,15 +171,49 @@ func copyTree(src, dst string) error {
 	})
 }
 
-// cmdLab routes the lab subcommands (drill today).
+// cmdLab routes the lab subcommands: drill (this file), the offline
+// TESTING.md matrix groups, the comment-author field audit, and the VR
+// consumption vertical-slice verifier.
 func cmdLab(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("use: lab drill [--contract <name>] [--out DIR]")
+		labUsage(os.Stderr)
+		return errors.New("missing lab subcommand")
 	}
 	switch args[0] {
 	case "drill":
 		return runDrill(args[1:])
+	case "matrix":
+		return cmdLabMatrix(args[1:])
+	case "audit-comments":
+		return cmdLabAuditComments(args[1:])
+	case "vr-slice":
+		return cmdLabVRSlice(args[1:])
+	case "help", "-h", "--help":
+		labUsage(os.Stdout)
+		return nil
 	default:
+		labUsage(os.Stderr)
 		return fmt.Errorf("unknown lab subcommand %q", args[0])
 	}
+}
+
+// labUsage prints the lab lane's subcommand surface.
+func labUsage(w *os.File) {
+	fmt.Fprint(w, `use: lab drill [--contract <name>] [--out DIR]
+     lab matrix <a|b|e|user_posts> [flags]
+     lab audit-comments --store <dir> [flags]
+     lab vr-slice --sec-uid <id> [--mock=true]
+
+matrix  run one TESTING.md matrix group offline via fixture-driven mock
+        platforms; three-valued judgment report per row lands under
+        adapt/reports/matrix-<group>-<ts>.json
+audit-comments
+        comment-author 12-field completeness audit over a JSONL store;
+        AC-19 target >= 90% overall
+vr-slice
+        execute the three-segment VR consumption slice end to end and
+        archive integration evidence under adapt/reports/vr-slice-*.json
+
+Flags: see each subcommand (-h).
+`)
 }
