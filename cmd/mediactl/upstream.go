@@ -89,13 +89,11 @@ type upstreamSummary struct {
 
 func cmdUpstream(args []string) error {
 	if len(args) == 0 {
-		return fmt.Errorf("use: upstream scan | upstream diff-summary <slug> | upstream swap-test <slug>")
+		return fmt.Errorf("use: upstream scan | upstream diff-summary <slug>")
 	}
 	switch args[0] {
 	case "scan":
 		return upstreamScan(args[1:])
-	case "swap-test":
-		return upstreamSwapTest(args[1:])
 	case "diff-summary":
 		return upstreamDiffSummary(args[1:])
 	default:

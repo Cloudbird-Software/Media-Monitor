@@ -1,7 +1,8 @@
 // Command mediactl is the Media-Monitor CLI: contract listing, offline
 // canary/diff of the adaptation harness, contract-driven collection
 // (collect), direct-message send, trace, live monitor, task ops, toolbox,
-// netcapture query/export, and self-update check.
+// netcapture query/export, self-update check, and the offline verification
+// lane (`lab matrix`, `lab audit-comments`).
 package main
 
 import (
@@ -58,8 +59,6 @@ func main() {
 		err = cmdAccounts(os.Args[2:])
 	case "vision":
 		err = cmdVision(os.Args[2:])
-	case "lab":
-		err = cmdLab(os.Args[2:])
 	case "send":
 		err = cmdSend(os.Args[2:])
 	case "trace":
@@ -74,6 +73,8 @@ func main() {
 		err = cmdUpdate(os.Args[2:])
 	case "toolbox":
 		err = cmdToolbox(os.Args[2:])
+	case "lab":
+		err = cmdLab(os.Args[2:])
 	case "help", "-h", "--help":
 		usage(os.Stdout)
 	default:
@@ -156,6 +157,13 @@ commands:
                                    deep link comes from the flow's
                                    profile_url_template (fail-closed when
                                    missing); DM reuses M2
+  lab matrix <a|b|e|user_posts>    run one TESTING.md matrix group offline via
+                                   fixture-driven mock platforms; three-valued
+                                   judgment report per row lands under
+                                   adapt/reports/matrix-<group>-<ts>.json
+  lab audit-comments --store <dir> [--collection comments] [--min-pct 90]
+                                   comment-author 12-field completeness audit
+                                   over a JSONL store (AC-19 evidence)
   toolbox encrypt embed --text <t> [--secret <s>] [--min N] [--max M]
                                    hide text in zero-width characters (text
                                    from --text or stdin; --secret seeds the
