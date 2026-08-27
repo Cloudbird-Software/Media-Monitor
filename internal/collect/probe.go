@@ -90,9 +90,24 @@ func (e *Engine) probeFetch(ctx context.Context, c *contracts.Contract, pathPara
 func (e *Engine) ProbeAccount(ctx context.Context, platform, contract string, params map[string]string) (ProbeOutcome, error) {
 	if contract == "" {
 		var err error
-		contract, params, err = DefaultProbeContract(platform)
+		var defaults map[string]string
+		contract, defaults, err = DefaultProbeContract(platform)
 		if err != nil {
 			return ProbeOutcome{}, err
+		}
+		// Caller-supplied params must survive default-contract resolution:
+		// overlay them on the platform defaults (B1 — the previous
+		// reassignment dropped them, so the documented --param usage could
+		// never reach the placeholder check).
+		if len(params) > 0 {
+			merged := make(map[string]string, len(defaults)+len(params))
+			for k, v := range defaults {
+				merged[k] = v
+			}
+			for k, v := range params {
+				merged[k] = v
+			}
+			params = merged
 		}
 	}
 	c, ok := e.reg.Get(contract)
