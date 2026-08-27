@@ -58,6 +58,8 @@ func main() {
 		err = cmdAccounts(os.Args[2:])
 	case "vision":
 		err = cmdVision(os.Args[2:])
+	case "lab":
+		err = cmdLab(os.Args[2:])
 	case "send":
 		err = cmdSend(os.Args[2:])
 	case "trace":

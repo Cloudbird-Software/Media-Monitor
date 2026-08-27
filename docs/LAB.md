@@ -38,9 +38,13 @@ bash ghcb release <issue#>   # 或由 conductor 自动
 定时任务附 `-comment-issue <n>` 参数触发（`mediactl adapt canary --live
 --comment-issue <n>` 面）。
 
-## SLA 计量（W7-C3 承接）
+## SLA 计量（W7-C3 已落地工具面）
 
+- **drill**：`mediactl lab drill [--contract <name>]` —— 沙箱副本内种子破坏
+  （主 binding → `$.drilled_seed_break`）→ offline canary 必红 → 报告
+  {`seed/seeded_at/detected_at/detect_seconds/green_again`} 落
+  `adapt/reports/drill-*.json`；活树零触碰（rollback by construction）。
 - time-to-detect：种子破坏时刻 → drift issue 开出时刻（drill 与真实事件
-  分列计数器 `sla.time_to_detect.drill` / `.real`）。
+  分列计数器 `sla.time_to_detect.drill` / `.real`，dashboard 呈现）。
 - time-to-repair：issue 开出 → 复跑绿评论时刻。
-- 面板呈现：dashboard「closed-loop SLA」（W7-C4）。
+- 月度 drill 验收口径：1 个 canary 周期 + 1 个工作日内自愈（IR BUDGET）。
