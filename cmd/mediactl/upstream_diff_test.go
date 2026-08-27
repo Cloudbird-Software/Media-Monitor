@@ -83,3 +83,20 @@ func TestDiffSummaryJSONRoundTrip(t *testing.T) {
 		t.Fatalf("round trip = %+v", back)
 	}
 }
+
+// TestDiffSummarySlugBeforeFlags (holdout F1): the slug may precede the
+// flags even though Go's flag package stops at the first positional.
+func TestDiffSummarySlugBeforeFlags(t *testing.T) {
+	slug := ""
+	var rest []string
+	for _, a := range []string{"Johnserf-Seed/f2", "--to", "dev"} {
+		if slug == "" && !strings.HasPrefix(a, "-") {
+			slug = a
+			continue
+		}
+		rest = append(rest, a)
+	}
+	if slug != "Johnserf-Seed/f2" || len(rest) != 2 {
+		t.Fatalf("split = %q %v", slug, rest)
+	}
+}

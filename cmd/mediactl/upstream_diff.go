@@ -146,13 +146,26 @@ func upstreamDiffSummary(args []string) error {
 	fs := flag.NewFlagSet("upstream diff-summary", flag.ExitOnError)
 	to := fs.String("to", "", "head ref (default: the entry's default branch HEAD)")
 	out := fs.String("out", "", "write the JSON digest to this file")
-	if err := fs.Parse(args); err != nil {
+	// Accept `<slug> [flags]` as well as `[flags] <slug>` (holdout F1: Go's
+	// flag package stops parsing at the first positional argument).
+	slug := ""
+	var rest []string
+	for _, a := range args {
+		if slug == "" && !strings.HasPrefix(a, "-") {
+			slug = a
+			continue
+		}
+		rest = append(rest, a)
+	}
+	if err := fs.Parse(rest); err != nil {
 		return err
 	}
-	if fs.NArg() != 1 {
+	if fs.NArg() != 0 {
 		return fmt.Errorf("usage: upstream diff-summary <slug> [--to <ref>] [--out FILE]")
 	}
-	slug := fs.Arg(0)
+	if slug == "" {
+		return fmt.Errorf("usage: upstream diff-summary <slug> [--to <ref>] [--out FILE] (slug required)")
+	}
 	reg, err := loadUpstreamRegistry()
 	if err != nil {
 		return err
