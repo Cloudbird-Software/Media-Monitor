@@ -156,8 +156,8 @@ func TestServerToolsAndBasics(t *testing.T) {
 
 	m = c.call(t, "tools/list", "l1", nil)
 	toolList := m["result"].(map[string]any)["tools"].([]any)
-	if len(toolList) != 22 {
-		t.Fatalf("tool count = %d, want 22", len(toolList))
+	if len(toolList) != 23 {
+		t.Fatalf("tool count = %d, want 23", len(toolList))
 	}
 	names := map[string]bool{}
 	for _, tl := range toolList {
