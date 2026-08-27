@@ -72,6 +72,7 @@ func main() {
 	runner := core.NewRunner(st, counters)
 
 	d := &daemon{runner: runner, counters: counters, store: st, im: newIMPoller()}
+	d.dataDir = *dir
 	d.wireAdapt(*dir)
 	if d.adaptErr != nil {
 		log.Printf("warn: %v (collect API degraded, canary summary unavailable)", d.adaptErr)
@@ -83,6 +84,7 @@ func main() {
 	d.ctx = ctx
 	go d.startPushLoop(ctx)
 	go d.startWaterlevelLoop(ctx)
+	go d.startLabLoop(ctx)
 
 	srv := &http.Server{Addr: *addr, Handler: d.routes(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -112,6 +114,7 @@ type daemon struct {
 	canary     *canaryStatus // computed once at startup
 	accounts   *accounts.Pool
 	store      *store.Store
+	dataDir    string
 	// datacenter hub + webhook push state.
 	hub          *datacenter.Hub
 	webhookDesc  string
