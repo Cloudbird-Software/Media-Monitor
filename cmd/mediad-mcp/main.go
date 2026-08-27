@@ -434,6 +434,19 @@ func buildTools(a *app) []mcpio.Tool {
 			Handler: a.downloadVideo,
 		},
 		{
+			Name:        "download_media",
+			Description: "Download media bytes for one item to disk (IR-MM-0002 IFACE-6). media_kind=video resolves via the platform's video-download contract and streams <item_id>.mp4 ({path, bytes, sha256}); media_kind=note_images takes the image URLs you got from a user-posts listing (extra.images) and streams them to <item_id>/NNN.<ext> plus a manifest.json with per-file sha256 — every URL host must be on the platform's image CDN allowlist or the call fails closed (cdn_host_not_allowed). Bytes never ride the MCP channel.",
+			InputSchema: objSchema([]string{"platform", "item_id", "media_kind"}, map[string]any{
+				"platform":   platformProp,
+				"item_id":    sProp("item id (aweme id / note id) — artifact key"),
+				"media_kind": map[string]any{"type": "string", "enum": []string{"video", "note_images"}, "description": "video = platform video-download contract stream; note_images = batch image set from a listing's extra.images urls"},
+				"urls":       map[string]any{"type": "array", "items": map[string]any{"type": "string"}, "description": "note_images only: image URLs from the listing atom (extra.images); allowlist-enforced"},
+				"out_dir":    sProp("artifact root override (default <data>/artifacts)"),
+				"account_id": accountProp,
+			}),
+			Handler: a.downloadMedia,
+		},
+		{
 			Name:        "get_collects",
 			Description: "List the account's bookmark folders (collects, contract-driven). Pass collects_id to list the videos inside one folder instead. Requires an account with valid cookies (account_id or the platform default cookies).",
 			InputSchema: objSchema([]string{"platform"}, map[string]any{
@@ -1214,4 +1227,43 @@ func (a *app) downloadVideo(ctx context.Context, args map[string]any) (any, erro
 		outDir = def
 	}
 	return a.engineFor(argStr(args, "account_id")).DownloadVideoTo(ctx, platform, itemID, outDir)
+}
+
+// downloadMedia is the download_media atom (IR-MM-0002 AC-2 / IFACE-6):
+// media_kind=video re-enters the download_video path; media_kind=note_images
+// streams the caller-supplied listing URLs into
+// <data>/artifacts/<platform>/<item_id>/ + manifest.json (CDN allowlist
+// enforced inside the engine, fail-closed).
+func (a *app) downloadMedia(ctx context.Context, args map[string]any) (any, error) {
+	kind := argStr(args, "media_kind")
+	if kind == "" {
+		return nil, errors.New("media_kind is required (video|note_images)")
+	}
+	if kind != "video" && kind != "note_images" {
+		return nil, fmt.Errorf("media_kind %q must be video or note_images", kind)
+	}
+	if kind == "video" {
+		return a.downloadVideo(ctx, args)
+	}
+	platform, err := requirePlatform(args)
+	if err != nil {
+		return nil, err
+	}
+	itemID := argStr(args, "item_id")
+	if itemID == "" {
+		return nil, errors.New("item_id is required")
+	}
+	urls := splitTargets(argStr(args, "urls"))
+	if len(urls) == 0 {
+		return nil, errors.New("note_images requires urls (from the user-posts listing atom's extra.images)")
+	}
+	outDir := argStr(args, "out_dir")
+	def := filepath.Join(a.dataDir, "artifacts")
+	if outDir != "" && filepath.Clean(outDir) != def {
+		return nil, errors.New("out_dir may only be empty or the configured artifacts root " + def)
+	}
+	if outDir == "" {
+		outDir = def
+	}
+	return a.engineFor(argStr(args, "account_id")).DownloadNoteImages(ctx, platform, itemID, urls, outDir)
 }
