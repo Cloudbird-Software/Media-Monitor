@@ -1,0 +1,45 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "xhs-note-imagetext-0002",
+        "note": {
+          "type": "normal",
+          "display_title": "image-text note has no video stream",
+          "user": {
+            "user_id": "owner-xhs-1",
+            "nickname": "radar-fixture",
+            "avatar": "https://sns-avatar-qc.xhscdn.com/fixture/av.webp"
+          },
+          "time": 1787600000,
+          "interact_info": {
+            "liked_count": "9800",
+            "collected_count": "4100",
+            "comment_count": "806",
+            "share_count": "512"
+          },
+          "image_list": [
+            {
+              "url_default": "https://sns-img-qc.xhscdn.com/fixture/inner-0002-1.webp",
+              "info_list": [
+                {"image_scene": "WB_DFT", "url": "https://sns-img-qc.xhscdn.com/fixture/inner-0002-1.webp"}
+              ]
+            },
+            {
+              "url_default": "https://sns-img-qc.xhscdn.com/fixture/inner-0002-2.webp",
+              "info_list": [
+                {"image_scene": "WB_DFT", "url": "https://sns-img-qc.xhscdn.com/fixture/inner-0002-2.webp"}
+              ]
+            }
+          ],
+          "tag_list": [
+            {"id": "t-001", "name": "黄金3秒"},
+            {"id": "t-002", "name": "爆款拆解"}
+          ]
+        }
+      }
+    ]
+  },
+  "code": 0,
+  "success": true
+}

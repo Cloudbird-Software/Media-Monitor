@@ -1,0 +1,38 @@
+{
+  "name": "xhs-video-download",
+  "platform": "xhs",
+  "category": "video_download",
+  "version": "1",
+  "doc": "resolve one xhs note's play address (video notes) via the web feed endpoint. Evidence: MediaCrawler creator-mode feed param table (knowledge-only, IR-MM-0001 D-2) cross-checked against f2 apps/xhs request shape (Apache-2.0, ADR-0101). x-s / x-s-common ride HTTP request headers (IFACE-7) and are computed by the deployment-owned signsvc script (HARDENING M3 — the algorithm never ships in this repo); the CDN stream GET itself is unsigned. Image notes carry no video stream: play_url binds empty and resolve fails closed with an explicit error — use the user-posts listing's extra.images with the download_media atom instead.",
+  "transport": {
+    "base_url": "https://edith.xiaohongshu.com",
+    "path": "/api/sns/web/v1/feed",
+    "method": "POST",
+    "headers": {
+      "accept": "application/json, text/plain, */*",
+      "origin": "https://www.xiaohongshu.com",
+      "referer": "https://www.xiaohongshu.com/"
+    },
+    "body": {
+      "source_note_id": "",
+      "image_scenes": ["FD_PRV_WEBP", "FD_WM_WEBP"]
+    },
+    "placeholders": ["source_note_id"]
+  },
+  "signature": {
+    "headers": ["x-s", "x-s-common"],
+    "required": ["x-s", "x-s-common"]
+  },
+  "cookie": {
+    "required": ["web_session", "a1"],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {
+    "fields": {
+      "play_url": "$.data.items[0].note.video.media.stream.h264[0].master_url",
+      "cover": "$.data.items[0].note.image_list[0].url_default",
+      "aweme_id": "$.data.items[0].id",
+      "duration": "$.data.items[0].note.video.capa.duration"
+    }
+  }
+}

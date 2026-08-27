@@ -1,0 +1,57 @@
+{
+  "data": {
+    "items": [
+      {
+        "id": "xhs-note-video-0001",
+        "note": {
+          "type": "video",
+          "display_title": "golden-3s opening breakdown",
+          "user": {
+            "user_id": "owner-xhs-1",
+            "nickname": "radar-fixture",
+            "avatar": "https://sns-avatar-qc.xhscdn.com/fixture/av.webp"
+          },
+          "time": 1787800000,
+          "interact_info": {
+            "liked_count": "45200",
+            "collected_count": "12800",
+            "comment_count": "3105",
+            "share_count": "2600"
+          },
+          "image_list": [
+            {
+              "url_default": "https://sns-img-qc.xhscdn.com/fixture/cover-0001.webp",
+              "info_list": [
+                {"image_scene": "WB_DFT", "url": "https://sns-img-qc.xhscdn.com/fixture/cover-0001.webp"}
+              ]
+            }
+          ],
+          "video": {
+            "capa": {"duration": 41000},
+            "media": {
+              "stream": {
+                "h264": [
+                  {
+                    "master_url": "https://sns-video-hw.xhscdn.com/fixture/stream-0001-master.mp4",
+                    "backup_urls": ["https://sns-video-al.xhscdn.com/fixture/stream-0001-backup.mp4"],
+                    "video_bitrate": 2196000,
+                    "width": 1080,
+                    "height": 1920
+                  }
+                ],
+                "h265": [
+                  {
+                    "master_url": "https://sns-video-hw.xhscdn.com/fixture/stream-0001-h265.mp4",
+                    "video_bitrate": 1800000
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "code": 0,
+  "success": true
+}

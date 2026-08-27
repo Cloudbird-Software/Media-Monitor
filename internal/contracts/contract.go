@@ -53,6 +53,11 @@ type Signature struct {
 	// observe present in live traffic.
 	Params   []string `json:"params,omitempty"`
 	Required []string `json:"required,omitempty"`
+	// Headers lists signer-produced values that must ride HTTP request
+	// headers instead of the URL query (IFACE-7, e.g. xhs x-s /
+	// x-s-common). Required values declared here are validated against
+	// the signer output, not the query.
+	Headers []string `json:"headers,omitempty"`
 }
 
 type Binding struct {

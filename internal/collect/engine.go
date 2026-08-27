@@ -230,6 +230,11 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		q.Set(k, v)
 	}
 	signer := e.signers[c.Platform]
+	sigHeaders := map[string]string{}
+	inHeader := map[string]bool{}
+	for _, h := range c.Signature.Headers {
+		inHeader[h] = true
+	}
 	if signer != nil {
 		pre := c.Transport.BaseURL + path
 		if len(q) > 0 {
@@ -240,21 +245,37 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 			return "", nil, nil, fmt.Errorf("collect %s: sign: %w", c.Name, serr)
 		}
 		for k, v := range sig {
-			q.Set(k, v)
+			// IFACE-7: values the contract routes to headers ride the
+			// request headers (e.g. xhs x-s / x-s-common); the rest land
+			// in the query exactly as before.
+			if inHeader[k] {
+				sigHeaders[k] = v
+			} else {
+				q.Set(k, v)
+			}
 		}
 	}
 	// Fail-closed: everything the contract marks as a required signature
-	// parameter must be present in the final URL query.
+	// must be present in the final URL query or — when the contract routes
+	// it to headers (signature.headers) — in the signer output that will
+	// ride the request headers.
 	for _, rp := range c.Signature.Required {
-		if q.Get(rp) == "" {
-			return "", nil, nil, fmt.Errorf("collect %s: signature required param %q missing/empty in final URL", c.Name, rp)
+		if q.Get(rp) != "" || sigHeaders[rp] != "" {
+			continue
 		}
+		if inHeader[rp] {
+			return "", nil, nil, fmt.Errorf("collect %s: signature required header %q missing/empty (signer output)", c.Name, rp)
+		}
+		return "", nil, nil, fmt.Errorf("collect %s: signature required param %q missing/empty in final URL", c.Name, rp)
 	}
 	full := c.Transport.BaseURL + path
 	if len(q) > 0 {
 		full += "?" + q.Encode()
 	}
 	headers := map[string]string{}
+	for k, v := range sigHeaders {
+		headers[k] = v
+	}
 	for k, v := range c.Transport.Headers {
 		headers[k] = v
 	}
