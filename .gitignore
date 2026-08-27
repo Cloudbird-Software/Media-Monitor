@@ -13,3 +13,4 @@ dist/
 *.key
 ghcb
 .ghcb.cache
+upstream/swap-reports/
