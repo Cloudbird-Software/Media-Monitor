@@ -51,6 +51,7 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/signclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/store"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/tasks"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/waterlevel"
 )
 
 func main() {
@@ -81,6 +82,7 @@ func main() {
 	defer cancel()
 	d.ctx = ctx
 	go d.startPushLoop(ctx)
+	go d.startWaterlevelLoop(ctx)
 
 	srv := &http.Server{Addr: *addr, Handler: d.routes(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -734,4 +736,64 @@ func intVal(m map[string]any, key string, def int) int {
 		}
 	}
 	return def
+}
+
+// startWaterlevelLoop runs the account-pool water-level alarm cycle
+// (IR-MM-0001 AC-10): every MEDIAMON_WATERLEVEL_INTERVAL (default 30m) the
+// per-platform usable count is checked against MEDIAMON_WATERLEVEL_MIN
+// (default 2); low water opens a type:drift issue via the repo App token
+// (AGENT_APP_SECRET), recovery closes it. Without the secret the loop logs
+// a documented skip each cycle (fail-closed, never silent).
+func (d *daemon) startWaterlevelLoop(ctx context.Context) {
+	interval := 30 * time.Minute
+	if v := os.Getenv("MEDIAMON_WATERLEVEL_INTERVAL"); v != "" {
+		if p, err := time.ParseDuration(v); err == nil && p > 0 {
+			interval = p
+		}
+	}
+	threshold := waterlevel.DefaultThreshold
+	if v := os.Getenv("MEDIAMON_WATERLEVEL_MIN"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			threshold = n
+		}
+	}
+	t := time.NewTicker(interval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+		if d.accounts == nil {
+			continue
+		}
+		n, err := waterlevel.NewGitHubNotifier("Cloudbird-Software/Media-Monitor", waterlevelInstallationID())
+		if err != nil {
+			log.Printf("waterlevel: %v", err)
+			continue
+		}
+		opened, closed, err := waterlevel.Run(d.accounts, n, threshold)
+		if err != nil {
+			log.Printf("waterlevel: cycle: %v", err)
+			continue
+		}
+		for _, num := range opened {
+			log.Printf("waterlevel: opened drift issue #%d", num)
+			d.counters.Inc("accounts.waterlevel.opened", 1)
+		}
+		for _, num := range closed {
+			log.Printf("waterlevel: closed drift issue #%d (recovered)", num)
+			d.counters.Inc("accounts.waterlevel.closed", 1)
+		}
+	}
+}
+
+// waterlevelInstallationID is the app installation for this repo (env
+// overridable for tests/other deployments).
+func waterlevelInstallationID() string {
+	if v := os.Getenv("MEDIAMON_INSTALLATION_ID"); v != "" {
+		return v
+	}
+	return "154584760"
 }
