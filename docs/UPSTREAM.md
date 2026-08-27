@@ -32,11 +32,16 @@ watch-only — parameters and binding knowledge, never code.
 
 ## Swap-test bench (local, agent-driven)
 
-`upstream/swap-test.md` workflow (agent-only; not automated yet):
-pin upstream → adapter shim under `internal/platforms` or standalone script
-→ run the same canary suite against the upstream implementation → score
-(success rate / freshness / license). Adoption requires a C1 PR with the
-score attached. Removal mirrors it. The vendor submodules above provide the
+**Executable now** (ADR-0099): `mediactl upstream swap-test <slug>` scores a
+pinned upstream against this repo's contract expectations and prints a
+three-field score — {success_rate, freshness_days, license_verdict} JSON.
+Reports land under `upstream/swap-reports/<slug>-<date>.json` (gitignored
+tool output). Unknown slug / missing adapter / unavailable sources are
+explicit errors (never a hang, never silent). A score ≥0.8 prints the
+adoption suggestion; adoption still requires a C1 PR with the score
+attached, and the decision (adopt/ignore) is recorded on the card issue.
+Adapters live in cmd/mediactl as scaffolding (never internal/). Removal
+mirrors the adoption path. The vendor submodules above provide the
 pinned local baseline the bench scores against.
 
 ## Policy
