@@ -10,3 +10,9 @@
 [submodule "upstream/vendor/UI-TARS"]
 	path = upstream/vendor/UI-TARS
 	url = https://github.com/bytedance/UI-TARS.git
+[submodule "upstream/vendor/wx_channels_decryption"]
+	path = upstream/vendor/wx_channels_decryption
+	url = https://github.com/Evil0ctal/WeChat-Channels-Video-File-Decryption.git
+[submodule "upstream/vendor/res_downloader"]
+	path = upstream/vendor/res_downloader
+	url = https://github.com/putyy/res-downloader.git

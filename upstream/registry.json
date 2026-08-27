@@ -123,6 +123,42 @@
         "*.md"
       ],
       "notes": "cheap per-frame widget grounding candidate; verify license at onboarding"
+    },
+    {
+      "slug": "Evil0ctal/WeChat-Channels-Video-File-Decryption",
+      "role": "signature",
+      "pin": {
+        "type": "sha",
+        "ref": "799a131834ccc6ac69d1fbfa8c30350c4f718ccb"
+      },
+      "license": {
+        "spdx": "MIT",
+        "verdict": "allowed"
+      },
+      "tracked_paths": [
+        "*.py",
+        "*.js",
+        "README.md"
+      ],
+      "notes": "weixin channels media decryption algorithm reference (Isaac64 keystream + XOR; IR-MM-0002 AC-7/ADR-0102); submodule under upstream/vendor/"
+    },
+    {
+      "slug": "putyy/res-downloader",
+      "role": "collector",
+      "pin": {
+        "type": "sha",
+        "ref": "f8ac4d9c85baf28322106e40ea3fdea9867e2f74"
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "verdict": "allowed"
+      },
+      "tracked_paths": [
+        "src/",
+        "*.go",
+        "*.md"
+      ],
+      "notes": "proxy-sniffing multi-platform downloader architecture reference, Go (IR-MM-0002 S1/ADR-0102); submodule under upstream/vendor/"
     }
   ]
 }
