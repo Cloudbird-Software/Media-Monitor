@@ -178,3 +178,22 @@ func TestProbeUnknownPlatformDefault(t *testing.T) {
 		t.Fatal("kuaishou must fail closed (no probe contract declared)")
 	}
 }
+
+// TestProbeDefaultContractHonorsCallerParams: the default-contract path must
+// overlay caller-supplied params on the platform defaults instead of
+// dropping them (B1 — the previous reassignment discarded the kv map, so
+// the documented `--param user_id=...` usage could never reach the
+// placeholder check and every default-path probe failed closed).
+func TestProbeDefaultContractHonorsCallerParams(t *testing.T) {
+	pf := newProbeFixture(t, "ok")
+	eng, pool := probeSetup(t, pf)
+	defer pf.srv.Close()
+	defer pool.Close()
+	out, err := eng.ProbeAndStore(context.Background(), pool, "acc-1", "", map[string]string{"user_id": "u1"})
+	if err != nil {
+		t.Fatalf("default-contract probe with caller params: %v", err)
+	}
+	if out.Health != accounts.HealthHealthy {
+		t.Fatalf("health = %q (%s), want healthy", out.Health, out.Detail)
+	}
+}
