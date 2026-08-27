@@ -122,12 +122,9 @@ func (p *stopPredicate) engagementValue(c *contracts.Contract, rec map[string]an
 	return asInt(v), true
 }
 
-// walkState carries the consecutive-low counter and the auto-rotation
-// bookkeeping (tried account ids + rotation budget) across one walk.
+// walkState carries the consecutive-low counter across items.
 type walkState struct {
 	consecutiveLow int
-	tried          map[string]bool
-	rotations      int
 }
 
 // apply evaluates the predicate over one page of newly fetched records and
@@ -189,17 +186,6 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 	ccur := cur
 	pages := 0
 	st := &walkState{}
-	fe := e // fetch engine; rotated clones replace it under auto mode
-	if fe.isAutoAccount() {
-		bound, aerr := fe.bindInitial(name)
-		if aerr != nil {
-			return nil, cur, aerr
-		}
-		fe = bound
-	}
-	if st.tried == nil {
-		st.tried = map[string]bool{}
-	}
 	for {
 		if limit > 0 && len(out) >= limit {
 			break
@@ -216,23 +202,9 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 		if c.Paging.CountParam != "" && limit > 0 {
 			query[c.Paging.CountParam] = strconv.Itoa(limit)
 		}
-		doc, err := fe.Fetch(ctx, name, pathParams, query)
+		doc, err := e.Fetch(ctx, name, pathParams, query)
 		if err != nil {
-			if fe.isAutoAccount() && (errorsIs(err, ErrAuthWall) || errorsIs(err, ErrEmptyPage)) {
-				// Auto rotation (IR AC-9): auth wall / empty page switches
-				// to the next health-ranked account and retries the SAME
-				// page (cursor untouched — the walk never restarts).
-				nfe, rerr := fe.rotateOn(name, err, st.tried, &st.rotations)
-				if rerr != nil {
-					return nil, ccur, rerr
-				}
-				fe = nfe
-				continue
-			}
 			return nil, ccur, err
-		}
-		if id := fe.currentAccount(); id != "" && fe.accounts != nil {
-			_ = fe.accounts.MarkSuccess(id)
 		}
 		page := selectRecords(bp, doc)
 		stop := false

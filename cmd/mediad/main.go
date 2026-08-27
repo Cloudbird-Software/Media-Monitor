@@ -51,7 +51,6 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/signclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/store"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/tasks"
-	"github.com/Cloudbird-Software/Media-Monitor/internal/waterlevel"
 )
 
 func main() {
@@ -76,14 +75,12 @@ func main() {
 	if d.adaptErr != nil {
 		log.Printf("warn: %v (collect API degraded, canary summary unavailable)", d.adaptErr)
 	}
-	d.dataDir = *dir
 	d.wireDatacenter(*dir)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	d.ctx = ctx
 	go d.startPushLoop(ctx)
-	go d.startWaterlevelLoop(ctx)
 
 	srv := &http.Server{Addr: *addr, Handler: d.routes(), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
@@ -113,7 +110,6 @@ type daemon struct {
 	canary     *canaryStatus // computed once at startup
 	accounts   *accounts.Pool
 	store      *store.Store
-	dataDir    string
 	// datacenter hub + webhook push state.
 	hub          *datacenter.Hub
 	webhookDesc  string
@@ -285,7 +281,7 @@ func (d *daemon) collectHandler(w http.ResponseWriter, req *http.Request) {
 	}
 	op := strings.TrimPrefix(req.URL.Path, "/api/v1/collect/")
 	switch op {
-	case "search", "comments", "replies", "user", "user-posts", "group", "video", "video-download", "collects", "collects-videos", "im-unread":
+	case "search", "comments", "replies", "user", "user-posts", "group", "video", "collects", "collects-videos", "im-unread":
 	default:
 		http.NotFound(w, req)
 		return
@@ -433,22 +429,6 @@ func (d *daemon) runCollect(op string, ctx context.Context, body map[string]any)
 		// The watermark-free address is returned; downloading the bytes is
 		// left to mediactl / the caller.
 		return map[string]any{"video": meta}, nil
-	case "video-download":
-		itemID := strVal(body, "item_id")
-		if itemID == "" {
-			return nil, errors.New("item_id is required")
-		}
-		// out_dir default: the daemon data root's artifacts/ dir (IFACE-3);
-		// the engine appends <platform>/<item>.mp4.
-		outDir := strVal(body, "out_dir")
-		if outDir == "" {
-			outDir = filepath.Join(d.dataDir, "artifacts")
-		}
-		res, err := eng.DownloadVideoTo(ctx, platform, itemID, outDir)
-		if err != nil {
-			return nil, err
-		}
-		return map[string]any{"download": res}, nil
 	case "collects":
 		folders, cur, err := eng.CollectFolders(ctx, platform, model.Cursor{}, limit)
 		if err != nil {
@@ -754,64 +734,4 @@ func intVal(m map[string]any, key string, def int) int {
 		}
 	}
 	return def
-}
-
-// startWaterlevelLoop runs the account-pool water-level alarm cycle
-// (IR-MM-0001 AC-10): every MEDIAMON_WATERLEVEL_INTERVAL (default 30m) the
-// per-platform usable count is checked against MEDIAMON_WATERLEVEL_MIN
-// (default 2); low water opens a type:drift issue via the repo App token
-// (AGENT_APP_SECRET), recovery closes it. Without the secret the loop logs
-// a documented skip each cycle (fail-closed, never silent).
-func (d *daemon) startWaterlevelLoop(ctx context.Context) {
-	interval := 30 * time.Minute
-	if v := os.Getenv("MEDIAMON_WATERLEVEL_INTERVAL"); v != "" {
-		if p, err := time.ParseDuration(v); err == nil && p > 0 {
-			interval = p
-		}
-	}
-	threshold := waterlevel.DefaultThreshold
-	if v := os.Getenv("MEDIAMON_WATERLEVEL_MIN"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			threshold = n
-		}
-	}
-	t := time.NewTicker(interval)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-t.C:
-		}
-		if d.accounts == nil {
-			continue
-		}
-		n, err := waterlevel.NewGitHubNotifier("Cloudbird-Software/Media-Monitor", waterlevelInstallationID())
-		if err != nil {
-			log.Printf("waterlevel: %v", err)
-			continue
-		}
-		opened, closed, err := waterlevel.Run(d.accounts, n, threshold)
-		if err != nil {
-			log.Printf("waterlevel: cycle: %v", err)
-			continue
-		}
-		for _, num := range opened {
-			log.Printf("waterlevel: opened drift issue #%d", num)
-			d.counters.Inc("accounts.waterlevel.opened", 1)
-		}
-		for _, num := range closed {
-			log.Printf("waterlevel: closed drift issue #%d (recovered)", num)
-			d.counters.Inc("accounts.waterlevel.closed", 1)
-		}
-	}
-}
-
-// waterlevelInstallationID is the app installation for this repo (env
-// overridable for tests/other deployments).
-func waterlevelInstallationID() string {
-	if v := os.Getenv("MEDIAMON_INSTALLATION_ID"); v != "" {
-		return v
-	}
-	return "154584760"
 }
