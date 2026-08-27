@@ -1253,7 +1253,19 @@ func (a *app) downloadMedia(ctx context.Context, args map[string]any) (any, erro
 	if itemID == "" {
 		return nil, errors.New("item_id is required")
 	}
-	urls := splitTargets(argStr(args, "urls"))
+	// urls arrives as a real JSON array over MCP (accept string lists too
+	// for CLI-style callers); a bare argStr would drop an array value.
+	var urls []string
+	switch v := args["urls"].(type) {
+	case []any:
+		for _, u := range v {
+			if s, ok := u.(string); ok && strings.TrimSpace(s) != "" {
+				urls = append(urls, s)
+			}
+		}
+	case string:
+		urls = splitTargets(v)
+	}
 	if len(urls) == 0 {
 		return nil, errors.New("note_images requires urls (from the user-posts listing atom's extra.images)")
 	}
