@@ -11,8 +11,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
+
+// itemIDPattern constrains caller-supplied item ids to plain identifier
+// characters (digits / ASCII letters / - _ .) of bounded length, so a
+// crafted id can never contribute a separator or traversal form.
+var itemIDPattern = regexp.MustCompile(`^[0-9A-Za-z._-]{1,64}$`)
 
 // DownloadResult is the download_video atom's return shape (IFACE-3).
 type DownloadResult struct {
@@ -50,6 +56,9 @@ func (e *Engine) DownloadVideoTo(ctx context.Context, platform, itemID, outDir s
 	if itemID == "" {
 		return DownloadResult{}, fmt.Errorf("collect: item_id is required")
 	}
+	if !itemIDPattern.MatchString(itemID) {
+		return DownloadResult{}, fmt.Errorf("collect: item_id %q is not a safe artifact key", itemID)
+	}
 	if !safeSegment(platform) {
 		return DownloadResult{}, fmt.Errorf("collect: invalid platform segment %q", platform)
 	}
@@ -68,16 +77,21 @@ func (e *Engine) DownloadVideoTo(ctx context.Context, platform, itemID, outDir s
 	dir := filepath.Join(root, platform)
 	final := filepath.Join(dir, name+".mp4")
 	tmp := final + ".tmp"
-	// Containment post-condition (defense in depth): the resolved absolute
-	// artifact path must stay inside the cleaned root; any escape is a
-	// fail-closed error, never a write.
-	if absRoot, aerr := filepath.Abs(root); aerr == nil {
-		if absFinal, ferr := filepath.Abs(final); ferr == nil {
-			cut := absRoot + string(os.PathSeparator)
-			if absFinal != absRoot && !strings.HasPrefix(absFinal+string(os.PathSeparator), cut) {
-				return DownloadResult{}, fmt.Errorf("collect: artifact path escapes artifacts root: %s", final)
-			}
-		}
+	// Containment post-condition: resolve `final` relative to the cleaned
+	// root and refuse any result that climbs out of it (`..` segments). A
+	// clean relative walk from root to the artifact proves the layout stays
+	// inside the artifacts tree; anything else is a fail-closed error.
+	absRoot, aerr := filepath.Abs(root)
+	if aerr != nil {
+		return DownloadResult{}, fmt.Errorf("collect: artifacts root: %w", aerr)
+	}
+	absFinal, ferr := filepath.Abs(final)
+	if ferr != nil {
+		return DownloadResult{}, fmt.Errorf("collect: artifact path: %w", ferr)
+	}
+	rel, rerr := filepath.Rel(absRoot, absFinal)
+	if rerr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return DownloadResult{}, fmt.Errorf("collect: artifact path escapes artifacts root: %s", final)
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return DownloadResult{}, fmt.Errorf("collect: artifact dir: %w", err)
