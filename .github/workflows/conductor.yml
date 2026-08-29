@@ -389,6 +389,21 @@ jobs:
               if payload:
                   run_id = (payload.get("client_payload") or {}).get("run_id") or payload.get("run_id")
                   verdict_from_dispatch = (payload.get("client_payload") or {}).get("verdict")
+              if not run_id:
+                  # 标签路径补件（ADR-0085，IR-0006 W1 实走发现 2026-08-29）：
+                  # label:state:wave-planned 事件无 dispatch 载荷——run_id 从本卡
+                  # survived 评论机械提取（评论须含 verdict=survived/adversary:survived
+                  # 且带 run_id 键，与下方跨卡复用检查同源同则）；提取不到仍
+                  # fail-closed 拒绝（"缺少审计 run ID"）
+                  st_c2, cs = api(E["APP_TOKEN"], f"/repos/{REPO}/issues/{issue_number}/comments")
+                  if st_c2 == 200:
+                      for c in cs or []:
+                          cb = c.get("body", "")
+                          if "adversary:survived" in cb or "verdict=survived" in cb:
+                              m_run0 = re.search(r"run[_-]?id[=:]\s*([A-Za-z0-9_\-]+)", cb, re.I)
+                              if m_run0:
+                                  run_id = m_run0.group(1)
+                                  break
               # 三元组完整性检查
               if not spec_version:
                   return False, "缺少 specVersion（issue body 未含 specVersion 字段）", None
