@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@b0ce93280fd0173f438f3725149117d211eac529 # v1
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/dep-review.yml@61b6373df06798213be87d295df6fdda23553ddb # v1
     with:
       ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
 
