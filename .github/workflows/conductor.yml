@@ -562,7 +562,7 @@ jobs:
     # spec-author 钉发布 tag 的 commit SHA（供应链；ADR-0049/0050）
     needs: route
     if: needs.route.outputs.invoke == 'spec-author'
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/spec-author.yml@4676c98047f816f7c888591eb882bf941e5c9fe0 # v1.4.3（irRef/taskId 事件真值覆写修复）
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/spec-author.yml@d3c01525be512471380a7ab33ccae2b73b3e575f # v1.4.3（irRef/taskId 事件真值覆写修复）
     with:
       issue_number: ${{ fromJson(needs.route.outputs.issue) }}
       target_repo: ${{ github.repository }} # ADR-0097：IR 所在仓=spec PR 目标仓
