@@ -149,7 +149,7 @@ jobs:
       ciw-ref: b0ce93280fd0173f438f3725149117d211eac529
 
   suppression-budget:
-    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@b0ce93280fd0173f438f3725149117d211eac529
+    uses: Cloudbird-Software/CI-Workflows/.github/workflows/suppression-gate.yml@61b6373df06798213be87d295df6fdda23553ddb
     with:
       detector-ref: b0ce93280fd0173f438f3725149117d211eac529
 
