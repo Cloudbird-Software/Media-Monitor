@@ -951,8 +951,10 @@ func TestSendMessageContractNotDeclared(t *testing.T) {
 	}
 }
 
-// TestPaginationLoopGuard: a cursor that never advances aborts after the
-// page cap instead of looping forever.
+// TestPaginationLoopGuard: a cursor that never advances stops after the page
+// cap — and since the silent-scraping round (report item 8 / t03) the walk
+// KEEPS the collected records and returns the live cursor instead of
+// discarding ~maxPages pages of data with an error.
 func TestPaginationLoopGuard(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"data":[{"id":"x"}],"cursor":"20","has_more":true}`))
@@ -962,8 +964,14 @@ func TestPaginationLoopGuard(t *testing.T) {
 	eng := mockEngine(t, addContracts(t, searchContract(srv)), func(c *Context) {
 		c.Names = map[string]map[string]string{"mock": {"search": "mock-search"}}
 	})
-	_, _, err := eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 0)
-	if err == nil || !strings.Contains(err.Error(), "pagination") {
-		t.Fatalf("err = %v, want pagination cap error", err)
+	items, cur, err := eng.SearchItems(context.Background(), "mock", "kw", "", model.Cursor{}, 0)
+	if err != nil {
+		t.Fatalf("err = %v, want nil (data preserved on page-cap hit)", err)
+	}
+	if len(items) != maxPages {
+		t.Fatalf("items = %d, want %d (one per capped page)", len(items), maxPages)
+	}
+	if !cur.HasMore {
+		t.Fatal("cursor must stay live so the caller can resume")
 	}
 }

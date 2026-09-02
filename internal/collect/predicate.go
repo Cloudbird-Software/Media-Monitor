@@ -189,6 +189,7 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 	ccur := cur
 	pages := 0
 	st := &walkState{}
+	paging := pacingFor(e.pacing, c.Paging.PageSleepMS)
 	fe := e // fetch engine; rotated clones replace it under auto mode
 	if fe.isAutoAccount() {
 		bound, aerr := fe.bindInitial(name)
@@ -246,8 +247,20 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 			return truncate(out, limit), next, nil
 		}
 		if pages >= maxPages {
-			return nil, next, fmt.Errorf("collect %s: pagination exceeded %d pages (cursor did not settle)", name, maxPages)
+			// Report item 8 / t03: hitting the page ceiling used to discard
+			// ~1980 collected records and return nil. Instead: keep the data,
+			// surface the live cursor so the caller can resume, and stop
+			// cleanly (the guard exists against runaway cursors, not as a
+			// reason to throw the walk away).
+			if e.obs != nil {
+				e.obs.Inc("collect.maxpages_hit", 1)
+			}
+			return truncate(out, limit), next, nil
 		}
+		// Human pacing (report item 1/A1): think time between consecutive
+		// pages, log-normal + clamped; disabled by MEDIAMON_EMERGENCY /
+		// MEDIAMON_PAGE_SLEEP_MS=0 / per-contract paging.page_sleep_ms=-1.
+		fe.pageThink(ctx, paging)
 		ccur = next
 	}
 	return truncate(out, limit), ccur, nil

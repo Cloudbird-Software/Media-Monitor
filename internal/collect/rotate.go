@@ -86,7 +86,9 @@ func (e *Engine) platformFor(name string) string {
 }
 
 // forAccount clones the engine with a specific account selected. The clone
-// keeps rotation armed in auto mode (autoBase marker).
+// keeps rotation armed in auto mode (autoBase marker) and inherits the base
+// engine's pacing config + test sleep hook so think-time behavior survives
+// account switches.
 func (e *Engine) forAccount(accountID string) *Engine {
 	base := e.autoBase
 	ne := New(Context{
@@ -98,8 +100,10 @@ func (e *Engine) forAccount(accountID string) *Engine {
 		Names:     e.names,
 		Accounts:  e.accounts,
 		AccountID: accountID,
+		Pacing:    &e.pacing,
 	})
 	ne.autoBase = base
+	ne.sleepHook = e.sleepHook
 	return ne
 }
 

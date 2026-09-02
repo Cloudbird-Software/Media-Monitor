@@ -8,11 +8,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
@@ -43,25 +45,36 @@ type Context struct {
 	Accounts *accounts.Pool
 	// AccountID selects the account to act as; "" means platform defaults.
 	AccountID string
+	// Pacing overrides the inter-page think-time config (nil = env/defaults,
+	// see pacing.go). The zero Context keeps pacing ON with defaults.
+	Pacing *PacingConfig
 }
 
 // Engine executes contracts. Safe for concurrent use once built.
 type Engine struct {
-	reg        *contracts.Registry
-	hc         *httpclient.Client
-	obs        *obs.CounterMap
-	signers    map[string]httpclient.Signer
-	cookies    map[string]string
-	names      map[string]map[string]string
-	accounts   *accounts.Pool
-	accountID  string
-	autoBase   *Engine // non-nil while rotating in auto mode
-	proxyMu    sync.Mutex
-	proxyCache map[string]*httpclient.Client // proxy url -> dedicated client
+	reg         *contracts.Registry
+	hc          *httpclient.Client
+	obs         *obs.CounterMap
+	signers     map[string]httpclient.Signer
+	cookies     map[string]string
+	names       map[string]map[string]string
+	accounts    *accounts.Pool
+	accountID   string
+	autoBase    *Engine // non-nil while rotating in auto mode
+	proxyMu     sync.Mutex
+	proxyCache  map[string]*httpclient.Client // proxy url -> dedicated client
+	pacing      PacingConfig                  // inter-page think time (pacing.go)
+	pacingMu    sync.Mutex
+	pacingRand  *rand.Rand
+	sleepHook   func() time.Duration // test seam: replaces the random sample
 }
 
 // New builds an Engine from its wiring context.
 func New(ctx Context) *Engine {
+	pacing := PacingFromEnv()
+	if ctx.Pacing != nil {
+		pacing = *ctx.Pacing
+	}
 	e := &Engine{
 		reg:        ctx.Registry,
 		obs:        ctx.Obs,
@@ -71,6 +84,8 @@ func New(ctx Context) *Engine {
 		accounts:   ctx.Accounts,
 		accountID:  ctx.AccountID,
 		proxyCache: map[string]*httpclient.Client{},
+		pacing:     pacing,
+		pacingRand: newPacingRand(),
 	}
 	if ctx.HTTP != nil {
 		e.hc = ctx.HTTP

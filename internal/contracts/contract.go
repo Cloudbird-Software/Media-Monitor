@@ -82,6 +82,10 @@ type Paging struct {
 	CountDefault   int    `json:"count_default,omitempty"`
 	HasMorePath    string `json:"has_more_path,omitempty"`
 	NextCursorPath string `json:"next_cursor_path,omitempty"`
+	// PageSleepMS overrides the engine's inter-page think-time median for
+	// this contract (silent-scraping pacing): 0 = inherit the global config,
+	// -1 = pacing off for this contract, >0 = median in milliseconds.
+	PageSleepMS int `json:"page_sleep_ms,omitempty"`
 }
 
 type CookieSpec struct {
