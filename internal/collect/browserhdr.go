@@ -121,8 +121,31 @@ func (e *Engine) fetchClient(platform, proxy string) *httpclient.Client {
 	return e.sessionClient(e.clientFor(proxy), e.sessionKey(platform))
 }
 
-// resolveUA returns the engine-pinned session UA for a platform ("" = no
-// engine pin; the HTTP client's own pool applies). The real per-session
-// pinning against the accounts UA pool lands with the UA-pool rebuild
-// (silent-scraping commit 4); account-pinned UAs bypass this entirely.
-func (e *Engine) resolveUA(platform string) string { return "" }
+// fallbackSessionUA is the deterministic fallback when no UA pool is wired:
+// the current corpus-era desktop Chrome (a real, existing UA — report B2).
+const fallbackSessionUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36"
+
+// resolveUA returns the session-pinned User-Agent for this engine's current
+// identity (report B2/B3): ONE UA per cookie lifetime — the account's pinned
+// UA when the account carries one, otherwise a UA drawn once from the pool
+// and cached under the session key. Switching accounts switches the session
+// key, hence the UA; the UA NEVER rotates per request.
+func (e *Engine) resolveUA(platform string) string {
+	key := e.sessionKey(platform)
+	e.uaMu.Lock()
+	defer e.uaMu.Unlock()
+	if ua, ok := e.uaByPlat[key]; ok {
+		return ua
+	}
+	ua := fallbackSessionUA
+	if e.uaPool != nil {
+		if picked := e.uaPool.Pick(); picked != "" {
+			ua = picked
+		}
+	}
+	if e.uaByPlat == nil {
+		e.uaByPlat = map[string]string{}
+	}
+	e.uaByPlat[key] = ua
+	return ua
+}

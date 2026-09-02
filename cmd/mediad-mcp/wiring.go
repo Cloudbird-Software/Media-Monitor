@@ -51,3 +51,14 @@ func uaPoolUserAgents() []string {
 	fmt.Fprintf(os.Stderr, "mediad-mcp: ua pool: %d user-agents loaded from %s\n", len(doc.UAs), path)
 	return doc.UAs
 }
+
+// sessionUAPool loads the UA pool for engine session pinning (one UA per
+// cookie lifetime, report B2/B3). Not a gate: nil falls back to a
+// deterministic real-Chrome UA inside the engine.
+func sessionUAPool() *accounts.UAPool {
+	pool, err := accounts.LoadUAPoolDefault(os.Getenv("MEDIAMON_UA_POOL"))
+	if err != nil || pool == nil {
+		return nil
+	}
+	return pool
+}

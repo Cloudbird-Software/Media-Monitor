@@ -53,6 +53,10 @@ type Context struct {
 	// contract transport.headers; empty map = engine sends no browser
 	// defaults (legacy behavior).
 	BrowserHeaders map[string]map[string]string
+	// UAPool supplies the session-pinned User-Agents (one UA per cookie
+	// lifetime; nil = a deterministic real-Chrome fallback). Wire with
+	// accounts.LoadUAPoolDefault (MEDIAMON_UA_POOL override).
+	UAPool *accounts.UAPool
 }
 
 // Engine executes contracts. Safe for concurrent use once built.
@@ -74,8 +78,9 @@ type Engine struct {
 	sleepHook   func() time.Duration          // test seam: replaces the random sample
 	browserHdrs map[string]map[string]string  // platform -> browser default headers
 	sess        *sessionCache                 // cookie-jar clients per identity (shared across clones)
+	uaPool      *accounts.UAPool              // session-pinned UA source (browserhdr.go)
 	uaMu        sync.Mutex
-	uaByPlat    map[string]string // platform -> pinned session UA (uapool binding)
+	uaByPlat    map[string]string // sessionKey -> pinned session UA (binding: 1 UA per cookie lifetime)
 }
 
 // New builds an Engine from its wiring context.
@@ -97,6 +102,7 @@ func New(ctx Context) *Engine {
 		pacingRand:  newPacingRand(),
 		browserHdrs: ctx.BrowserHeaders,
 		sess:        newSessionCache(),
+		uaPool:      ctx.UAPool,
 		uaByPlat:    map[string]string{},
 	}
 	if ctx.HTTP != nil {

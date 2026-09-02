@@ -586,15 +586,16 @@ func collectEngine(o *collectOptions) (*collect.Engine, error) {
 		return nil, err
 	}
 	eng := collect.New(collect.Context{
-		Registry:      reg,
-		HTTP:          sharedHTTPClient(),
-		Obs:           obs.NewCounterMap(),
-		Signers:       signers,
-		Cookies:       cookies,
-		Names:         names,
-		Accounts:      pool,
-		AccountID:     o.account,
+		Registry:       reg,
+		HTTP:           sharedHTTPClient(),
+		Obs:            obs.NewCounterMap(),
+		Signers:        signers,
+		Cookies:        cookies,
+		Names:          names,
+		Accounts:       pool,
+		AccountID:      o.account,
 		BrowserHeaders: browserHeaderDefaults(),
+		UAPool:         sessionUAPool(),
 	})
 	return eng, nil
 }

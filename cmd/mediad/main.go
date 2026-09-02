@@ -244,6 +244,7 @@ func (d *daemon) wireAdapt(dataDir string) {
 			kuaishou.Platform: kuaishou.BrowserHeaders(),
 			xhs.Platform:      xhs.BrowserHeaders(),
 		},
+		UAPool: sessionUAPool(),
 	}
 	d.engine = collect.New(d.collectCtx)
 	d.reg = reg

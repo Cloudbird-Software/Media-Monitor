@@ -193,6 +193,7 @@ func newApp(adaptDir, dataDir string) (*app, error) {
 			kuaishou.Platform: kuaishou.BrowserHeaders(),
 			xhs.Platform:      xhs.BrowserHeaders(),
 		},
+		UAPool: sessionUAPool(),
 	}
 	return &app{
 		reg:      reg,

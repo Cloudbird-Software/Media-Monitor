@@ -104,12 +104,14 @@ func (e *Engine) forAccount(accountID string) *Engine {
 	})
 	ne.autoBase = base
 	ne.sleepHook = e.sleepHook
-	// Share the browser header table and the cookie-session cache with the
-	// base engine: rotation clones keep the same header posture, and each
-	// account id keeps its own jar across switches (B1/B3).
+	// Share the browser header table, the cookie-session cache and the UA
+	// pin table with the base engine: rotation clones keep the same header
+	// posture, each account id keeps its own jar AND its own pinned UA
+	// (B1/B2/B3 — a session's UA changes only when the account changes).
 	ne.browserHdrs = e.browserHdrs
 	ne.sess = e.sess
 	ne.uaByPlat = e.uaByPlat
+	ne.uaPool = e.uaPool
 	return ne
 }
 

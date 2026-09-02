@@ -79,3 +79,14 @@ func browserHeaderDefaults() map[string]map[string]string {
 		xhs.Platform:      xhs.BrowserHeaders(),
 	}
 }
+
+// sessionUAPool loads the UA pool for engine session pinning (one UA per
+// cookie lifetime, report B2/B3). Not a gate: nil falls back to a
+// deterministic real-Chrome UA inside the engine.
+func sessionUAPool() *accounts.UAPool {
+	pool, err := accounts.LoadUAPoolDefault(os.Getenv("MEDIAMON_UA_POOL"))
+	if err != nil || pool == nil {
+		return nil
+	}
+	return pool
+}
