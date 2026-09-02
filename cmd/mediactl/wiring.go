@@ -28,6 +28,12 @@ func accountPoolFor(platform, id string) (*accounts.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Silent-scraping fix (report §3 附带): "auto" selects accounts by health
+	// inside the engine — it must pass through instead of failing the
+	// not-found check (auto mode was reachable only via mediad REST before).
+	if id == "auto" {
+		return pool, nil
+	}
 	a, ok := pool.Get(id)
 	if !ok {
 		return nil, fmt.Errorf("account %q not found in pool %s", id, accountsDir())

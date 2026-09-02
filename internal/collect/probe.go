@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
@@ -55,6 +57,11 @@ type probePage struct {
 	status int
 	err    error
 	empty  bool
+	// nextCursor is the response's own next-page cursor (nil when the
+	// contract declares no path or the response carries none).
+	nextCursor any
+	// hasMore mirrors the response's has_more flag when declarable.
+	hasMore bool
 }
 
 // probeFetch executes one contract request through the engine's full
@@ -80,7 +87,20 @@ func (e *Engine) probeFetch(ctx context.Context, c *contracts.Contract, pathPara
 	if err := json.Unmarshal(resp, &doc); err != nil || doc == nil {
 		return probePage{status: status, err: fmt.Errorf("response not a JSON object")}
 	}
-	return probePage{status: status, empty: bindingEmpty(c, doc)}
+	pg := probePage{status: status, empty: bindingEmpty(c, doc)}
+	if c.Paging.NextCursorPath != "" {
+		if p, err := contracts.ParsePath(c.Paging.NextCursorPath); err == nil {
+			pg.nextCursor = p.First(doc)
+		}
+	}
+	if c.Paging.HasMorePath != "" {
+		if p, err := contracts.ParsePath(c.Paging.HasMorePath); err == nil {
+			if v := p.First(doc); v != nil {
+				pg.hasMore = asBool(v)
+			}
+		}
+	}
+	return pg
 }
 
 // ProbeAccount walks the probe contract for one account and classifies the
@@ -123,12 +143,21 @@ func (e *Engine) ProbeAccount(ctx context.Context, platform, contract string, pa
 	p1 := e.probeFetch(ctx, c, params, nil)
 	walk.Page1Status, walk.Page1Err, walk.Page1Empty = p1.status, p1.err, p1.empty
 	if p1.err == nil && !p1.empty {
-		if c.Paging.NextCursorPath != "" {
+		if c.Paging.NextCursorPath != "" && p1.hasMore {
 			walk.DepthChecked = true
-			// depth check: re-run the fetch with the paging cursor forced to
-			// a second-page position — a half-dead cookie answers 200 + empty
-			// here while page 1 still looked alive (f2 #435).
-			p2 := e.probeFetch(ctx, c, params, map[string]string{c.Paging.CursorParam: probeDepthCursor})
+			// Depth check (f2 #435, silent-scraping fix): re-run the fetch at
+			// the REAL second-page position — the cursor page 1 itself
+			// returned. The old hardcoded probeDepthCursor="20" fabricated an
+			// illegal cursor for opaque-id schemes (xhs note ids), so page 2
+			// was ALWAYS empty and healthy accounts were misjudged expired.
+			// A half-dead cookie answers 200 + empty here while page 1 still
+			// looked alive. No usable cursor from the response → fall back to
+			// the configurable marker (MEDIAMON_PROBE_DEPTH_CURSOR, "20").
+			depth := probeDepthCursorFallback()
+			if s := asStr(p1.nextCursor); s != "" {
+				depth = s
+			}
+			p2 := e.probeFetch(ctx, c, params, map[string]string{c.Paging.CursorParam: depth})
 			walk.Page2Status, walk.Page2Err, walk.Page2Empty = p2.status, p2.err, p2.empty
 		}
 	}
@@ -136,11 +165,16 @@ func (e *Engine) ProbeAccount(ctx context.Context, platform, contract string, pa
 	return ProbeOutcome{Health: h, Detail: detail, CheckedAt: time.Now().Unix()}, nil
 }
 
-// probeDepthCursor is the page-2 position marker: most cursor schemes treat
-// a non-zero numeric cursor as "resume deep"; for offset-style params this
-// skips the first page; for max_cursor-style params the platform returns
-// the tail window. It is a depth probe, not a data fetch.
-const probeDepthCursor = "20"
+// probeDepthCursorFallback is the page-2 position marker used ONLY when the
+// page-1 response carries no usable next cursor: most cursor schemes treat
+// a non-zero numeric cursor as "resume deep". Configurable via
+// MEDIAMON_PROBE_DEPTH_CURSOR (default "20").
+func probeDepthCursorFallback() string {
+	if v := strings.TrimSpace(os.Getenv("MEDIAMON_PROBE_DEPTH_CURSOR")); v != "" {
+		return v
+	}
+	return "20"
+}
 
 // bindingEmpty reports whether the contract's primary list binding is
 // missing or empty in a 2xx document (the 200+empty-body half-dead-cookie

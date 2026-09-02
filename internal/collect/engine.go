@@ -75,10 +75,10 @@ type Engine struct {
 	pacing      PacingConfig                  // inter-page think time (pacing.go)
 	pacingMu    sync.Mutex
 	pacingRand  *rand.Rand
-	sleepHook   func() time.Duration          // test seam: replaces the random sample
-	browserHdrs map[string]map[string]string  // platform -> browser default headers
-	sess        *sessionCache                 // cookie-jar clients per identity (shared across clones)
-	uaPool      *accounts.UAPool              // session-pinned UA source (browserhdr.go)
+	sleepHook   func() time.Duration         // test seam: replaces the random sample
+	browserHdrs map[string]map[string]string // platform -> browser default headers
+	sess        *sessionCache                // cookie-jar clients per identity (shared across clones)
+	uaPool      *accounts.UAPool             // session-pinned UA source (browserhdr.go)
 	uaMu        sync.Mutex
 	uaByPlat    map[string]string // sessionKey -> pinned session UA (binding: 1 UA per cookie lifetime)
 }
@@ -223,6 +223,13 @@ func fillPath(path string, pathParams map[string]string) (string, map[string]str
 // cookie/static headers, and the POST JSON body.
 func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams, query map[string]string) (string, map[string]string, []byte, error) {
 	for _, p := range c.Transport.Placeholders {
+		// Replies contracts with an explicit reply_target_param carry the
+		// top-level comment id under that name instead (silent-scraping
+		// t10) — the legacy "comment_id" gate is satisfied by proxy.
+		// TODO-C线: 默认名与适配契约的最终对齐见 CommentReplies 注释。
+		if p == "comment_id" && c.Transport.ReplyTargetParam != "" {
+			continue
+		}
 		if pathParams[p] == "" {
 			return "", nil, nil, fmt.Errorf("collect %s: required placeholder %q not provided", c.Name, p)
 		}
@@ -520,10 +527,29 @@ func (e *Engine) nextCursor(c *contracts.Contract, doc map[string]any, cur model
 					nxt.Source = map[string]any{}
 				}
 				nxt.Source["cursor"] = v
+				// Sentinel (report item 11): platforms terminate cursored
+				// walks with an explicit end marker (kuaishou "no_more").
+				// The old code only stopped because the numeric-string
+				// coincidence made asBool false — recognize the sentinel
+				// explicitly instead of relying on the accident.
+				if s, ok := v.(string); ok && isCursorSentinel(s) {
+					nxt.HasMore = false
+				}
 			}
 		}
 	}
 	return nxt
+}
+
+// cursorSentinels are the explicit end-of-list markers platforms embed in
+// the next-cursor field (case-insensitive).
+var cursorSentinels = map[string]bool{
+	"no_more": true,
+}
+
+// isCursorSentinel reports whether a cursor value is an explicit end marker.
+func isCursorSentinel(v string) bool {
+	return cursorSentinels[strings.ToLower(strings.TrimSpace(v))]
 }
 
 // fetchPages runs the pagination loop for one contract: cursor and count
@@ -610,9 +636,16 @@ func (e *Engine) ItemComments(ctx context.Context, platform, itemID string, cur 
 }
 
 // CommentReplies collects the replies of one top-level comment, paginated.
-// The comment id travels as the contract's primary placeholder (comment_id);
-// the item id is forwarded as a static query param (aweme_id) when the
-// contract declares it.
+// The comment id travels as the contract's reply-target parameter — the
+// explicit transport.reply_target_param when declared, else the first
+// placeholder (comment_id); the item id is forwarded as a static query param
+// (aweme_id) when the contract declares it.
+//
+// Silent-scraping (report t10): xhs sub-comments need a different parameter
+// name than the engine default; the contract can now declare it. The default
+// stays the legacy name until the A-line corpus verdict lands.
+// TODO-C线: xhs 子评论参数名（comment_id vs root_comment_id）待 A 线语料
+// 裁决后由 C 线在适配契约设置 reply_target_param 对齐。
 func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid string, cur model.Cursor, limit int) ([]model.Comment, model.Cursor, error) {
 	name, err := e.resolveName(platform, "replies")
 	if err != nil {
@@ -622,7 +655,11 @@ func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid strin
 	if !ok {
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
-	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "comment_id"): cid}, nil, cur, limit)
+	replyParam := c.Transport.ReplyTargetParam
+	if replyParam == "" {
+		replyParam = firstPlaceholder(c, "comment_id")
+	}
+	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{replyParam: cid}, nil, cur, limit)
 	cmts := make([]model.Comment, 0, len(recs))
 	for _, r := range recs {
 		cmts = append(cmts, bindComment(c, r))

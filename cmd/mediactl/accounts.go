@@ -12,10 +12,12 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/collect"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/kuaishou"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/signclient"
 )
 
 // bytesReader returns a *bytes.Reader over raw (cookie import helpers take
@@ -270,6 +272,10 @@ func accountsProbe(args []string) error {
 
 // probeEngine builds a collect engine bound to one pool account: the
 // probe's requests ride that account's own cookie/proxy/UA (W4-C1 AC-5).
+// Silent-scraping fix (report §3 defect): Signers are injected exactly like
+// collectEngine — without them every signature-required contract (dy
+// a_bogus) fail-closed at buildURL and the probe NEVER went on the wire,
+// misjudging healthy accounts as expired.
 func probeEngine(reg *contracts.Registry, pool *accounts.Pool, accountID string) *collect.Engine {
 	cdir := filepath.Join(adaptDir(), "contracts")
 	names := map[string]map[string]string{}
@@ -279,6 +285,13 @@ func probeEngine(reg *contracts.Registry, pool *accounts.Pool, accountID string)
 	names[douyin.Platform] = dou.Names
 	names[kuaishou.Platform] = ks.Names
 	names[xhs.Platform] = xh.Names
+	signers := map[string]httpclient.Signer{}
+	if u := os.Getenv("MEDIAMON_SIGNER_URL"); u != "" {
+		sc := signclient.New(signclient.Config{BaseURL: u, Token: os.Getenv("MEDIAMON_SIGNER_TOKEN")})
+		for _, p := range []string{douyin.Platform, kuaishou.Platform, xhs.Platform} {
+			signers[p] = sc
+		}
+	}
 	return collect.New(collect.Context{
 		Registry:       reg,
 		HTTP:           sharedHTTPClient(),
@@ -288,5 +301,6 @@ func probeEngine(reg *contracts.Registry, pool *accounts.Pool, accountID string)
 		AccountID:      accountID,
 		BrowserHeaders: browserHeaderDefaults(),
 		UAPool:         sessionUAPool(),
+		Signers:        signers,
 	})
 }

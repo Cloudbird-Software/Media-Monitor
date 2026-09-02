@@ -9,16 +9,16 @@ package kuaishou
 // kuaishou request (contract transport.headers still override these values).
 func BrowserHeaders() map[string]string {
 	return map[string]string{
-		"Accept":           "application/json",
-		"Accept-Language":  "zh-CN,zh;q=0.9",
-		"Accept-Encoding":  "gzip, deflate",
-		"Referer":          "https://www.kuaishou.com/",
-		"Origin":           "https://www.kuaishou.com",
-		"Cache-Control":    "no-cache",
-		"Pragma":           "no-cache",
-		"Connection":       "keep-alive",
-		"Sec-Fetch-Dest":   "empty",
-		"Sec-Fetch-Mode":   "cors",
-		"Sec-Fetch-Site":   "same-origin",
+		"Accept":          "application/json",
+		"Accept-Language": "zh-CN,zh;q=0.9",
+		"Accept-Encoding": "gzip, deflate",
+		"Referer":         "https://www.kuaishou.com/",
+		"Origin":          "https://www.kuaishou.com",
+		"Cache-Control":   "no-cache",
+		"Pragma":          "no-cache",
+		"Connection":      "keep-alive",
+		"Sec-Fetch-Dest":  "empty",
+		"Sec-Fetch-Mode":  "cors",
+		"Sec-Fetch-Site":  "same-origin",
 	}
 }

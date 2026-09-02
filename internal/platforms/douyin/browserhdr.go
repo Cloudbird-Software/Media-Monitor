@@ -15,15 +15,15 @@ package douyin
 // top, derived from the pinned UA by the engine.
 func BrowserHeaders() map[string]string {
 	return map[string]string{
-		"Accept":           "application/json, text/plain, */*",
-		"Accept-Language":  "zh-CN,zh;q=0.9",
-		"Accept-Encoding":  "gzip, deflate",
-		"Referer":          "https://www.douyin.com/",
-		"Cache-Control":    "no-cache",
-		"Pragma":           "no-cache",
-		"Priority":         "u=1, i",
-		"Sec-Fetch-Dest":   "empty",
-		"Sec-Fetch-Mode":   "cors",
-		"Sec-Fetch-Site":   "same-origin",
+		"Accept":          "application/json, text/plain, */*",
+		"Accept-Language": "zh-CN,zh;q=0.9",
+		"Accept-Encoding": "gzip, deflate",
+		"Referer":         "https://www.douyin.com/",
+		"Cache-Control":   "no-cache",
+		"Pragma":          "no-cache",
+		"Priority":        "u=1, i",
+		"Sec-Fetch-Dest":  "empty",
+		"Sec-Fetch-Mode":  "cors",
+		"Sec-Fetch-Site":  "same-origin",
 	}
 }
