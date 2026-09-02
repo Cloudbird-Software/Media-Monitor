@@ -21,7 +21,7 @@ testlab/oracle-lite/
 ├── synth_api.py           合成站 API 服务（改：默认路径指向包内、端口独立段 876x）
 ├── synthgen/              合成数据生成器（整包自包含）
 │   ├── generator.py       生成 CLI（种子化可复现）
-│   ├── validate.py        数据集验收自测（54 项检查）
+│   ├── validate.py        数据集验收自测（68 项检查）
 │   ├── render.py          契约形态响应组装（synth_api 的渲染层）
 │   ├── sites/ data/ distributions.yaml ...
 │   └── datasets/          预生成迷你数据集（300 条/站，seed=20260902）
@@ -35,7 +35,7 @@ testlab/oracle-lite/
 
 ### 第 1 步：生成（或复用）迷你数据集
 
-包内已预生成（300 条/站，固定种子，`validate.py` 验收 54/54 全绿）；重生成：
+包内已预生成（300 条/站，固定种子，`validate.py` 验收 68/68 全绿）；重生成：
 
 ```bash
 cd testlab/oracle-lite
@@ -43,8 +43,31 @@ python synthgen/generator.py --site all --count 300 --seed 20260902 --with-index
 python synthgen/validate.py --datasets-dir synthgen/datasets --repro-count 300
 ```
 
-体积口径：douyin ≈2.6MB / xhs ≈4.6MB / kuaishou ≈1.4MB（含 index.db 与
+体积口径：douyin ≈2.6MB / xhs ≈4.8MB / kuaishou ≈1.4MB（含 index.db 与
 ground_truth.db）。同种子重生成逐字节一致（repro.same_seed 检查项）。
+
+### 本数据集体现的修复点（红队第 5 轮同步）
+
+本包的 synthgen / synth_api / pages 已同步**红队第 5 轮修复**（R5A/R5B/R5C，
+2026-09-03），迷你数据集（300 条/站、seed 20260902）与 validate 68 项检查
+直接体现以下前后对照：
+
+| 修复项 | 旧实现（同步前） | 本数据集 |
+|---|---|---|
+| R5A-P1-1 作者池长尾 | 300 条仅 ~35 个不同作者、top1 占 55%（旧 Zipf(1.8) 幂律） | 300 条 260/254/260 个不同作者（dy/xhs/ks）、top1 ≤2.3%；完整台架 10 万条/站为 11711/11788 个、top1 ≤1.02%（组合昵称池 ~3 万、长尾作品数 + 头部份额上限） |
+| R5A-P1-2 评论零重复 | 单视频 20 条评论仅 12 种文本、8 组一字不差 | 评论文本模板×槽位组合生成（commentext.py）：抽样的单内容窗口 0 完全重复（xhs 全量嵌入 ~0.3%，仍在语料 98% 唯一率口径内） |
+| R5A-P2-2 ks 评论计数 | commentCountV2 全集 {0..21}、62% 零评论（误用 us_c） | us_c 恒 0（语料 100/100）；commentCountV2 独立对数正态，抽样中位 1499（语料中位 1544、区间 [51,28863]） |
+| R5A-P2-5 评论者可回查 | 评论用户 → 作者主页 5/5 断链 | 抽样 772/513/800 条评论的评论者 0 断链、昵称跨端点一致 |
+| R5B-P1 dy 作者主页 | SSR works 恒空、无作品/喜欢 tab | /user/<sec_uid> SSR works/like_works 非空、「作品/喜欢」tab 可用 |
+| R5C-P2-1 错误卫生 | POST body 类型非法 → HTTP 500 + Python traceback | 逐端点容错回 200 业务信封（`page:"abc"` 等 → 缺省值），不泄解释器特征 |
+| R5C-P2-2 关键词语义 | 乱码/数字/emoji 词 → 三站空态（与 live 真值相反） | 任意非空关键词按轮转窗口出结果（`qzwkjxvbpq` → 20 卡）；仅空词/越界/count=0 走真站空态族 |
+
+validate 中对应的检查项：`author.longtail` / `author.window_repeat` /
+`comment.window_text_unique` / `comment.commenter_resolvable` /
+`ks.comment_count_dist` / `ks.us_c_always_zero`。其中 `author.longtail` 的
+distinct/top1 阈值按迷你集规模自适应（完整台架 10 万条时与原阈值 ≥5000/≤2%
+等价），`comment.window_text_unique` 的单窗口重复上限按语料唯一率取口径
+（dy 语料 100% 唯一仍要求 0；xhs/ks 语料本身 98%/94%）。
 
 ### 第 2 步：起合成站（三站一次拉起）
 
@@ -109,4 +132,4 @@ go test ./internal/collect -run TestSilentMockChainReport -count=1
    入包前做了形态保持的确定性替换（昵称→通用池、URL 保留 host 扰动路径、
    id/hex/b64 同形扰动、CJK 自由文本→等长通用文案；种子 20260902）。
    清洗只动值不动结构——渲染层（render.py）对 URL/时间/pii/id 类本就在运行时
-   重造，数据集字段经绑定优先透出，故 validate 54/54 与端点冒烟不受影响。
+   重造，数据集字段经绑定优先透出，故 validate 68/68 与端点冒烟不受影响。
