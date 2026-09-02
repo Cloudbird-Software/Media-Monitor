@@ -32,27 +32,62 @@ main{max-width:1180px;margin:18px auto;padding:0 20px}
 .metrics .like-count{color:#e02040}
 .toolbar{display:flex;gap:10px;align-items:center;margin:4px 0 14px}
 .toolbar button.load-more{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer}
+.toolbar button.load-more:disabled{color:#bbb;cursor:default;border-color:#eee}
 .toolbar .status{color:var(--sub);font-size:12px}
+.toolbar .status.retry{color:var(--brand);cursor:pointer;text-decoration:underline}
+.tabs{display:flex;align-items:center;gap:22px;margin:2px 0 14px;border-bottom:1px solid #eee;background:var(--card);border-radius:10px 10px 0 0;padding:0 14px}
+.tabs .tab-item{position:relative;padding:10px 2px;color:#555;cursor:pointer;font-size:14px}
+.tabs .tab-item.active{color:var(--brand);font-weight:600}
+.tabs .tab-item-border{position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--brand);border-radius:2px}
+.filter-tabs{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+.filter-tabs .tab{border:1px solid #e8e8e8;background:#fff;border-radius:14px;padding:4px 14px;font-size:12px;color:#666;cursor:pointer}
+.filter-tabs .tab.active{color:var(--brand);border-color:var(--brand)}
+.channel-list{display:flex;gap:18px;margin:2px 0 14px;list-style:none;flex-wrap:wrap;padding:6px 2px}
+.channel-list li.channel a{color:#666;text-decoration:none;font-size:13px;padding:6px 4px;display:inline-block}
+.channel-list li.channel a.active{color:var(--brand);font-weight:600;border-bottom:2px solid var(--brand)}
 .detail-wrap{display:flex;gap:26px;background:#fff;border-radius:12px;padding:22px;margin-top:6px}
 .detail-cover{width:340px;border-radius:10px;overflow:hidden;flex:none}
 .detail-cover img{width:100%;display:block}
 .detail-main{flex:1}
 .detail-main h1.title{font-size:20px;line-height:1.5;margin-bottom:10px}
-.detail-main .author-wrapper{color:#666;margin-bottom:12px}
+.detail-main .author-wrapper{color:#666;margin-bottom:12px;text-decoration:none;display:inline-block}
 .detail-main .metrics{font-size:15px;color:#444;display:flex;gap:22px;margin:8px 0 14px}
 .detail-main .metrics .like-count{color:#e02040;font-weight:600}
 .comments{margin-top:22px}
 .comments h3{margin:10px 0}
+.comments .comments-count{color:var(--sub);font-size:12px;margin:2px 0 10px}
 .comment-item{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px}
 .comment-item .c-user{color:var(--sub);font-size:12px}
-.comment-item .c-content{margin-top:2px}
+.comment-item .c-content{margin-top:2px;white-space:pre-wrap}
+.comment-item .c-like{color:var(--sub);font-size:12px;margin-top:4px}
+.sub-comments{margin:8px 0 4px 18px;padding-left:12px;border-left:2px solid #f0f0f0}
+.sub-comments .comment-item{background:#fafafa;padding:8px 12px}
+button.expand-replies{border:0;background:none;color:#1c6ed8;font-size:12px;cursor:pointer;padding:6px 0;margin-top:2px}
+button.load-more-comments{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer;margin:8px 0}
+button.load-more-comments:disabled{color:#bbb;cursor:default;border-color:#eee}
+.user-card{width:100%;background:var(--card);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06);text-decoration:none;color:inherit;margin-bottom:12px}
+.user-card .u-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#eee}
+.user-card .u-name{font-size:16px;font-weight:600}
+.user-card .u-meta{color:var(--sub);font-size:12px;margin-top:4px}
+.user-cards{list-style:none;display:block}
 footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
+.note-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:4vh 0}
+.note-modal{background:#fff;border-radius:14px;max-width:920px;width:92%;display:flex;overflow:hidden;position:relative}
+.note-modal .m-media{width:420px;flex:none;overflow:auto;background:#111}
+.note-modal .m-media img{width:100%;display:block}
+.note-modal .m-main{flex:1;padding:20px 24px;min-width:0}
+.note-modal .m-close{position:absolute;right:12px;top:10px;border:0;background:rgba(0,0,0,.05);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:#666}
+.note-modal .m-title{font-size:19px;line-height:1.5;margin:6px 30px 10px 0}
+.note-modal .m-author{color:#666;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px}
+.note-modal .m-metrics{display:flex;gap:18px;color:var(--sub);font-size:13px;margin-bottom:10px}
+.note-modal .m-metrics .like-count{color:#e02040}
+.profile-tabs{display:flex;gap:34px;border-bottom:1px solid #eee;margin:6px 0 16px}
+.profile-tabs .p-tab{padding:10px 2px;color:#555;cursor:pointer;font-size:15px;position:relative}
+.profile-tabs .p-tab.active{color:var(--brand);font-weight:600}
+.profile-tabs .p-tab .p-tab-count{color:var(--sub);font-size:12px;margin-left:4px}
+.profile-tabs .p-tab.active:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand)}
 </style>
-<!-- DOM structure cross-check against reference sample
-      搜索框：'search-input' 出现 1 次
-      卡片：'note-item' 出现 30 次
-      标题：'title' 出现 31 次
-      feed 容器：'exploreFeeds' 出现 1 次 -->
+<!-- 结构来源：脱敏 DOM 样本缺失(xhs/xhs_search_notes/sample_0001/page_dom.html)，骨架按契约字段生成 -->
 <script>window.__INITIAL_STATE__=/*__STATE__*/null;</script>
 </head>
 <body>
@@ -69,9 +104,9 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
   <div class="toolbar">
     <button class="load-more" id="loadMoreBtn" type="button">加载更多</button>
     <span class="status" id="loadStatus">初始化…</span>
-    <span class="status">卡片数：<span id="cardCount">0</span></span>
   </div>
-  <div id="exploreFeeds" class="feeds-container cards" data-keyword=""></div>
+<div class="filter-tabs" id="filterTabs"><button type="button" class="tab active" aria-details="综合">综合</button><button type="button" class="tab" aria-details="北京">北京</button><button type="button" class="tab" aria-details="上海">上海</button><button type="button" class="tab" aria-details="广东">广东</button><button type="button" class="tab" aria-details="浙江">浙江</button><button type="button" class="tab" aria-details="江苏">江苏</button><button type="button" class="tab" aria-details="四川">四川</button><button type="button" class="tab" aria-details="湖北">湖北</button></div>
+<div id="exploreFeeds" class="feeds-container cards" data-keyword=""></div>
   <div class="toolbar"><button class="load-more" id="loadMoreBtn2" type="button">加载更多</button></div>
 
 </main>
@@ -86,52 +121,81 @@ function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60
 function coverUrl(seed,label,w,h){return '/sns-webpic/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
 function contEl(){return document.querySelector('.cards');}
-/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError，红队修复复测暴露） */
-function setStatus(t){var e=document.getElementById('loadStatus');if(e)e.textContent=t;}
-var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0};
+/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError）。
+   红队 R5B-P3-3：失败态可点重试（class=retry + role=button，不再渲染 JS 异常原文）。 */
+function setStatus(t,retry){var e=document.getElementById('loadStatus');if(!e)return;
+  e.textContent=t||'';e.className='status'+(retry?' retry':'');e.setAttribute('role',retry?'button':'');
+  if(retry){e.onclick=function(){loadMore&&loadMore();};}else{e.onclick=null;}}
+var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0,type:'general'};
+var SEARCH_TYPE='general';   /* dy 搜索页按 ?type= 覆写（R5B-P2-3 频道分流） */
 
 var PS=20;
-function detailUrl(f){return '/explore/'+enc(f.id);}
+function detailUrl(f){return ('/search_result/'+enc(f.id)+'?xsec_token='+enc(f.xsec||'')+'&xsec_source=');}
 var BRAND="小红书";
-function fields(w){var n=w.note;var ii=n.interact_info||{};return {id:w.id, title:n.display_title||'(无标题)', like:str(ii.liked_count), play:'', comment:str(ii.comment_count), collect:str(ii.collected_count), author:(n.user&&n.user.nickname)||'', xsec:w.xsec, dur:0};}
+function fields(w){var n=w.note;var ii=n.interact_info||{};return {id:w.id, title:n.display_title||'(无标题)', like:str(ii.liked_count), play:'', comment:str(ii.comment_count), collect:str(ii.collected_count), author:(n.user&&n.user.nickname)||'', uid:(n.user&&n.user.user_id)||'', images:(n.image_list||[]).length, xsec:w.xsec, dur:0};}
 
 function fetchPage(kw){
   var url = '/api/sns/web/v2/search/notes';
   var body={keyword:kw, page:state.page, page_size:PS, search_id:state.searchId||'', sort:'general', note_type:0, ext_flags:[], geo:'', image_formats:['jpg','webp','avif'], message_id:'sending', session_id:uuid(), filters:[{tags:['time_descending'],type:'sort_type'},{tags:['不限'],type:'filter_note_type'}]};// 12 必填项全量（含 filters，QA P3-R2-1 兜底口径）
   return fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
     body:JSON.stringify(body)}).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status+' @ '+url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   });
 }
 
+/* R5B-P3-3：删除调试计数文案；R5B-P3-5：翻尽后按钮禁用。 */
+function setDone(done){
+  state.done=!!done;
+  ['loadMoreBtn','loadMoreBtn2'].forEach(function(id){
+    var b=document.getElementById(id); if(!b)return; b.disabled=!!done;
+  });
+}
 function renderCards(items, append){
   var cont=contEl();
   if(!append){cont.innerHTML='';}
   cont.setAttribute('data-keyword', state.keyword);
-  items.forEach(function(w){ cont.appendChild(cardNode(fields(w))); });
-  document.getElementById('cardCount').textContent=cont.children.length;
+  items.forEach(function(w){
+    var f=fields(w);
+    if(state.type==='user'&&DY_USER_MODE){cont.appendChild(userCardNode(f));}  /* dy 用户频道 */
+    else{cont.appendChild(cardNode(f));}
+  });
+}
+var DY_USER_MODE=false;
+var _seenSec={};   /* dy 用户 tab：按 sec_uid 去重（跨页聚合作者） */
+function renderItems(raw, append){
+  var cont=contEl();
+  if(typeof rememberNotes==='function'){rememberNotes(raw);}  /* xhs：条目数据入模态缓存 */
+  if(DY_USER_MODE&&state.type==='user'){
+    if(!append){cont.innerHTML='';_seenSec={};}
+    raw.forEach(function(a){
+      var f=fields(a); if(!f.sec||_seenSec[f.sec])return; _seenSec[f.sec]=1;
+      cont.appendChild(userCardNode(f));
+    });
+    return;
+  }
+  renderCards(raw, append);
 }
 function loadMore(){
   if(state.loading||state.done) return;
-  var myseq=state.seq;               // 代际守卫：过期响应（换词瞬间）直接丢弃
+  var myseq=state.seq;               /* 代际守卫：过期响应（换词瞬间）直接丢弃 */
   state.loading=true; setStatus('加载中…');
   fetchPage(state.keyword).then(function(resp){
-    if(myseq!==state.seq){return;}   // 已发起新搜索，本页作废
+    if(myseq!==state.seq){return;}   /* 已发起新搜索，本页作废 */
     var items=(resp.data.items||[]).filter(function(it){return it.model_type==='note';}).map(function(it){return {note:it.note_card, id:it.id, xsec:it.xsec_token||''};});
-    renderCards(items, true);
+    renderItems(items, true);
     var more=resp.data.has_more;
     state.page += 1;;
-    if(!more){state.done=true;setStatus('没有更多了');}
-    else setStatus('已加载 '+contEl().children.length+' 条');
-  }).catch(function(e){if(myseq===state.seq)setStatus('加载失败: '+e.message)})
+    if(!more){setDone(true);setStatus('没有更多了');}
+    else setStatus('');
+  }).catch(function(e){if(myseq===state.seq)setStatus('加载失败，点击重试',true)})
     .then(function(){if(myseq===state.seq)state.loading=false});
 }
 function doSearch(kw){
-  state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1};
-  document.title=kw+' - '+BRAND;   /* 红队 R3-P1-3：搜索页 title 对齐真站「<kw> - <品牌>」形态 */
+  state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1,type:SEARCH_TYPE||'general'};
+  document.title=kw+' - 小红书搜索';   /* R5B-P3-2 title 形态表：dy 静态、xhs/ks 关键词态 */
+  setDone(false);
   var cont=contEl(); cont.innerHTML=''; cont.setAttribute('data-keyword',kw);
-  document.getElementById('cardCount').textContent='0';
   loadMore();
 }
 /* 红队 R2-P2-6：滚动到底自动加载下一页（真站无限滚动；按钮保留兜底）。
@@ -155,8 +219,201 @@ function initSearch(){
   document.querySelector('.search-button,button[data-e2e="searchbar-button"]').addEventListener('click',function(){
     var v=(document.getElementById('searchInput')||document.querySelector('input')).value.trim()||"美食探店";
     location.href='/search_result?keyword='+enc(v);});
-  var kw0=(function(){var q=new URLSearchParams(location.search);if(q.has('keyword'))return q.get('keyword');if(q.has('searchKey'))return q.get('searchKey');var m=location.pathname.match(/^\/search\/(.+)$/);if(m){try{return decodeURIComponent(m[1])}catch(e){return m[1]}}return "美食探店";})();
+  var kw0=(function(){var q=new URLSearchParams(location.search);if(q.has('keyword'))return q.get('keyword');if(q.has('searchKey'))return q.get('searchKey');var m=location.pathname.match(/^\/(?:search|jingxuan\/search)\/(.+)$/);if(m){try{return decodeURIComponent(m[1])}catch(e){return m[1]}}return "美食探店";})();
   doSearch(kw0);
+}
+
+/* R5B-P2-3：筛选 tab（综合/地域）激活态切换 */
+(function(){
+  var tabs=document.querySelectorAll('#filterTabs .tab');
+  tabs.forEach(function(x){
+    x.addEventListener('click',function(){
+      tabs.forEach(function(y){y.className='tab'});
+      x.className='tab active';
+    });
+  });
+})();
+/* R5B-P2-4：搜索卡 /search_result/<id> 模态承载——点击开模态（pushState），
+   back 关模态（popstate），不重拉 page1（无导航 = 无重请求）。 */
+var _modalOpen=null;
+function closeModal(){
+  var m=document.getElementById('noteModalMask');
+  if(m)m.parentNode.removeChild(m);
+  _modalOpen=null;
+}
+window.addEventListener('popstate',function(){ closeModal(); });
+function noteModalHtml(f){
+  var n=f.note||{};
+  var mask=el('div','note-modal-mask'); mask.id='noteModalMask';
+  var modal=el('div','note-modal'); modal.id='noteModal';
+  var media=el('div','m-media');
+  ((n.image_list||[]).length?n.image_list:[{}]).forEach(function(im){
+    var u='';
+    ((im.info_list||[]).forEach(function(info){if(info.image_scene==='WB_DFT')u=info.url||u;}));
+    var img=new Image(); img.alt=n.display_title||'';
+    img.src=u||coverUrl(f.id,(n.display_title||'').slice(0,2),660,880);
+    media.appendChild(img);
+  });
+  var main=el('div','m-main');
+  var close=el('button','m-close','×'); close.setAttribute('aria-label','关闭');
+  close.onclick=function(){ if(history.state&&history.state.noteModal){history.back();} else {closeModal();} };
+  main.appendChild(close);
+  main.appendChild(el('div','m-title',n.display_title||'(无标题)'));
+  var au=el('a','m-author',((n.user&&n.user.nickname)||'')+' · 关注');
+  au.href='/user/profile/'+enc((n.user&&n.user.user_id)||'');
+  main.appendChild(au);
+  var ii=n.interact_info||{};
+  var m=el('div','m-metrics');
+  m.appendChild(el('span','like-count','点赞 '+fmt(ii.liked_count)));
+  m.appendChild(el('span','comment-count','评论 '+fmt(ii.comment_count)));
+  m.appendChild(el('span','collected-count','收藏 '+fmt(ii.collected_count)));
+  main.appendChild(m);
+  var cw=el('div','comments');
+  cw.appendChild(el('h3',null,'全部评论'));
+  var cc=el('div','comments-count','共 <span class="m-cmt-total">'+fmt(ii.comment_count)+'</span> 条评论');
+  cw.appendChild(cc);
+  var list=el('div','comment-list'); cw.appendChild(list);
+  var moreBtn=el('button','load-more-comments','加载更多评论');
+  cw.appendChild(moreBtn);
+  main.appendChild(cw);
+  modal.appendChild(media); modal.appendChild(main); mask.appendChild(modal);
+  mask.addEventListener('click',function(ev){if(ev.target===mask)close.onclick();});
+  return mask;
+}
+function openNoteModal(f, fromEntity){
+  closeModal();
+  var mask=noteModalHtml(f);
+  document.body.appendChild(mask);
+  _modalOpen=f.id;
+  /* 评论翻页链（xhs cursor id 链）+ 楼中楼展开（R5B-P2-1/P2-2 同详情页口径） */
+  var mc={cursor:'',done:false,loading:false};
+  var list=mask.querySelector('.comment-list');
+  var moreBtn=mask.querySelector('.load-more-comments');
+  function loadCmts(){
+    if(mc.done||mc.loading)return; mc.loading=true; moreBtn.disabled=true;
+    fetch('/api/sns/web/v2/comment/page?note_id='+enc(f.id)+'&cursor='+enc(mc.cursor)
+      +'&top_comment_id=&image_formats=jpg,webp,avif&xsec_token='+enc(f.xsec||''))
+      .then(function(r){return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))})
+      .then(function(resp){
+        var d=(resp&&resp.data)||{};
+        (d.comments||[]).forEach(function(c){list.appendChild(xhsCommentRow(c,f.id,f.xsec));});
+        mc.cursor=d.cursor||''; mc.done=!d.has_more;
+        moreBtn.disabled=mc.done; moreBtn.textContent=mc.done?'没有更多评论':'加载更多评论';
+        mc.loading=false;
+      }).catch(function(){mc.loading=false;moreBtn.disabled=false;});
+  }
+  moreBtn.onclick=loadCmts;
+  loadCmts();
+  if(!fromEntity){
+    try{ history.pushState({noteModal:1},'',detailUrl(f)); }catch(e){}  /* 协议受限环境降级：仅内存开模态 */
+  }
+}
+/* 卡片点击 → 模态（拦截整页跳转；href 保持真站 /search_result/<id> 形态） */
+function bindCardModal(){
+  document.addEventListener('click',function(ev){
+    var a=ev.target.closest&&ev.target.closest('a.card-link, a.title');
+    if(!a)return;
+    var m=(a.getAttribute('href')||'').match(/^\/search_result\/([0-9a-fA-F]+)/);
+    if(!m)return;
+    var id=m[1];
+    var sec=a.closest('[data-id]');
+    var f=window.__noteCache&&window.__noteCache[id];
+    if(f){ev.preventDefault(); openNoteModal(f,false); }
+  });
+}
+window.__noteCache={};
+function rememberNotes(raw){raw.forEach(function(w){if(w&&w.id)window.__noteCache[w.id]=w;});}
+/* 直开 /search_result/<id>（synth_api SSR entity）→ 搜索列表加载后自动开模态 */
+function maybeAutoOpenModal(){
+  var m=location.pathname.match(/^\/search_result\/([0-9a-fA-F]+)$/);
+  var st=window.__INITIAL_STATE__;
+  if(!m||!(st&&st.entity))return;
+  var e=st.entity, nc=e.note_card||{};
+  var f={id:e.id, xsec:(nc.xsec_token)||'', note:nc};
+  openNoteModal(f,true);
+}
+
+/* xhs：comment/page cursor id 链；面板「共 loaded/total 条评论」（total=interact 声称） */
+function xhsCommentRow(c,noteId,xsec){
+  var it=el('div','comment-item'); it.setAttribute('data-cid',c.id||'');
+  it.appendChild(el('div','c-user',((c.user_info&&c.user_info.nickname)||'匿名')
+    +(c.ip_location?(' · '+c.ip_location):'')));
+  it.appendChild(el('div','c-content',c.content||''));
+  it.appendChild(el('div','c-like like-count','赞 '+fmt(c.like_count)));
+  var n=parseInt(c.sub_comment_count||0,10);
+  if(n>0){   /* R5B-P2-2：展开 N 条回复（sub/page 端点） */
+    var btn=el('button','expand-replies','展开'+n+'条回复');
+    btn.setAttribute('data-cid',c.id||'');
+    btn.onclick=function(){xhsExpandReplies(btn,noteId,xsec);};
+    it.appendChild(btn);
+  }
+  return it;
+}
+function xhsExpandReplies(btn,noteId,xsec){
+  var rid=btn.getAttribute('data-cid');
+  var box=el('div','sub-comments');
+  btn.parentNode.insertBefore(box,btn.nextSibling);
+  btn.disabled=true; btn.textContent='展开中…';
+  function page(cursor){
+    fetch('/api/sns/web/v2/comment/sub/page?note_id='+enc(noteId)
+      +'&root_comment_id='+enc(rid)+'&num=10&cursor='+enc(cursor||'')
+      +'&image_formats=jpg,webp,avif&top_comment_id=&xsec_token='+enc(xsec||''))
+      .then(function(r){return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))})
+      .then(function(resp){
+        var d=(resp&&resp.data)||{};
+        (d.comments||[]).forEach(function(sc){
+          var it=el('div','comment-item');
+          var who=((sc.user_info&&sc.user_info.nickname)||'匿名');
+          var t=(sc.target_comment&&sc.target_comment.user_info&&sc.target_comment.user_info.nickname);
+          it.appendChild(el('div','c-user',who+(t?(' 回复 '+t):'')));
+          it.appendChild(el('div','c-content',sc.content||''));
+          it.appendChild(el('div','c-like like-count','赞 '+fmt(sc.like_count)));
+          box.appendChild(it);
+        });
+        if(d.has_more&&d.cursor){page(d.cursor);}
+        else{btn.parentNode&&btn.parentNode.removeChild(btn);}
+      }).catch(function(){btn.disabled=false;btn.textContent='加载失败，点击重试';
+        btn.onclick=function(){xhsExpandReplies(btn,noteId,xsec);};});
+  }
+  page('');
+}
+function initXhsComments(noteId,noteCard){
+  var box=document.getElementById('commentList'); if(!box)return;
+  var btn=document.getElementById('loadCmtBtn');
+  var total=null;
+  try{total=parseInt(((noteCard||{}).interact_info||{}).comment_count,10);}catch(e){}
+  if(total!=null&&!isNaN(total)){
+    var t=document.getElementById('commentCount'); if(t)t.textContent=total;
+  }
+  var c={cursor:'',done:false,loading:false};
+  function load(){
+    if(c.done||c.loading)return; c.loading=true; if(btn)btn.disabled=true;
+    fetch('/api/sns/web/v2/comment/page?note_id='+enc(noteId)+'&cursor='+enc(c.cursor)
+      +'&top_comment_id=&image_formats=jpg,webp,avif&xsec_token=')
+      .then(function(r){return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status))})
+      .then(function(resp){
+        var d=(resp&&resp.data)||{};
+        (d.comments||[]).forEach(function(cm){box.appendChild(xhsCommentRow(cm,noteId,''));});
+        var l=document.getElementById('commentLoaded');
+        if(l)l.textContent=box.children.length;
+        if(total==null||isNaN(total)){
+          var t=document.getElementById('commentCount'); if(t)t.textContent=box.children.length;
+        }
+        c.cursor=d.cursor||''; c.done=!d.has_more;
+        if(btn){btn.disabled=c.done;btn.textContent=c.done?'没有更多评论':'加载更多评论';}
+        c.loading=false;
+      }).catch(function(){c.loading=false;if(btn)btn.disabled=false;});
+  }
+  if(btn)btn.onclick=load;
+  load();
+  var _t=0;
+  window.addEventListener('scroll',function(){
+    var doc=document.documentElement;
+    var h=Math.max(doc.scrollHeight||0,document.body?document.body.scrollHeight||0:0);
+    if(!h||window.scrollY+window.innerHeight<=h-600)return;
+    var now=Date.now(); if(now-_t<1200)return; _t=now;
+    if(!c.done)load();
+  },{passive:true});
 }
 
 function cardNode(f){
@@ -164,7 +421,9 @@ function cardNode(f){
   if(f.xsec){sec.setAttribute('data-xsec-token',f.xsec)}
   var a=el('a','card-link'); a.href=detailUrl(f);
   var cov=el('div','cover');
-  var img=new Image(); img.alt=f.title; img.loading='lazy'; img.src=coverUrl(f.id,f.title.slice(0,2));
+  var img=new Image(); img.alt=f.title; img.loading='lazy';
+  img.width=323; img.height=430;
+  img.src=coverUrl(f.id,f.title.slice(0,2));
   cov.appendChild(img);
   var foot=el('div','card-info footer-box');
   var t=el('a','title'); t.textContent=f.title; t.href=detailUrl(f); foot.appendChild(t);
@@ -176,7 +435,7 @@ function cardNode(f){
   foot.appendChild(m);
   a.appendChild(cov); a.appendChild(foot); sec.appendChild(a); return sec;
 }
-document.addEventListener('DOMContentLoaded', function(){ initSearch();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore; });
+document.addEventListener('DOMContentLoaded', function(){ initSearch();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore;bindCardModal();maybeAutoOpenModal(); });
 </script>
 </body>
 </html>

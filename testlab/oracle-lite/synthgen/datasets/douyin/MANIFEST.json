@@ -38,7 +38,7 @@
     "normal": 0.935,
     "old_hot": 0.01
   },
-  "generated_at_utc": "2026-09-02T15:56:35Z",
+  "generated_at_utc": "2026-09-02T20:10:02Z",
   "distribution_config": {
     "meta": {
       "anchor_time": "2026-09-01T12:00:00+08:00",
@@ -142,7 +142,11 @@
           "beta_b": 70.0
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 8.5,
           "sigma": 1.8,
@@ -173,7 +177,11 @@
           }
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 7.6,
           "sigma": 1.8,
@@ -200,7 +208,11 @@
           "beta_b": 65.0
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 8.2,
           "sigma": 1.9,
@@ -219,8 +231,8 @@
     "jsonl": {
       "name": "aweme.jsonl",
       "lines": 300,
-      "bytes": 2574215,
-      "sha256": "53fd7ead41eb1a086613e591f2a2e76ac79205174e86bffe0d6e6b8b86d3572b"
+      "bytes": 2574386,
+      "sha256": "3e5bcc3441d8f0a6dbf2ab9acc60875503cae869c3fae9187bd72b531ea670b3"
     },
     "ground_truth_db": {
       "name": "ground_truth.db"

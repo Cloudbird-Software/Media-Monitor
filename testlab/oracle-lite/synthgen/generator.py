@@ -76,10 +76,11 @@ def generate_site(
         for i in range(count):
             rng = record_rng(seed, site_code, i)
             stats = ctx.engine.sample_stats(rng, i, fracs)
-            author = ctx.pick_author(rng)
+            author = ctx.pick_author(rng, i)   # R5A-P1-1：窗口级作者调度（40 slot 一对 + 39 slot 拒绝重抽）
             stats["followers"] = author["followers"]
             if filt is not None and not filt(stats):
                 continue
+            ctx.mark_emitted()   # 确定落盘的作者（评论者实体可回查池）
             record = mod.build_record(rng, stats, author, ctx)
             record_id, author_id = mod.record_identity(record)
             cls = stats["anomaly_class"]

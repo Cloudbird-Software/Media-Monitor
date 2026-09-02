@@ -80,6 +80,30 @@
     },
     {
       "site": "douyin",
+      "check": "author.longtail",
+      "passed": true,
+      "detail": "distinct=260（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+    },
+    {
+      "site": "douyin",
+      "check": "author.window_repeat",
+      "passed": true,
+      "detail": "281 个随机 20 卡窗：同作者最大重复=2（≤2，旧 6-16；语料 94% 卡片作者唯一）——含 1 对重复的窗 136、全唯一 145"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.window_text_unique",
+      "passed": true,
+      "detail": "render 抽样 40 内容 / 772 条评论：单窗口完全重复=0（重复率 ≤ 0%，语料唯一率 100%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.023（参考线 <0.1）"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.commenter_resolvable",
+      "passed": true,
+      "detail": "772 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+    },
+    {
+      "site": "douyin",
       "check": "anomaly.proportion",
       "passed": true,
       "detail": "{'high_collect_low_like': 1, 'high_like_low_view': 7, 'low_like_high_view': 2, 'new_hot': 2, 'normal': 286, 'old_hot': 2}"
@@ -88,7 +112,7 @@
       "site": "douyin",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=35, conflicts=0"
+      "detail": "authors=260, conflicts=0"
     },
     {
       "site": "douyin",
@@ -142,7 +166,7 @@
       "site": "xhs",
       "check": "mustvary.id_unique",
       "passed": true,
-      "detail": "{'id': '300/300', 'comments[].id': '5579/5579'}"
+      "detail": "{'id': '300/300', 'comments[].id': '5616/5616'}"
     },
     {
       "site": "xhs",
@@ -160,7 +184,7 @@
       "site": "xhs",
       "check": "dist.like_comment_corr",
       "passed": true,
-      "detail": "Pearson(log like, log comment)=0.7527 ≥ 0.7"
+      "detail": "Pearson(log like, log comment)=0.7584 ≥ 0.7"
     },
     {
       "site": "xhs",
@@ -184,13 +208,37 @@
       "site": "xhs",
       "check": "invariant.comment_time_ge_publish",
       "passed": true,
-      "detail": "评论 id/时间早于笔记发布=0（5579 条评论，要求 0，R2-P2-3）"
+      "detail": "评论 id/时间早于笔记发布=0（5616 条评论，要求 0，R2-P2-3）"
     },
     {
       "site": "xhs",
       "check": "invariant.comment_count_matches_retrievable",
       "passed": true,
       "detail": "comment_count 与内嵌（可翻）条数不同源=0/300（claim ∈ [k, 3k]，语料 label/可得 ∈ [1, 2.7]，R2-P1-2）"
+    },
+    {
+      "site": "xhs",
+      "check": "author.longtail",
+      "passed": true,
+      "detail": "distinct=254（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+    },
+    {
+      "site": "xhs",
+      "check": "author.window_repeat",
+      "passed": true,
+      "detail": "281 个随机 20 卡窗：同作者最大重复=2（≤2，旧 6-16；语料 94% 卡片作者唯一）——含 1 对重复的窗 127、全唯一 154"
+    },
+    {
+      "site": "xhs",
+      "check": "comment.window_text_unique",
+      "passed": true,
+      "detail": "render 抽样 40 内容 / 513 条评论：单窗口完全重复=2（重复率 ≤ 2%，语料唯一率 98%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.045（参考线 <0.1）"
+    },
+    {
+      "site": "xhs",
+      "check": "comment.commenter_resolvable",
+      "passed": true,
+      "detail": "513 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
     },
     {
       "site": "xhs",
@@ -202,7 +250,7 @@
       "site": "xhs",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=30, conflicts=0"
+      "detail": "authors=254, conflicts=0"
     },
     {
       "site": "xhs",
@@ -296,6 +344,42 @@
     },
     {
       "site": "kuaishou",
+      "check": "author.longtail",
+      "passed": true,
+      "detail": "distinct=260（≥240，旧实现 ~90-183），top1=0.0233（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "author.window_repeat",
+      "passed": true,
+      "detail": "281 个随机 20 卡窗：同作者最大重复=2（≤2，旧 6-16；语料 94% 卡片作者唯一）——含 1 对重复的窗 122、全唯一 159"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.window_text_unique",
+      "passed": true,
+      "detail": "render 抽样 40 内容 / 800 条评论：单窗口完全重复=0（重复率 ≤ 6%，语料唯一率 94%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.174（参考线 <0.1）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.commenter_resolvable",
+      "passed": true,
+      "detail": "800 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.comment_count_dist",
+      "passed": true,
+      "detail": "commentCountV2 抽样 300：中位=1499（语料 1544，旧为 0-21）、min=69/max=28863（语料 [51,28863]）、零值=0/语料 0/70"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.us_c_always_zero",
+      "passed": true,
+      "detail": "数据集 comment.us_c 非零=0/300（语料真值恒 0；旧 38% 非零）"
+    },
+    {
+      "site": "kuaishou",
       "check": "anomaly.proportion",
       "passed": true,
       "detail": "{'high_collect_low_like': 2, 'high_like_low_view': 8, 'low_like_high_view': 3, 'new_hot': 3, 'normal': 282, 'old_hot': 2}"
@@ -304,7 +388,7 @@
       "site": "kuaishou",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=38, conflicts=0"
+      "detail": "authors=260, conflicts=0"
     },
     {
       "site": "kuaishou",
@@ -336,6 +420,14 @@
       "like_view_corr": 0.8851390992952171,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
+      "author_distinct": 260,
+      "author_top1_share": 0.013333333333333334,
+      "author_window_max_repeat": 2,
+      "author_window_pair_frac": 0.48398576512455516,
+      "comment_dup_texts": 0,
+      "comment_cross_overlap_rate": 0.023316062176165803,
+      "commenter_checked": 772,
+      "commenter_bad": 0,
       "repro_count": 300
     },
     "xhs": {
@@ -343,9 +435,17 @@
       "like_median": 340.5,
       "like_lognorm_mu": 5.915480353230399,
       "like_lognorm_sigma": 1.3338494998088175,
-      "like_comment_corr": 0.7527164619940377,
+      "like_comment_corr": 0.7584476141721447,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
+      "author_distinct": 254,
+      "author_top1_share": 0.013333333333333334,
+      "author_window_max_repeat": 2,
+      "author_window_pair_frac": 0.45195729537366547,
+      "comment_dup_texts": 2,
+      "comment_cross_overlap_rate": 0.04483430799220273,
+      "commenter_checked": 513,
+      "commenter_bad": 0,
       "repro_count": 300
     },
     "kuaishou": {
@@ -358,6 +458,16 @@
       "like_view_corr": 0.8792162598202381,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
+      "author_distinct": 260,
+      "author_top1_share": 0.023333333333333334,
+      "author_window_max_repeat": 2,
+      "author_window_pair_frac": 0.43416370106761565,
+      "comment_dup_texts": 0,
+      "comment_cross_overlap_rate": 0.17375,
+      "commenter_checked": 800,
+      "commenter_bad": 0,
+      "ks_comment_total_median": 1499.0,
+      "ks_us_c_nonzero": 0,
       "repro_count": 300
     }
   },

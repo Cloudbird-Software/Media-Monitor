@@ -4,7 +4,7 @@
 契约实证要点：
 - photoUrl/photoH265Url 为数组 [{cdn,url}]
 - manifest 为对象（adaptationSet[].representation[]）
-- comment 维度即 feeds[].comment.us_c（实证多为 0，按参考值池采样）
+- comment 维度即 feeds[].comment.us_c（语料实证恒 0，R5A-P2-2 对齐；评论计数走渲染层独立分布）
 - photo.timestamp 为毫秒；viewCount/likeCount/collectCount 为整数
 """
 from __future__ import annotations
@@ -12,7 +12,6 @@ from __future__ import annotations
 import numpy as np
 
 from synthgen import ids
-from synthgen.distengine import clamp_comment
 
 ENTITY = "feed"
 CONTRACT_ENDPOINT = "www.kuaishou.com_rest_v_search_feed"
@@ -159,8 +158,10 @@ def build_record(rng: np.random.Generator, stats: dict, author: dict, ctx) -> di
             "livingInfo": {"iconType": 0, "living": False, "livingId": None},
         },
         "comment": {
-            # P2-1 修复：us_c 参考池独立采样后，落盘前统一做不变式钳制 us_c ≤ like×0.3
-            "us_c": clamp_comment(ids.pick(rng, pools["us_c_pool"]), stats["like"])
+            # R5A-P2-2：语料真值 search feed comment.us_c 恒 0（100/100）——该字段
+            # 非评论总数（旧实现当计数源导致 commentCountV2 全集 {0..21}、62% 零，
+            # 真站中位 1544、零值 0/70）。评论计数由渲染层独立对数正态派生（render._ks_comment_total）。
+            "us_c": 0
         },
         "danmakuSwitch": True,
         "type": 1,

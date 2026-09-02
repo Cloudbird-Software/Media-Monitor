@@ -26,6 +26,7 @@ _PKG_PARENT = str(Path(__file__).resolve().parent.parent)
 if _PKG_PARENT not in sys.path:
     sys.path.insert(0, _PKG_PARENT)
 
+from synthgen import commentext
 from synthgen import ids
 
 ENDPOINTS = {
@@ -719,38 +720,60 @@ def render_douyin_detail_missing() -> dict:
 
 
 # 抖音评论（数据集实体不含评论列表 → 按 aweme_id 确定性合成；同一 id 同一页永远一致）
-_DY_CMT_TEXTS = [
-    "这个{topic}也太绝了，收藏了", "刷到三次了，必须来评论一下", "跟着做了，全家都说好吃",
-    "博主太用心了，文案和画面都在线", "请问{topic}用的什么工具呀", "已三连，蹲一个后续",
-    "这才是我想看的{topic}，没有废话", "看了三遍，每一遍都有新收获", "评论区也太热闹了吧",
-    "感谢分享，正好需要这个{topic}", "拍得真好，bgm 也选得妙", "第一天来打卡，以后天天看",
-]
+# R5A-P1-2：文本由 commentext 模板×槽位组合生成（旧 12 条固定池 idx 轮转，
+# 单视频 20 条仅 12 种、8 组一字不差重复；语料唯一率 100%）
 _DY_CMT_IP = ["四川", "广东", "浙江", "江苏", "北京", "上海", "山东", "湖北", "福建", "河南",
               "湖南", "安徽", "重庆", "陕西", "辽宁", "中国香港", "中国台湾", "日本", "美国", "新加坡"]
 
 
-def _dy_comment_user(rng: np.random.Generator, rec: dict) -> dict:
-    """评论用户：以作品作者结构为模板换身份（nickname 池确定性采样，uid/sec_uid 重派生）。"""
-    user = dict(rec.get("author") or {})
-    nickname = ids.pick(rng, ("爱吃", "爱看", "爱拍", "爱逛", "大碗", "元气", "快乐", "人间")
-                        ) + ids.pick(rng, ("小王", "阿慧", "大乔", "小李", "老张", "汤圆", "栗子", "椰果")
-                                     ) + ids.pick(rng, ("日常", "日记", "不吃香菜", "在线", "星球", "观察员"))
-    uid = ids.dy_uid(rng)  # R2-P2-2：长度/首位按语料分布（恒 19 位 → 众数 16）
+def _dataset_commenter(dataset: "DatasetReader", site: str, salt: str, seq: int) -> dict:
+    """评论者 = 数据集内某条作品的作者实体（R5A-P2-5：跨端点可回查）。
+
+    行号由 (site, salt, seq) 确定性派生 ⇒ 同一评论的评论者在任何翻页路径/
+    任何端点下恒为同一实体；sec_uid/user_id 落在站点作者实体空间，
+    profile/other、user_posted、profile/get 反查均可解析且昵称一致。
+    """
+    if dataset is None:
+        return {}
+    try:
+        ln = _stable_hash("%s-cuser::%s::%d" % (site, salt, seq)) % len(dataset)
+        rec = dataset.read(ln)
+    except Exception:
+        return {}
+    if site == "xhs":   # xhs 作者实体位于 note_card.user
+        a = (rec.get("note_card") or {}).get("user") or {}
+        if not a.get("user_id"):
+            return {}
+        return {"user_id": a.get("user_id"), "nickname": a.get("nickname"),
+                "avatar": a.get("avatar")}
+    a = rec.get("author") or {}
+    return a if (a.get("uid") or a.get("id")) else {}
+
+
+def _dy_comment_user(rng: np.random.Generator, rec: dict, dataset=None, seq: int = 0,
+                     aweme_id: str = "") -> dict:
+    """评论用户：R5A-P2-5 取数据集作者实体（sec_uid 可经 profile/other 回查、昵称一致）；
+    派生字段（short_id/unique_id 等）按 rng 确定性生成。dataset 缺失时退回旧合成形态。"""
+    src = _dataset_commenter(dataset, "douyin", str(aweme_id or rec.get("aweme_id") or ""), seq)
+    if src:
+        user = dict(src)
+    else:
+        user = dict(rec.get("author") or {})
+        user["uid"] = ids.dy_uid(rng)
+        user["sec_uid"] = ids.dy_sec_uid(rng)
+        user["nickname"] = ids.pick(rng, ("爱吃", "爱看", "爱拍", "爱逛")) + \
+            ids.pick(rng, ("小王", "阿慧", "大乔", "小李", "汤圆", "栗子")) + \
+            ids.pick(rng, ("日常", "日记", "不吃香菜", "在线", "星球", "观察员"))
     user.update({
-        "uid": uid,
         "short_id": ids.digits_str(rng, 11),
         "unique_id": ids.digits_str(rng, 11),
-        "sec_uid": ids.dy_sec_uid(rng),
-        "nickname": nickname,
         "signature": None,
-        "follower_count": int(rng.integers(0, 20000)),
-        "total_favorited": int(rng.integers(0, 200000)),
     })
     return user
 
 
 def _dy_comment(rng: np.random.Generator, rec: dict, idx: int, total: int,
-                now_ts: int | None = None) -> dict:
+                now_ts: int | None = None, dataset=None, text_salt: str | None = None) -> dict:
     """单条评论。红队 R2-P2-3：create_time = 发布后 [0, min(30d, now-发布)] 延迟
     （旧实现为发布前 60s~30d 的时间倒置）；cid 用真站雪花结构 (ctime-δ)<<32|rand32
     （R2-P2-2，语料 cid 首位 '7' 1175/1175、时间可编码）。"""
@@ -759,7 +782,9 @@ def _dy_comment(rng: np.random.Generator, rec: dict, idx: int, total: int,
         if isinstance(te, dict) and te.get("hashtag_name"):
             topic = te["hashtag_name"]
             break
-    text = _DY_CMT_TEXTS[idx % len(_DY_CMT_TEXTS)].format(topic=topic or "视频")
+    aweme_id = str(rec.get("aweme_id") or "")
+    # 楼中楼（text_salt=comment_id）与根评论分命名空间：两列表内部 0 重复且互不撞句
+    text = commentext.comment_text("douyin", idx, text_salt or aweme_id, topic=topic or None)
     pub = int(rec.get("create_time") or _now_ms() // 1000)
     now = int(now_ts if now_ts is not None else _now_ms() // 1000)
     delay_span = max(1, min(30 * 86400, now - pub))  # 评论只能晚于发布（R2-P2-3）
@@ -799,7 +824,8 @@ def _dy_comment(rng: np.random.Generator, rec: dict, idx: int, total: int,
         "text": text,
         "text_extra": [],
         "text_music_info": None,
-        "user": _dy_comment_user(rng, rec),
+        "user": _dy_comment_user(rng, rec, dataset=dataset, seq=idx,
+                                 aweme_id=str(text_salt or aweme_id)),
         "user_buried": False,
         "user_digged": 0,
         "video_list": None,
@@ -807,10 +833,10 @@ def _dy_comment(rng: np.random.Generator, rec: dict, idx: int, total: int,
 
 
 def _dy_comment_item(rng: np.random.Generator, rec: dict, idx: int, total: int,
-                     now_ts: int | None = None) -> dict:
+                     now_ts: int | None = None, dataset=None, text_salt: str | None = None) -> dict:
     """评论条目：语义核心（cid/时间序/user）+ 真值模板物化（S2：comment user 69 键、
     text_extra 元素、can_create_item 等高频结构由 sites/templates/dy_comment_item 补齐）。"""
-    base = _dy_comment(rng, rec, idx, total, now_ts=now_ts)
+    base = _dy_comment(rng, rec, idx, total, now_ts=now_ts, dataset=dataset, text_salt=text_salt)
     if "dy_comment_item" not in _templates():
         return base
     return materialize({"aweme_id": rec.get("aweme_id"), "cid": base["cid"],
@@ -894,7 +920,8 @@ def render_douyin_comment_list(dataset: DatasetReader, line_no: int, cursor: int
         return _dy_comment_envelope(rng, [], min(cursor, total), 0, total)
     n = max(0, min(count, total - cursor))
     comments = [_dy_comment_item(_page_rng(dataset, f"dy-cmt2-{aweme_id}-{cursor + i}"),
-                                 rec, cursor + i, total, now_ts=now) for i in range(n)]
+                                 rec, cursor + i, total, now_ts=now, dataset=dataset)
+                for i in range(n)]
     if count <= 0:  # R4-P3-1：count=0/-1 → 0 条，游标原地
         next_cursor, has_more = cursor, (1 if cursor < total else 0)
     else:
@@ -936,7 +963,8 @@ def render_douyin_comment_list_reply(dataset: DatasetReader, line_no: int, comme
     comments = []
     for i in range(n):
         c = _dy_comment_item(_page_rng(dataset, f"dy-rpl2-{comment_id}-{cursor + i}"),
-                             rec, cursor + i, total, now_ts=now)
+                             rec, cursor + i, total, now_ts=now, dataset=dataset,
+                             text_salt="reply::%s" % comment_id)
         c["reply_id"] = comment_id
         c["level"] = 2  # 楼中楼子评论层级（真站 reply 条目 level=2）
         if "dy_reply_item" in _templates():  # reply 专属高频键（root_comment_id 等，S2）
@@ -961,18 +989,11 @@ _XHS_KEYWORDS = ["美食探店", "旅行攻略", "健身打卡", "穿搭分享",
 
 XHS_COMMENT_PAGE_SIZE = 10  # 语料实证：comment/page 每页 10 条
 
-# xhs 评论文案池（数据集内嵌评论是「样例集」，总量以 interact_info.comment_count
-# 为准——超出内嵌部分按 (note_id, 序号) 确定性合成，与 dy 评论同策略）
-_XHS_CMT_TEXTS = [
-    "太实用了，马上安排", "收藏了，周末就去试", "博主拍照也太好看了吧",
-    "这个思路真的绝", "蹲一个详细教程", "已下单，回来汇报",
-    "评论区也好有爱", "同款体验，确实不错", "感谢分享，正好需要",
-    "看完了，受益匪浅", "风格好喜欢", "这也太治愈了",
-]
+# xhs 评论文案（R5A-P1-2）：数据集内嵌评论是「样例集」，总量以 interact_info.comment_count
+# 为准——超出内嵌部分按 (note_id, 序号) 确定性合成；文本全部走 commentext
+# 组合引擎（与 sites/xhs.py 内嵌评论共享 salt=note_id 的 seq 空间，同笔记 0 重复）
 _XHS_CMT_IP = ["江苏", "上海", "北京", "广东", "浙江", "四川", "山东",
                "湖北", "福建", "中国香港", "日本", "新加坡"]
-_XHS_CMT_NICKS = ["奶茶三分甜", "晚风与猫", "山雾漫步", "一只柚子", "北岛有风",
-                  "拾贝壳的人", "半夏微凉", "橘子汽水", "步履不停", "慢煮时光"]
 
 
 def _xhs_sub_claim_for(comment_id: str) -> int:
@@ -980,25 +1001,34 @@ def _xhs_sub_claim_for(comment_id: str) -> int:
     return _stable_hash("xhs-sub-total::%s" % comment_id) % 10
 
 
-def _xhs_synth_comment(rec: dict, idx: int) -> dict:
+def _xhs_synth_comment(dataset, rec: dict, idx: int) -> dict:
     """第 idx（≥内嵌数）条评论：确定性合成（同 note 同序号永远一致）。
 
     红队 R3-P2-1/R3-P1-1：sub_comment_count 与 /comment/sub/page 可得数同源
     （_xhs_sub_claim_for）；claim>0 时内嵌 1 条 + 游标续读（语料形态：
     claim '9' 字符串、内嵌 1、sub/page 翻尽 9）。
+    R5A-P1-2：文本走 commentext（salt=note_id，与内嵌评论同一 seq 空间）；
+    R5A-P2-5：评论者取数据集作者实体（user_posted 可回查）。
     """
     note_id = str(rec.get("id") or "")
     seed = _stable_hash("xhs-cmt::%s::%d" % (note_id, idx))
     rng = np.random.default_rng([seed & 0x7FFFFFFF, idx])
-    pub_ms = int(rec.get("create_time") or 0) or _now_ms()
+    # 发布时间基准：note_id 自带 hex(ts)（记录无外显 create_time，避免墙钟漂移）
+    pub_ms = int(rec.get("create_time") or 0) or (
+        int(note_id[0:8], 16) * 1000 if len(note_id) == 24 else _now_ms())
     ctime = int(pub_ms + (seed % (30 * 86400)) * 1000)
-    author = (rec.get("note_card") or {}).get("user") or {}
+    if dataset is not None and dataset.anchor_ts:  # 评论不晚于数据集锚定时间
+        ctime = min(ctime, int(dataset.anchor_ts) * 1000)
     cid = ids.xhs_ts_hex_id(rng, ctime // 1000)
     sub_claim = _xhs_sub_claim_for(cid)
+    commenter = _dataset_commenter(dataset, "xhs", "%s::%d" % (note_id, idx), idx)
+    if not commenter:
+        commenter = {"user_id": ids.hex_id(rng, 24),
+                     "nickname": "小红书用户", "avatar": ""}
     c = {
         "id": cid,
         "note_id": note_id,
-        "content": _XHS_CMT_TEXTS[idx % len(_XHS_CMT_TEXTS)],
+        "content": commentext.comment_text("xhs", idx, note_id),
         "create_time": ctime,
         "like_count": str(int(rng.integers(0, 900))),
         "liked": False,
@@ -1012,15 +1042,16 @@ def _xhs_synth_comment(rec: dict, idx: int) -> dict:
         "sub_comment_cursor": "",
         "sub_comment_has_more": False,
         "user_info": {
-            "user_id": ids.hex_id(rng, 24),
-            "nickname": ids.pick(rng, _XHS_CMT_NICKS),
-            "image": "https://sns-avatar-qc.xhscdn.com/avatar/%s?imageView2/2/w/120/format/jpg"
-                     % ids.hex_id(rng, 32),
+            "user_id": commenter["user_id"],
+            "nickname": commenter["nickname"],
+            "image": commenter.get("avatar") or commenter.get("image")
+                     or "https://sns-avatar-qc.xhscdn.com/avatar/%s"
+                        % ids.hex_id(rng, 24),
             "xsec_token": ids.xhs_xsec_token(rng),
             "ai_agent": False,
         },
     }
-    subs = _xhs_sub_comments_full(rec, c, sub_claim)
+    subs = _xhs_sub_comments_full(dataset, rec, c, sub_claim)
     if subs:
         c["sub_comments"] = subs[:1]  # 语料形态：大计数内嵌 1 条
         c["sub_comment_has_more"] = sub_claim > 1
@@ -1029,7 +1060,7 @@ def _xhs_synth_comment(rec: dict, idx: int) -> dict:
     return c
 
 
-def _xhs_synth_sub_comment(rec: dict, root: dict, idx: int) -> dict:
+def _xhs_synth_sub_comment(dataset, rec: dict, root: dict, idx: int) -> dict:
     """root 的第 idx 条子评论：确定性合成（sub/page 翻页数据源）。"""
     note_id = str(rec.get("id") or "")
     root_id = str(root.get("id") or "")
@@ -1037,10 +1068,16 @@ def _xhs_synth_sub_comment(rec: dict, root: dict, idx: int) -> dict:
     rng = np.random.default_rng([seed & 0x7FFFFFFF, idx + 7])
     root_ct = int(root.get("create_time") or 0) or _now_ms()
     ctime = int(root_ct + (seed % (14 * 86400)) * 1000)  # 子评论晚于父评论
+    if dataset is not None and dataset.anchor_ts:
+        ctime = min(ctime, int(dataset.anchor_ts) * 1000)
+    commenter = _dataset_commenter(dataset, "xhs", "sub::%s::%s" % (note_id, root_id), idx)
+    if not commenter:
+        commenter = {"user_id": ids.hex_id(rng, 24),
+                     "nickname": "小红书用户", "avatar": ""}
     return {
         "id": ids.xhs_ts_hex_id(rng, ctime // 1000),
         "note_id": note_id,
-        "content": _XHS_CMT_TEXTS[(idx * 3 + 1) % len(_XHS_CMT_TEXTS)],
+        "content": commentext.comment_text("xhs", idx, "sub::%s::%s" % (note_id, root_id)),
         "create_time": ctime,
         "like_count": str(int(rng.integers(0, 300))),
         "liked": False,
@@ -1051,23 +1088,24 @@ def _xhs_synth_sub_comment(rec: dict, root: dict, idx: int) -> dict:
         "show_tags": [],
         "status": 0,
         "user_info": {
-            "user_id": ids.hex_id(rng, 24),
-            "nickname": ids.pick(rng, _XHS_CMT_NICKS),
-            "image": "https://sns-avatar-qc.xhscdn.com/avatar/%s?imageView2/2/w/120/format/jpg"
-                     % ids.hex_id(rng, 32),
+            "user_id": commenter["user_id"],
+            "nickname": commenter["nickname"],
+            "image": commenter.get("avatar") or commenter.get("image")
+                     or "https://sns-avatar-qc.xhscdn.com/avatar/%s"
+                        % ids.hex_id(rng, 24),
             "xsec_token": ids.xhs_xsec_token(rng),
             "ai_agent": False,
         },
     }
 
 
-def _xhs_sub_comments_full(rec: dict, root: dict, claim: int) -> list:
+def _xhs_sub_comments_full(dataset, rec: dict, root: dict, claim: int) -> list:
     """root 评论的全量子评论（内嵌在前 + 确定性合成补足到 claim，语料 claim=可得）。"""
     if claim <= 0:
         return []
     subs = [dict(s) for s in (root.get("sub_comments") or []) if isinstance(s, dict)]
     for idx in range(len(subs), claim):
-        subs.append(_xhs_synth_sub_comment(rec, root, idx))
+        subs.append(_xhs_synth_sub_comment(dataset, rec, root, idx))
     return subs[:claim]
 
 
@@ -1079,7 +1117,7 @@ def _xhs_note_declared_comments(rec: dict) -> int:
         return 0
 
 
-def _xhs_note_comments(rec: dict) -> list:
+def _xhs_note_comments(dataset, rec: dict) -> list:
     """笔记全量顶层评论：内嵌样例集 + 超出部分按 (note_id, 序号) 确定性合成。
 
     comment/page 与 comment/sub/page 共用同一构建（红队 R3-P2-1：
@@ -1088,7 +1126,7 @@ def _xhs_note_comments(rec: dict) -> list:
     comments = [dict(c) for c in (rec.get("comments") or []) if isinstance(c, dict)]
     declared = _xhs_note_declared_comments(rec)
     for idx in range(len(comments), max(len(comments), declared)):
-        comments.append(_xhs_synth_comment(rec, idx))
+        comments.append(_xhs_synth_comment(dataset, rec, idx))
     return comments
 
 
@@ -1187,7 +1225,7 @@ def render_xhs_comment_page(dataset: DatasetReader, note_line_no: int, cursor: s
     原只回 6 条且 p2 空（truth 语料页页 10 条 → L3 长度带失分）。
     """
     rec = dataset.read(note_line_no)
-    comments = _xhs_note_comments(rec)
+    comments = _xhs_note_comments(dataset, rec)
     if cursor:
         # 游标定位：本页从 cursor 所指评论的下一条开始；未命中（乱传/跨笔记）→ 取尽
         start = None
@@ -1245,7 +1283,7 @@ def render_xhs_comment_sub_page(dataset: DatasetReader, note_line_no: int,
     rec = dataset.read(note_line_no)
     rng = _page_rng(dataset, f"xhs-sub-{note_line_no}-{root_comment_id}-{cursor or 'p0'}")
     root = None
-    for c in _xhs_note_comments(rec):
+    for c in _xhs_note_comments(dataset, rec):
         if str(c.get("id") or "") == str(root_comment_id):
             root = c
             break
@@ -1255,7 +1293,7 @@ def render_xhs_comment_sub_page(dataset: DatasetReader, note_line_no: int,
             claim = int(str(root.get("sub_comment_count") or "0"))
         except (TypeError, ValueError):
             claim = len(root.get("sub_comments") or [])
-        subs = _xhs_sub_comments_full(rec, root, claim)
+        subs = _xhs_sub_comments_full(dataset, rec, root, claim)
     if cursor and subs:
         start = None
         for i, s in enumerate(subs):
@@ -1382,15 +1420,7 @@ def render_ks_search_feed(dataset: DatasetReader, page_no: int, page_size: int,
 # 信封/键集全部按语料实证形态（ks_corpus_baseline3.json）：
 #   - GraphQL 统一 {"data": {...}} 包装，vision* 键名 + __typename；
 #   - REST photo/comment/list：rootCommentsV2/commentCountV2/pcursorV2 信封（snake_case 键）；
-#   - 评论计数与 search feed 的 comment.us_c 同源（跨端点计数一致）。
-# ---------------------------------------------------------------------------
-_KS_CMT_TEXTS = [
-    "太真实了，看完直接愣住", "这就是生活啊", "拍得真好，支持一下", "评论区都是懂行的",
-    "第一次见这么拍的", "跟着拍同款去了", "这个必须收藏", "主播也太有才了",
-    "看完了，意犹未尽", "这波操作满分", "家乡味一下子就来了", "满满的回忆",
-]
-_KS_CMT_NAMES = ["山城小面", "北巷", "大力的日常", "爱吃辣的猫", "晚风拾遗", "半亩方塘",
-                 "奔跑的柚子", "老陈说事", "小城故事", "拾光记", "南方以南", "一颗白菜"]
+#   - R5A-P1-2：评论文本 commentext 组合生成；R5A-P2-5：评论者 = 数据集作者实体。
 _KS_HOST_HEADS = ["public-bjy-c34-kce-node3595", "public-bjmt-c26-kce-node283",
                   "public-bjzey-c95-kce-node171", "public-bjy-c56-kce-node210",
                   "public-bjmt-c26-kce-node310"]
@@ -1426,37 +1456,47 @@ def _ks_sub_total_for(comment_id: str) -> int:
 
 
 def _ks_comment_total(rec: dict) -> int:
-    """评论总数与 search feed 的 comment.us_c 同源（跨端点计数一致）。"""
-    try:
-        return int((rec.get("comment") or {}).get("us_c") or 0)
-    except (TypeError, ValueError):
-        return 0
+    """评论总数（commentCountV2，REST 与 GraphQL 同源）。
+
+    红队 R5A-P2-2：旧实现取 search feed 的 comment.us_c 当计数源——但语料真值
+    us_c 恒 0（100/100，另有语义），导致合成 commentCountV2 全集 {0,1,5,8,13,21}、
+    62% 零评论；真站 70 样本 ∈ [51, 28863]、中位 1544、零值 0/70。现改为按
+    photo.id 确定性派生的独立对数正态（中位 e^7.34≈1544，σ=1.15 对齐语料区间）。
+    """
+    from statistics import NormalDist
+    pid = str((rec.get("photo") or {}).get("id") or "")
+    u = (_stable_hash("ks-cmt-cnt::%s" % pid) % (2 ** 53)) / float(2 ** 53)
+    u = min(max(u, 1e-9), 1.0 - 1e-9)
+    z = NormalDist().inv_cdf(u)
+    v = 1544.0 * float(np.exp(1.15 * z))   # 中位 1544（语料实证），σ=1.15
+    return int(min(28863, max(51, round(v))))
 
 
 def _ks_comments_core(dataset: DatasetReader, line_no: int, pcursor: str, count: int):
     """快手评论页核心数据（REST/GraphQL 共用）：返回 (条目核心列表, total, start, more)。"""
     rec = dataset.read(line_no)
     total = _ks_comment_total(rec)
+    photo_id = str((rec.get("photo") or {}).get("id") or "")
     rng = _page_rng(dataset, f"ks-cmt-{line_no}-{pcursor or 'p0'}")
     start = 0
     if pcursor and pcursor not in ("", "no_more") and pcursor.isdigit():
         start = max(0, min(int(pcursor) - _KS_CMT_CURSOR_BASE, total))
     n = max(0, min(count, total - start))
+    anchor_ms = (dataset.anchor_ts or 0) * 1000 or _now_ms()
     items = []
     for i in range(n):
         idx = start + i
         pub_ms = int((rec.get("photo") or {}).get("timestamp") or _now_ms())
-        span = max(1, min(90 * 86400 * 1000, _now_ms() - pub_ms))
+        span = max(1, min(90 * 86400 * 1000, max(anchor_ms, pub_ms) - pub_ms))
         ts = int(pub_ms + rng.integers(0, span))
         cid = str(_KS_CMT_CURSOR_BASE + idx)
+        commenter = _dataset_commenter(dataset, "kuaishou", photo_id, idx)
         items.append({
             "cid": cid,
-            "author_id": ids.ks_id(rng),
-            "author_name": _KS_CMT_NAMES[int(rng.integers(0, len(_KS_CMT_NAMES)))],
-            "content": _KS_CMT_TEXTS[idx % len(_KS_CMT_TEXTS)],
-            "headurl": ("http://p66-plat.wsbkwai.com/uhead/AB/2026/03/04/02/BMjAyNjAzMDQwMjUyMjRf"
-                        "%s_1_hd%d_%d_s.jpg?x-kcdn-pid=112530"
-                        % (ids.opaque(rng, 20), int(rng.integers(600, 900)), int(rng.integers(100, 999)))),
+            "author_id": str(commenter.get("id") or ids.ks_id(rng)),
+            "author_name": str(commenter.get("name") or "快手用户"),
+            "content": commentext.comment_text("kuaishou", idx, photo_id),
+            "headurl": str(commenter.get("header_url") or ""),
             "timestamp": ts,
             "liked": False,
             "status": "done",
@@ -1585,32 +1625,42 @@ def render_ks_graphql(dataset: DatasetReader, operation: str, variables: dict,
 
 def render_ks_sub_comments(dataset: DatasetReader, line_no: int, root_comment_id: str,
                            pcursor: str = "") -> dict:
-    """visionSubCommentList：{pcursor:"", subComments:[], pcursorV2, subCommentsV2}。"""
+    """visionSubCommentList：{pcursor:"", subComments:[], pcursorV2, subCommentsV2}。
+
+    R5A-P1-2/P2-5：子评论文本 commentext（salt=root cid 命名空间）；评论者与
+    replyTo 指向的根评论作者均取数据集作者实体（跨端点可回查）。"""
     rec = dataset.read(line_no)
+    photo_id = str((rec.get("photo") or {}).get("id") or "")
     rng = _page_rng(dataset, f"ks-sub-{line_no}-{root_comment_id}-{pcursor or 'p0'}")
     total = _ks_sub_total_for(root_comment_id)
     start = 0
     if pcursor and pcursor.isdigit():
         start = max(0, min(int(pcursor) - _KS_CMT_CURSOR_BASE, total))
     n = max(0, min(10, total - start))
-    root_name = _KS_CMT_NAMES[_stable_hash("ks-root-name::%s" % root_comment_id)
-                              % len(_KS_CMT_NAMES)]
+    # 根评论作者（cid = BASE+idx 与 _ks_comments_core 同一派生 → 姓名一致）
+    root_idx = max(0, int(root_comment_id) - _KS_CMT_CURSOR_BASE) if root_comment_id.isdigit() else 0
+    root_author = _dataset_commenter(dataset, "kuaishou", photo_id, root_idx)
+    root_name = str(root_author.get("name") or "快手用户")
+    root_aid = str(root_author.get("id") or "0")
+    anchor_ms = (dataset.anchor_ts or 0) * 1000 or _now_ms()
     subs = []
     for i in range(n):
         idx = start + i
         pub_ms = int((rec.get("photo") or {}).get("timestamp") or _now_ms())
-        span = max(1, min(90 * 86400 * 1000, _now_ms() - pub_ms))
+        span = max(1, min(90 * 86400 * 1000, max(anchor_ms, pub_ms) - pub_ms))
         ts = int(pub_ms + rng.integers(0, span))
+        commenter = _dataset_commenter(dataset, "kuaishou",
+                                       "sub::%s" % root_comment_id, idx)
         subs.append({
-            "commentId": str(_KS_CMT_CURSOR_BASE + idx + 1), "authorId": ids.ks_id(rng),
-            "authorName": _KS_CMT_NAMES[int(rng.integers(0, len(_KS_CMT_NAMES)))],
-            "content": _KS_CMT_TEXTS[(idx * 5 + 2) % len(_KS_CMT_TEXTS)],
-            "headurl": ("http://p66-plat.wsbkwai.com/uhead/AB/2026/05/11/07/BMjAyNjA1MTEw"
-                        "NzI1MjRf%s_2_hd%d_%d_s.jpg?x-kcdn-pid=112530"
-                        % (ids.opaque(rng, 20), int(rng.integers(600, 900)), int(rng.integers(100, 999)))),
+            "commentId": str(_KS_CMT_CURSOR_BASE + idx + 1),
+            "authorId": str(commenter.get("id") or ids.ks_id(rng)),
+            "authorName": str(commenter.get("name") or "快手用户"),
+            "content": commentext.comment_text("kuaishou", idx,
+                                               "sub::%s" % root_comment_id),
+            "headurl": str(commenter.get("header_url") or ""),
             "timestamp": ts, "hasSubComments": False,
             "likedCount": str(int(rng.integers(0, 200))), "liked": False, "status": "done",
-            "replyToUserName": root_name, "replyTo": ids.ks_id(rng),
+            "replyToUserName": root_name, "replyTo": root_aid,
             "__typename": "VisionSubCommentItem",
         })
     more = start + n < total

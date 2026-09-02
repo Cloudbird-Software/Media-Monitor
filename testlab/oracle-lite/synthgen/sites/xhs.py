@@ -13,6 +13,7 @@ from datetime import datetime
 
 import numpy as np
 
+from synthgen import commentext
 from synthgen import ids
 from synthgen.distengine import clamp_comment
 
@@ -63,7 +64,8 @@ def _image_item(rng) -> dict:
 
 
 def _comment_user(rng, ctx) -> dict:
-    u = ctx.authors[int(rng.integers(0, len(ctx.authors)))]
+    # R5A-P2-5：评论者从「已落盘作品的作者」实体池采样（user_posted 可回查、昵称一致）
+    u = ctx.pick_commenter(rng)
     return {
         "user_id": u["user_id"],
         "nickname": u["nickname"],
@@ -87,7 +89,9 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
         再钳制 comment ≤ like×0.3 不变式（clamp_comment）——计数与可翻条数同源；
       - 评论按 like_count 降序内嵌（真站评论区默认热度排序：最高赞评论必在第 1 页）；
       - 评论 id / 子评论 id 用真站结构 hex(ts)+00000000+hex8（R2-P2-2），
-        ts 取评论自身 create_time（晚于笔记发布，R2-P2-3 同族口径）。
+        ts 取评论自身 create_time（晚于笔记发布，R2-P2-3 同族口径）；
+      - R5A-P1-2：评论文本 commentext 组合生成（单笔记窗口 0 完全重复）；
+        R5A-P2-5：评论者取自已落盘作者实体（user_posted 可回查、昵称一致）。
 
     返回 (comments, comment_count)：build_record 把计数写进
     interact_info.comment_count 并同步 stats["comment"]（index.db 同源）。
@@ -109,8 +113,9 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
     # 评论时间窗：发布后 [~2min, min(14d, 距 anchor)]（R2-P2-3：评论晚于发布）
     span_s = max(120.0, min(14.0 * 86400, ctx.engine.anchor - note_dt - 60))
     for i in range(k):
-        cat_pool = pools["comment_templates"].get(stats["category"], pools["comment_templates"]["generic"])
-        content = ids.pick(rng, cat_pool) if rng.random() < 0.8 else ids.pick(rng, pools["comment_templates"]["generic"])
+        # R5A-P1-2：评论文本模板×槽位组合生成（同笔记 seq 双射 → 内嵌+渲染层合成
+        # 共享同一 (salt=note_id, seq) 空间，单笔记窗口内 0 完全重复，语料唯一率 98%）
+        content = commentext.comment_text("xhs", i, note_id, topic=stats.get("category"))
         c_user = _comment_user(rng, ctx)
         created = int((note_dt + rng.uniform(0.02, 1.0) * span_s) * 1000)
         created = min(created, ctx.engine.anchor * 1000)
@@ -127,7 +132,10 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
             sub_comments.append({
                 "id": ids.xhs_ts_hex_id(rng, sub_created // 1000),
                 "note_id": note_id,
-                "content": ids.pick(rng, pools["sub_comment_pool"]),
+                # R5A-P1-2：子评论同引擎（salt=根评论命名空间，内嵌 seq=0 与渲染层
+                # sub/page 合成 seq≥1 同空间，根评论内 0 重复）
+                "content": commentext.comment_text(
+                    "xhs", 0, "sub::%s::%s" % (note_id, cid), topic=stats.get("category")),
                 "create_time": sub_created,
                 "like_count": str(int(rng.integers(0, max(2, like_count)))),
                 "liked": False,

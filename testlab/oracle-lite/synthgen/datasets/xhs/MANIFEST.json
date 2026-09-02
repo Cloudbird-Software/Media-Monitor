@@ -38,7 +38,7 @@
     "normal": 0.935,
     "old_hot": 0.01
   },
-  "generated_at_utc": "2026-09-02T15:56:38Z",
+  "generated_at_utc": "2026-09-02T20:10:06Z",
   "distribution_config": {
     "meta": {
       "anchor_time": "2026-09-01T12:00:00+08:00",
@@ -142,7 +142,11 @@
           "beta_b": 70.0
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 8.5,
           "sigma": 1.8,
@@ -173,7 +177,11 @@
           }
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 7.6,
           "sigma": 1.8,
@@ -200,7 +208,11 @@
           "beta_b": 65.0
         },
         "author_pool": 30000,
-        "author_popularity_shape": 1.8,
+        "author_works": {
+          "mean_works": 3.4,
+          "sigma": 2.2,
+          "share_cap": 0.016
+        },
         "follower": {
           "mu": 8.2,
           "sigma": 1.9,
@@ -219,8 +231,8 @@
     "jsonl": {
       "name": "note.jsonl",
       "lines": 300,
-      "bytes": 4596601,
-      "sha256": "3438aa970ba0a112f46e5b9493b10fc38d478075bb4101d8f5f6279c55b81372"
+      "bytes": 4788108,
+      "sha256": "37949fefe32742a89c68b69532d1494ddf90b53663e294c39a586f8aef960c47"
     },
     "ground_truth_db": {
       "name": "ground_truth.db"

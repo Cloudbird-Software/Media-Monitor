@@ -32,26 +32,62 @@ main{max-width:1180px;margin:18px auto;padding:0 20px}
 .metrics .like-count{color:#e02040}
 .toolbar{display:flex;gap:10px;align-items:center;margin:4px 0 14px}
 .toolbar button.load-more{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer}
+.toolbar button.load-more:disabled{color:#bbb;cursor:default;border-color:#eee}
 .toolbar .status{color:var(--sub);font-size:12px}
+.toolbar .status.retry{color:var(--brand);cursor:pointer;text-decoration:underline}
+.tabs{display:flex;align-items:center;gap:22px;margin:2px 0 14px;border-bottom:1px solid #eee;background:var(--card);border-radius:10px 10px 0 0;padding:0 14px}
+.tabs .tab-item{position:relative;padding:10px 2px;color:#555;cursor:pointer;font-size:14px}
+.tabs .tab-item.active{color:var(--brand);font-weight:600}
+.tabs .tab-item-border{position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--brand);border-radius:2px}
+.filter-tabs{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+.filter-tabs .tab{border:1px solid #e8e8e8;background:#fff;border-radius:14px;padding:4px 14px;font-size:12px;color:#666;cursor:pointer}
+.filter-tabs .tab.active{color:var(--brand);border-color:var(--brand)}
+.channel-list{display:flex;gap:18px;margin:2px 0 14px;list-style:none;flex-wrap:wrap;padding:6px 2px}
+.channel-list li.channel a{color:#666;text-decoration:none;font-size:13px;padding:6px 4px;display:inline-block}
+.channel-list li.channel a.active{color:var(--brand);font-weight:600;border-bottom:2px solid var(--brand)}
 .detail-wrap{display:flex;gap:26px;background:#fff;border-radius:12px;padding:22px;margin-top:6px}
 .detail-cover{width:340px;border-radius:10px;overflow:hidden;flex:none}
 .detail-cover img{width:100%;display:block}
 .detail-main{flex:1}
 .detail-main h1.title{font-size:20px;line-height:1.5;margin-bottom:10px}
-.detail-main .author-wrapper{color:#666;margin-bottom:12px}
+.detail-main .author-wrapper{color:#666;margin-bottom:12px;text-decoration:none;display:inline-block}
 .detail-main .metrics{font-size:15px;color:#444;display:flex;gap:22px;margin:8px 0 14px}
 .detail-main .metrics .like-count{color:#e02040;font-weight:600}
 .comments{margin-top:22px}
 .comments h3{margin:10px 0}
+.comments .comments-count{color:var(--sub);font-size:12px;margin:2px 0 10px}
 .comment-item{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px}
 .comment-item .c-user{color:var(--sub);font-size:12px}
-.comment-item .c-content{margin-top:2px}
+.comment-item .c-content{margin-top:2px;white-space:pre-wrap}
+.comment-item .c-like{color:var(--sub);font-size:12px;margin-top:4px}
+.sub-comments{margin:8px 0 4px 18px;padding-left:12px;border-left:2px solid #f0f0f0}
+.sub-comments .comment-item{background:#fafafa;padding:8px 12px}
+button.expand-replies{border:0;background:none;color:#1c6ed8;font-size:12px;cursor:pointer;padding:6px 0;margin-top:2px}
+button.load-more-comments{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer;margin:8px 0}
+button.load-more-comments:disabled{color:#bbb;cursor:default;border-color:#eee}
+.user-card{width:100%;background:var(--card);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06);text-decoration:none;color:inherit;margin-bottom:12px}
+.user-card .u-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#eee}
+.user-card .u-name{font-size:16px;font-weight:600}
+.user-card .u-meta{color:var(--sub);font-size:12px;margin-top:4px}
+.user-cards{list-style:none;display:block}
 footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
+.note-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:4vh 0}
+.note-modal{background:#fff;border-radius:14px;max-width:920px;width:92%;display:flex;overflow:hidden;position:relative}
+.note-modal .m-media{width:420px;flex:none;overflow:auto;background:#111}
+.note-modal .m-media img{width:100%;display:block}
+.note-modal .m-main{flex:1;padding:20px 24px;min-width:0}
+.note-modal .m-close{position:absolute;right:12px;top:10px;border:0;background:rgba(0,0,0,.05);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:#666}
+.note-modal .m-title{font-size:19px;line-height:1.5;margin:6px 30px 10px 0}
+.note-modal .m-author{color:#666;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px}
+.note-modal .m-metrics{display:flex;gap:18px;color:var(--sub);font-size:13px;margin-bottom:10px}
+.note-modal .m-metrics .like-count{color:#e02040}
+.profile-tabs{display:flex;gap:34px;border-bottom:1px solid #eee;margin:6px 0 16px}
+.profile-tabs .p-tab{padding:10px 2px;color:#555;cursor:pointer;font-size:15px;position:relative}
+.profile-tabs .p-tab.active{color:var(--brand);font-weight:600}
+.profile-tabs .p-tab .p-tab-count{color:var(--sub);font-size:12px;margin-left:4px}
+.profile-tabs .p-tab.active:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand)}
 </style>
-<!-- DOM structure cross-check against reference sample
-      搜索框：'input-mini' 出现 1 次
-      卡片：'card-container' 出现 20 次
-      卡片列表：'cards' 出现 1 次 -->
+<!-- 结构来源：脱敏 DOM 样本缺失(kuaishou/ks_search_video/sample_0001/page_dom.html)，骨架按契约字段生成 -->
 <script>window.__INITIAL_STATE__=/*__STATE__*/null;</script>
 </head>
 <body>
@@ -68,9 +104,9 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
   <div class="toolbar">
     <button class="load-more" id="loadMoreBtn" type="button">加载更多</button>
     <span class="status" id="loadStatus">初始化…</span>
-    <span class="status">卡片数：<span id="cardCount">0</span></span>
   </div>
-  <div class="cards search-content" data-keyword=""></div>
+
+<div class="cards search-content" data-keyword=""></div>
   <div class="toolbar"><button class="load-more" id="loadMoreBtn2" type="button">加载更多</button></div>
 
 </main>
@@ -85,9 +121,13 @@ function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60
 function coverUrl(seed,label,w,h){return '/kos/nlav111422/pc-vision/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
 function contEl(){return document.querySelector('.cards');}
-/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError，红队修复复测暴露） */
-function setStatus(t){var e=document.getElementById('loadStatus');if(e)e.textContent=t;}
-var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0};
+/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError）。
+   红队 R5B-P3-3：失败态可点重试（class=retry + role=button，不再渲染 JS 异常原文）。 */
+function setStatus(t,retry){var e=document.getElementById('loadStatus');if(!e)return;
+  e.textContent=t||'';e.className='status'+(retry?' retry':'');e.setAttribute('role',retry?'button':'');
+  if(retry){e.onclick=function(){loadMore&&loadMore();};}else{e.onclick=null;}}
+var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0,type:'general'};
+var SEARCH_TYPE='general';   /* dy 搜索页按 ?type= 覆写（R5B-P2-3 频道分流） */
 
 var PS=20;
 function detailUrl(f){return '/short-video/'+enc(f.id);}
@@ -99,38 +139,63 @@ function fetchPage(kw){
   var body={keyword:kw, page:'search', pcursor:state.pcursor||'', searchSessionId:state.session||'', webPageArea:''};
   return fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
     body:JSON.stringify(body)}).then(function(r){
-    if(!r.ok) throw new Error('HTTP '+r.status+' @ '+url);
+    if(!r.ok) throw new Error('HTTP '+r.status);
     return r.json();
   });
 }
 
+/* R5B-P3-3：删除调试计数文案；R5B-P3-5：翻尽后按钮禁用。 */
+function setDone(done){
+  state.done=!!done;
+  ['loadMoreBtn','loadMoreBtn2'].forEach(function(id){
+    var b=document.getElementById(id); if(!b)return; b.disabled=!!done;
+  });
+}
 function renderCards(items, append){
   var cont=contEl();
   if(!append){cont.innerHTML='';}
   cont.setAttribute('data-keyword', state.keyword);
-  items.forEach(function(w){ cont.appendChild(cardNode(fields(w))); });
-  document.getElementById('cardCount').textContent=cont.children.length;
+  items.forEach(function(w){
+    var f=fields(w);
+    if(state.type==='user'&&DY_USER_MODE){cont.appendChild(userCardNode(f));}  /* dy 用户频道 */
+    else{cont.appendChild(cardNode(f));}
+  });
+}
+var DY_USER_MODE=false;
+var _seenSec={};   /* dy 用户 tab：按 sec_uid 去重（跨页聚合作者） */
+function renderItems(raw, append){
+  var cont=contEl();
+  if(typeof rememberNotes==='function'){rememberNotes(raw);}  /* xhs：条目数据入模态缓存 */
+  if(DY_USER_MODE&&state.type==='user'){
+    if(!append){cont.innerHTML='';_seenSec={};}
+    raw.forEach(function(a){
+      var f=fields(a); if(!f.sec||_seenSec[f.sec])return; _seenSec[f.sec]=1;
+      cont.appendChild(userCardNode(f));
+    });
+    return;
+  }
+  renderCards(raw, append);
 }
 function loadMore(){
   if(state.loading||state.done) return;
-  var myseq=state.seq;               // 代际守卫：过期响应（换词瞬间）直接丢弃
+  var myseq=state.seq;               /* 代际守卫：过期响应（换词瞬间）直接丢弃 */
   state.loading=true; setStatus('加载中…');
   fetchPage(state.keyword).then(function(resp){
-    if(myseq!==state.seq){return;}   // 已发起新搜索，本页作废
+    if(myseq!==state.seq){return;}   /* 已发起新搜索，本页作废 */
     var items=resp.feeds;
-    renderCards(items, true);
+    renderItems(items, true);
     var more=resp.feeds && resp.feeds.length > 0 && resp.pcursor && resp.pcursor !== 'no_more';
     state.pcursor = resp.pcursor; state.session = resp.searchSessionId;;
-    if(!more){state.done=true;setStatus('没有更多了');}
-    else setStatus('已加载 '+contEl().children.length+' 条');
-  }).catch(function(e){if(myseq===state.seq)setStatus('加载失败: '+e.message)})
+    if(!more){setDone(true);setStatus('没有更多了');}
+    else setStatus('');
+  }).catch(function(e){if(myseq===state.seq)setStatus('加载失败，点击重试',true)})
     .then(function(){if(myseq===state.seq)state.loading=false});
 }
 function doSearch(kw){
-  state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1};
-  document.title=kw+' - '+BRAND;   /* 红队 R3-P1-3：搜索页 title 对齐真站「<kw> - <品牌>」形态 */
+  state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1,type:SEARCH_TYPE||'general'};
+  document.title=kw+' - 快手';   /* R5B-P3-2 title 形态表：dy 静态、xhs/ks 关键词态 */
+  setDone(false);
   var cont=contEl(); cont.innerHTML=''; cont.setAttribute('data-keyword',kw);
-  document.getElementById('cardCount').textContent='0';
   loadMore();
 }
 /* 红队 R2-P2-6：滚动到底自动加载下一页（真站无限滚动；按钮保留兜底）。
@@ -158,11 +223,31 @@ function initSearch(){
   doSearch(kw0);
 }
 
+/* R5B-P2-3：视频/用户 tab 激活态（用户 tab → /search/user?searchKey=）；
+   搜索加载并发 /rest/v/search/user（语料 req_0007：search/feed 与 search/user 同发） */
+(function(){
+  var tabs=document.querySelectorAll('#searchTabs .tab-item');
+  tabs.forEach(function(x){
+    x.addEventListener('click',function(){
+      location.href=x.getAttribute('data-href-prefix')+enc(state.keyword);
+    });
+  });
+})();
+function fetchSearchUsers(kw,pcursor){
+  return fetch('/rest/v/search/user',{method:'POST',
+    headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify({keyword:kw,pcursor:pcursor||'',searchSessionId:state.session||'',webPageArea:''})}
+  ).then(function(r){return r.ok?r.json():null}).catch(function(){return null});
+}
+function onSearchUsers(resp){ window.__ksSearchUsers=resp; }
+
 function cardNode(f){
   var d=el('div','card-container video-card'); d.setAttribute('data-id',f.id);
   var a=el('a','card-link'); a.href=detailUrl(f);
   var cov=el('div','cover');
-  var img=new Image(); img.alt=f.title; img.loading='lazy'; img.src=coverUrl(f.id,f.title.slice(0,2));
+  var img=new Image(); img.alt=f.title; img.loading='lazy';
+  img.width=323; img.height=430;
+  img.src=coverUrl(f.id,f.title.slice(0,2));
   cov.appendChild(img);
   if(f.dur>0){cov.appendChild(el('span','duration',fmtDur(f.dur*1000)))}
   var info=el('div','card-info');
@@ -175,6 +260,19 @@ function cardNode(f){
   info.appendChild(m);
   a.appendChild(cov); a.appendChild(info); d.appendChild(a); return d;
 }
+/* 红队 R5B-P2-3：ks 用户 tab 卡（/search/user 页 + /rest/v/search/user 数据） */
+function ksUserCardNode(u){
+  var d=el('div','card-container user-result-card'); d.setAttribute('data-user-id',u.user_id||'');
+  var a=el('a','user-card'); a.href='/profile/'+enc(u.user_id||'');
+  var img=new Image(); img.alt=u.user_name; img.loading='lazy'; img.className='u-avatar';
+  img.src=coverUrl(u.user_id||u.user_name,(u.user_name||'').slice(0,2),128,128);
+  var box=el('div');
+  box.appendChild(el('div','u-name',u.user_name||'快手用户'));
+  box.appendChild(el('div','u-meta',u.user_text||''));
+  a.appendChild(img); a.appendChild(box); d.appendChild(a); return d;
+}
+var _origLoadMore=loadMore;
+loadMore=function(){var r=_origLoadMore();if(state.page===1){fetchSearchUsers(state.keyword,'').then(onSearchUsers);}return r;};
 document.addEventListener('DOMContentLoaded', function(){ initSearch();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore; });
 </script>
 </body>

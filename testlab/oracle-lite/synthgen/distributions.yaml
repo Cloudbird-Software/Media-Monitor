@@ -57,7 +57,9 @@ sites:
     view: {mu: 10.82, sigma: 1.40, min: 200}
     like:  {beta_a: 5.0, beta_b: 70.0}     # 基准点赞率均值 ≈ 0.067
     author_pool: 30000
-    author_popularity_shape: 1.8           # 作者被引用幂律
+    # R5A-P1-1：作者作品数长尾（对数正态，均值 mean_works 条/人）+ 头部份额上限注水
+    # （top1 作者占全库 ≤ share_cap；旧 Zipf(1.8) 引用幂律 top1 占 ~54%，语料实际 ≈1%）
+    author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}
     follower: {mu: 8.5, sigma: 1.8, min: 0}  # 粉丝对数正态（粉丝中位 ≈ 5k）
     durations_ms: {mu: 4.8, sigma: 0.45, min: 5000, max: 600000}
   xhs:
@@ -67,7 +69,7 @@ sites:
     ratios:                                # 站点级比率覆盖：收藏文化更强
       collect: {beta_a: 4.0, beta_b: 10.0, cap_like_frac: 2.50}
     author_pool: 30000
-    author_popularity_shape: 1.8
+    author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}   # R5A-P1-1 长尾作品数+份额上限
     follower: {mu: 7.6, sigma: 1.8, min: 0}
     images_per_note: {min: 1, max: 6, mean: 3.5}
     # 每条笔记内嵌（comment/page 可翻取）评论条数上限——R2-P1-2：计数与可得同源
@@ -78,6 +80,6 @@ sites:
     view: {mu: 9.90, sigma: 1.35, min: 100}
     like:  {beta_a: 6.0, beta_b: 65.0}     # 均值 ≈ 0.085
     author_pool: 30000
-    author_popularity_shape: 1.8
+    author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}   # R5A-P1-1 长尾作品数+份额上限
     follower: {mu: 8.2, sigma: 1.9, min: 0}
     durations_ms: {mu: 5.0, sigma: 0.5, min: 5000, max: 900000}
