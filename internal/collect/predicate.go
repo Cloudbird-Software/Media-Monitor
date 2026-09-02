@@ -168,6 +168,50 @@ func (p *stopPredicate) apply(c *contracts.Contract, recs []map[string]any, st *
 	return kept, false
 }
 
+// DefaultMaxCountPerRequest is the hard cap on the per-request count param
+// (report item 3 / C1: the human baseline never asks for count=60/100 — dy
+// stays at 20, occasional 50; a large count is a strong bot fingerprint).
+const DefaultMaxCountPerRequest = 20
+
+// maxCountPerRequest resolves the global count cap: MEDIAMON_MAX_COUNT
+// overrides the default 20 (deployments behind tolerant gateways may raise
+// it; values <= 0 fall back to the default).
+func maxCountPerRequest() int {
+	if n, ok := envInt("MEDIAMON_MAX_COUNT"); ok && n > 0 {
+		return n
+	}
+	return DefaultMaxCountPerRequest
+}
+
+// pageCountFor computes the count param value for one page: the caller's
+// limit (when set) clamped to the global per-request cap; when the caller
+// sets no limit the contract's count_default applies (never zero — the cap
+// is the final floor). The limit itself only stops the walk; it is NEVER
+// passed through as a page size (t02: --limit 60 produced count=60 in a
+// single request).
+func pageCountFor(c *contracts.Contract, limit int) int {
+	cap := maxCountPerRequest()
+	want := 0
+	if limit > 0 {
+		want = limit
+	} else if c.Paging.CountDefault > 0 {
+		want = c.Paging.CountDefault
+	}
+	if want <= 0 || want > cap {
+		return cap
+	}
+	return want
+}
+
+// maxPagesLimit resolves the pagination guard: MEDIAMON_MAX_PAGES overrides
+// the built-in 100 (report item 8: 页数上限可配置).
+func maxPagesLimit() int {
+	if n, ok := envInt("MEDIAMON_MAX_PAGES"); ok && n > 0 {
+		return n
+	}
+	return maxPages
+}
+
 // fetchPagesWith is fetchPages plus the optional backtrack predicate (see
 // predicate.go). pred == nil keeps the legacy behavior byte-for-byte: the
 // predicate application is skipped entirely and the loop is the original
@@ -214,8 +258,11 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 				query[c.Paging.CursorParam] = asStr(v)
 			}
 		}
-		if c.Paging.CountParam != "" && limit > 0 {
-			query[c.Paging.CountParam] = strconv.Itoa(limit)
+		if c.Paging.CountParam != "" {
+			// Count clamping (report C1): the count param is the PAGE SIZE,
+			// never the caller's limit — always clamped to ≤ the per-request
+			// cap (default 20, MEDIAMON_MAX_COUNT).
+			query[c.Paging.CountParam] = strconv.Itoa(pageCountFor(c, limit))
 		}
 		doc, err := fe.Fetch(ctx, name, pathParams, query)
 		if err != nil {
@@ -246,7 +293,7 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 		if stop || !next.HasMore || c.Paging.NextCursorPath == "" {
 			return truncate(out, limit), next, nil
 		}
-		if pages >= maxPages {
+		if pages >= maxPagesLimit() {
 			// Report item 8 / t03: hitting the page ceiling used to discard
 			// ~1980 collected records and return nil. Instead: keep the data,
 			// surface the live cursor so the caller can resume, and stop

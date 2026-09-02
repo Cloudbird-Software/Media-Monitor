@@ -525,7 +525,7 @@ func collectFlagSet(name string, o *collectOptions) *flag.FlagSet {
 	fs.StringVar(&o.cookies, "cookies", "", "cookie file; first line must be 'k1=v1; k2=v2'")
 	fs.StringVar(&o.account, "account", "", "account id from the pool; the request uses its cookie/proxy/UA (pool dir: $MEDIAMON_ACCOUNTS_DIR, default data/accounts)")
 	fs.StringVar(&o.outDir, "out-dir", "", "also append results to a JSONL store under this dir (collections items/comments/users/members)")
-	fs.IntVar(&o.limit, "limit", 20, "max records to fetch (<=0 = no limit)")
+	fs.IntVar(&o.limit, "limit", 20, "max records to fetch (0 = no record cap, walk still bounded by the page guard; the per-request count param is ALWAYS clamped to the safe page size, default 20, $MEDIAMON_MAX_COUNT)")
 	fs.StringVar(&o.signerURL, "signer-url", os.Getenv("MEDIAMON_SIGNER_URL"), "remote signer service base URL for signature params (default: $MEDIAMON_SIGNER_URL)")
 	fs.StringVar(&o.signerTok, "signer-token", os.Getenv("MEDIAMON_SIGNER_TOKEN"), "bearer token for the signer service (default: $MEDIAMON_SIGNER_TOKEN)")
 	return fs

@@ -56,15 +56,24 @@ func DefaultPacing() PacingConfig {
 
 // envMS reads a plain integer-milliseconds env var.
 func envMS(name string) (time.Duration, bool) {
+	n, ok := envInt(name)
+	if !ok || n < 0 {
+		return 0, false
+	}
+	return time.Duration(n) * time.Millisecond, true
+}
+
+// envInt reads a plain integer env var (shared by pacing/count/pages knobs).
+func envInt(name string) (int, bool) {
 	v := strings.TrimSpace(os.Getenv(name))
 	if v == "" {
 		return 0, false
 	}
 	n, err := strconv.Atoi(v)
-	if err != nil || n < 0 {
+	if err != nil {
 		return 0, false
 	}
-	return time.Duration(n) * time.Millisecond, true
+	return n, true
 }
 
 // envFloat reads a float env var.
