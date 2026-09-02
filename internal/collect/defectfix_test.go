@@ -103,19 +103,21 @@ func TestProbeDepthSkippedWhenNoMore(t *testing.T) {
 	}
 }
 
-// TestReplyTargetParamConfigurable (report t10 / item 6-④): a replies
-// contract can declare transport.reply_target_param; the engine then keys
-// the top-level comment id by that name. Default stays the first placeholder
-// (TODO-C线: xhs 真名待 A 线结论，由 C 线在适配契约设置).
-func TestReplyTargetParamConfigurable(t *testing.T) {
-	var seenDefault, seenCustom string
+// TestReplyTargetParamFromContract (report t10 / item 6-④ / TODO-C): the
+// reply-target parameter name is contract data — the engine keys the
+// top-level comment id by the contract's first declared placeholder, so the
+// xhs contract declares root_comment_id (A-line corpus verdict 64/64) and a
+// douyin-shaped contract keeps comment_id. The transitional
+// transport.reply_target_param override is gone (silent-scraping C-line).
+func TestReplyTargetParamFromContract(t *testing.T) {
+	var seenDy, seenXhs string
 	var mu sync.Mutex
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		if r.URL.Query().Get("root_comment_id") != "" {
-			seenCustom = r.URL.Query().Get("root_comment_id")
+			seenXhs = r.URL.Query().Get("root_comment_id")
 		} else {
-			seenDefault = r.URL.Query().Get("comment_id")
+			seenDy = r.URL.Query().Get("comment_id")
 		}
 		mu.Unlock()
 		w.Write([]byte(`{"comments":[{"id":"r1"}],"has_more":false}`))
@@ -123,36 +125,34 @@ func TestReplyTargetParamConfigurable(t *testing.T) {
 	defer srv.Close()
 	reg := contracts.NewRegistry()
 	reg.Add(&contracts.Contract{
-		Name: "rep-default", Platform: "mock", Category: "replies", Version: "1",
+		Name: "rep-dy", Platform: "mock", Category: "replies", Version: "1",
 		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/d", Method: "GET", Placeholders: []string{"comment_id"}},
 		Binding:   contracts.Binding{Comments: "$.comments"},
 	})
 	reg.Add(&contracts.Contract{
-		Name: "rep-custom", Platform: "mock", Category: "replies", Version: "1",
-		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/c", Method: "GET", Placeholders: []string{"comment_id"}, ReplyTargetParam: "root_comment_id"},
+		Name: "rep-xhs", Platform: "mock2", Category: "replies", Version: "1",
+		Transport: contracts.Transport{BaseURL: srv.URL, Path: "/x", Method: "GET", Placeholders: []string{"root_comment_id"}},
 		Binding:   contracts.Binding{Comments: "$.comments"},
 	})
 	e := New(Context{
 		Registry: reg,
 		HTTP:     httpclient.New(httpclient.Config{Timeout: 3 * time.Second, UserAgents: []string{"ua"}}),
 		Obs:      obs.NewCounterMap(),
-		Names:    map[string]map[string]string{"mock": {"replies": "rep-default"}},
+		Names:    map[string]map[string]string{"mock": {"replies": "rep-dy"}, "mock2": {"replies": "rep-xhs"}},
 	})
 	if _, _, err := e.CommentReplies(context.Background(), "mock", "it1", "cid-9", model.Cursor{}, 10); err != nil {
 		t.Fatal(err)
 	}
-	e2 := New(Context{Registry: reg, HTTP: httpclient.New(httpclient.Config{UserAgents: []string{"ua"}}), Obs: obs.NewCounterMap(),
-		Names: map[string]map[string]string{"mock": {"replies": "rep-custom"}}})
-	if _, _, err := e2.CommentReplies(context.Background(), "mock", "it1", "cid-9", model.Cursor{}, 10); err != nil {
+	if _, _, err := e.CommentReplies(context.Background(), "mock2", "it1", "cid-9", model.Cursor{}, 10); err != nil {
 		t.Fatal(err)
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	if seenDefault != "cid-9" {
-		t.Fatalf("default param name: comment_id=%q, want cid-9", seenDefault)
+	if seenDy != "cid-9" {
+		t.Fatalf("douyin-shaped contract: comment_id=%q, want cid-9", seenDy)
 	}
-	if seenCustom != "cid-9" {
-		t.Fatalf("custom param name: root_comment_id=%q, want cid-9", seenCustom)
+	if seenXhs != "cid-9" {
+		t.Fatalf("xhs contract: root_comment_id=%q, want cid-9", seenXhs)
 	}
 }
 

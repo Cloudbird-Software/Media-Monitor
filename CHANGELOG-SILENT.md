@@ -64,7 +64,13 @@
 2. **probeEngine 漏注 Signers**（dy 探测永不出网误判 expired）：与 collectEngine 同源装配 signers（`MEDIAMON_SIGNER_URL/TOKEN`），并补 BrowserHeaders/UAPool
 3. **probe 深度游标硬编码 "20"**（xhs 不透明 id 游标必空 → 好号误判 expired）：改用**首页响应返回的真实 next_cursor** 做第二页探测；`has_more=false` 不再深探；无游标可取时回退 `MEDIAMON_PROBE_DEPTH_CURSOR`（默认 "20"）
 4. **xhs 子评论参数名**（comment_id vs root_comment_id）：契约可声明 `transport.reply_target_param`，引擎按该名传递顶层评论 id；未声明保持默认 comment_id。
-   **TODO-C线**：默认值等 A 线语料裁决结论，由 C 线在适配契约中设置该值并对齐合成站（代码内已留 TODO-C线 标注）。
+   **TODO-C线 已裁决落地（2026-09，C 线 commit）**：A 线语料结论 = `root_comment_id`
+   （xhs_note_detail_comments 64/64 个 sub/page 请求全用 root_comment_id，零个裸 comment_id）。
+   `adapt/contracts/xhs-comments-replies.json` v1 的 placeholder 直接改为
+   `["root_comment_id"]`（参数名回归纯契约数据），过渡用的 `transport.reply_target_param`
+   机制整体删除（contract.go 字段、buildURL 的 comment_id 门旁路、CommentReplies 覆盖分支），
+   引擎只按「契约首个 placeholder」取名——dy 保持 comment_id、xhs 发 root_comment_id，
+   不再依赖合成站的 comment_id 兼容别名。
 
 ## 7. 附带低成本项（待办#10/#11）
 

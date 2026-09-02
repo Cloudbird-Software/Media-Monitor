@@ -34,9 +34,10 @@
   （:authority/:method/:path/:scheme + accept 等 ~20 头，一期取证 header_order）。
 - 做法：依赖 #1 的 h2 拟态（transport 层控制帧与头块顺序），单独立项无意义，随 #1 一起。
 
-## 5. xhs 子评论参数名默认值对齐（待 A 线结论）
+## 5. xhs 子评论参数名默认值对齐（待 A 线结论）——已解决，非遗留
 
-- 本分支已做配置化（`transport.reply_target_param`，见 CHANGELOG-SILENT §6-4）。
-- **TODO-C线**：A 线语料裁决（comment_id vs root_comment_id）结论出来后，
-  在适配契约（adapt/contracts/xhs-comments-replies.json 或 testlab 适配层）设置该值，
-  并与合成站（oracle/replay/synth_api.py）对齐复测 t10。
+- **已裁决落地（2026-09，C 线）**：A 线语料结论 root_comment_id（64/64）。
+  `adapt/contracts/xhs-comments-replies.json` v1 placeholder 改为
+  `["root_comment_id"]`，过渡机制 `transport.reply_target_param` 删除，
+  引擎按契约首个 placeholder 取参数名（见 CHANGELOG-SILENT §6-4）。
+  合成站对齐复测见 `oracle/mediamonitor/test_report_round2.md` t10。

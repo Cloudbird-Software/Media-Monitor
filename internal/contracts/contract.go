@@ -45,15 +45,10 @@ type Transport struct {
 	// AltHosts lists additional accepted hosts for URL validation (e.g. live
 	// room URL aliases); the base_url host is always accepted.
 	AltHosts []string `json:"alt_hosts,omitempty"`
-	// ReplyTargetParam names the query/body parameter that carries the
-	// top-level comment id on a replies contract (silent-scraping: the xhs
-	// sub-comment endpoint's parameter name differs from the engine default
-	// "comment_id"). Empty = the first declared placeholder (legacy
-	// behavior).
-	// TODO-C线: A 线正用语料裁决 xhs 子评论真名（comment_id vs
-	// root_comment_id）；结论出来后由 C 线在适配契约里设置该值并对齐
-	// 合成站。上游契约暂不设置（保持默认），避免抢跑结论。
-	ReplyTargetParam string `json:"reply_target_param,omitempty"`
+	// (silent-scraping TODO-C resolved 2026-09: the A-line corpus verdict
+	// named the xhs reply-target parameter root_comment_id, 64/64 — the
+	// transitional transport.reply_target_param override was removed; the
+	// parameter name now rides Placeholders[0] as plain contract data.)
 }
 
 type Signature struct {
