@@ -1,0 +1,233 @@
+{
+  "tool": "synthgen/1.0.0",
+  "site": "douyin",
+  "entity": "aweme",
+  "seed": 20260902,
+  "anchor_time": "2026-09-01T12:00:00+08:00",
+  "anomaly_classes": {
+    "high_collect_low_like": 0.01,
+    "high_like_low_view": 0.02,
+    "low_like_high_view": 0.015,
+    "new_hot": 0.01,
+    "old_hot": 0.01
+  },
+  "anomaly_class_names_zh": {
+    "high_like_low_view": "高赞低播放",
+    "low_like_high_view": "低赞高播放",
+    "new_hot": "新发布高互动",
+    "old_hot": "老内容高互动",
+    "high_collect_low_like": "高收藏低赞"
+  },
+  "filter": "",
+  "count_requested": 300,
+  "count_emitted": 300,
+  "gt_rows": 300,
+  "class_counts": {
+    "high_collect_low_like": 1,
+    "high_like_low_view": 7,
+    "low_like_high_view": 2,
+    "new_hot": 2,
+    "normal": 286,
+    "old_hot": 2
+  },
+  "target_fractions": {
+    "high_collect_low_like": 0.01,
+    "high_like_low_view": 0.02,
+    "low_like_high_view": 0.015,
+    "new_hot": 0.01,
+    "normal": 0.935,
+    "old_hot": 0.01
+  },
+  "generated_at_utc": "2026-09-02T15:56:35Z",
+  "distribution_config": {
+    "meta": {
+      "anchor_time": "2026-09-01T12:00:00+08:00",
+      "version": 1
+    },
+    "time": {
+      "powerlaw": {
+        "scale_days": 2.0,
+        "shape": 1.35,
+        "max_age_days": 730
+      }
+    },
+    "defaults": {
+      "ratios": {
+        "comment": {
+          "beta_a": 2.0,
+          "beta_b": 26.0,
+          "cap_like_frac": 0.3
+        },
+        "collect": {
+          "beta_a": 3.0,
+          "beta_b": 15.0,
+          "cap_like_frac": 1.5
+        },
+        "share": {
+          "beta_a": 2.0,
+          "beta_b": 24.0,
+          "cap_like_frac": 0.3
+        }
+      }
+    },
+    "anomalies": {
+      "high_like_low_view": {
+        "frac": 0.02,
+        "view_quantile": [
+          0.02,
+          0.45
+        ],
+        "like_mult": [
+          8.0,
+          28.0
+        ],
+        "like_rate_cap": 0.55
+      },
+      "low_like_high_view": {
+        "frac": 0.015,
+        "view_quantile": [
+          0.6,
+          0.995
+        ],
+        "like_div": [
+          20.0,
+          80.0
+        ]
+      },
+      "new_hot": {
+        "frac": 0.01,
+        "max_age_hours": 48,
+        "view_mult": [
+          1.5,
+          4.0
+        ],
+        "engage_mult": [
+          3.0,
+          10.0
+        ]
+      },
+      "old_hot": {
+        "frac": 0.01,
+        "min_age_days": 365,
+        "view_mult": [
+          1.2,
+          3.0
+        ],
+        "engage_mult": [
+          5.0,
+          15.0
+        ]
+      },
+      "high_collect_low_like": {
+        "frac": 0.01,
+        "like_mult": [
+          0.25,
+          0.6
+        ],
+        "collect_mult": [
+          10.0,
+          40.0
+        ]
+      }
+    },
+    "sites": {
+      "douyin": {
+        "view": {
+          "mu": 10.82,
+          "sigma": 1.4,
+          "min": 200
+        },
+        "like": {
+          "beta_a": 5.0,
+          "beta_b": 70.0
+        },
+        "author_pool": 30000,
+        "author_popularity_shape": 1.8,
+        "follower": {
+          "mu": 8.5,
+          "sigma": 1.8,
+          "min": 0
+        },
+        "durations_ms": {
+          "mu": 4.8,
+          "sigma": 0.45,
+          "min": 5000,
+          "max": 600000
+        }
+      },
+      "xhs": {
+        "view": {
+          "mu": 8.0,
+          "sigma": 1.2,
+          "min": 50
+        },
+        "like": {
+          "beta_a": 7.0,
+          "beta_b": 55.0
+        },
+        "ratios": {
+          "collect": {
+            "beta_a": 4.0,
+            "beta_b": 10.0,
+            "cap_like_frac": 2.5
+          }
+        },
+        "author_pool": 30000,
+        "author_popularity_shape": 1.8,
+        "follower": {
+          "mu": 7.6,
+          "sigma": 1.8,
+          "min": 0
+        },
+        "images_per_note": {
+          "min": 1,
+          "max": 6,
+          "mean": 3.5
+        },
+        "comments_per_note": {
+          "min": 0,
+          "max": 40
+        }
+      },
+      "kuaishou": {
+        "view": {
+          "mu": 9.9,
+          "sigma": 1.35,
+          "min": 100
+        },
+        "like": {
+          "beta_a": 6.0,
+          "beta_b": 65.0
+        },
+        "author_pool": 30000,
+        "author_popularity_shape": 1.8,
+        "follower": {
+          "mu": 8.2,
+          "sigma": 1.9,
+          "min": 0
+        },
+        "durations_ms": {
+          "mu": 5.0,
+          "sigma": 0.5,
+          "min": 5000,
+          "max": 900000
+        }
+      }
+    }
+  },
+  "files": {
+    "jsonl": {
+      "name": "aweme.jsonl",
+      "lines": 300,
+      "bytes": 2574215,
+      "sha256": "53fd7ead41eb1a086613e591f2a2e76ac79205174e86bffe0d6e6b8b86d3572b"
+    },
+    "ground_truth_db": {
+      "name": "ground_truth.db"
+    },
+    "index_db": {
+      "name": "index.db",
+      "present": true
+    }
+  }
+}

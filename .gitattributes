@@ -6,3 +6,5 @@ Makefile text eol=lf
 *.md text eol=lf
 *.json text eol=lf
 *.go text eol=lf
+# testlab/oracle-lite 数据集逐字节进出仓（MANIFEST sha256 复现口径，禁止 eol 转换）
+testlab/oracle-lite/synthgen/datasets/** -text

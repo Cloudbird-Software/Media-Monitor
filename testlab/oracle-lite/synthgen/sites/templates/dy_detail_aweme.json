@@ -1,0 +1,773 @@
+{
+ "family": "dy_detail_aweme",
+ "source_endpoints": [
+  "www.douyin.com/aweme/v1/web/aweme/detail/",
+  "www-hj.douyin.com/aweme/v1/web/aweme_detail.contract"
+ ],
+ "n_samples": 44,
+ "min_parent_rate": 0.5,
+ "keep_paths": 610,
+ "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地",
+ "template": {
+  "activity_video_type": 0,
+  "anchors": null,
+  "authentication_token": "DF4sDhMERBAVripNGQCZyY8zdV2GiP9Uv3hSsDfYj_--Hzbl_l5uGSidCIVD0kJoi0YG27-yX_s3WtX7M8Qpr4eTHeYiYV4uHGx6DhJ5VVJHPmLBtCsR9D6J0yJMPxz-pGd3R_Mix3HNM5nGVzX44HhJY1843mNJtw8ZevKSExAqG1I3tj5qoBueisoLhURckTdMk9xlMOzvLFD0HHHBcFGBTjTI63rfK2MtPQQHS1jTTYBpnQuCSmVZp4OBYScBlb1DGImRUEHZ4BfGVYdDFYitynL0mGqMXE",
+  "author": {
+   "account_cert_info": "{}",
+   "avatar_thumb": {
+    "height": 720,
+    "uri": "085y681/kfuaq-tyxjvi/ipj-qf-ghd-6581_8io45f5401q98045zoncogk6k28k6c02",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/vnzih/287q419/hkaev-sppzkw/nfw-kj-fry-3113_0zo07e8221q88906bqodilp0n65k0v72.blmf?egkg=474507295"
+    ],
+    "width": 720
+   },
+   "awemehts_greet_info": "",
+   "cf_list": null,
+   "close_friend_type": 0,
+   "contacts_status": 2,
+   "contrail_list": null,
+   "cover_url": [
+    {
+     "height": 720,
+     "uri": "v2470505xg5t2r29xss7",
+     "url_list": [
+      "https://p3-pc-sign.douyinpic.com/iql/w2549758nf4o0h39hjk9?ud5w=138y43ci&x-ymzhuub=0568270205&d-dtjfvxsdc=wUZt4SUcLVTg9U9NA%3Wz9dEIHr1e%1U&pnzj=679486921"
+     ],
+     "width": 720
+    }
+   ],
+   "create_time": 0,
+   "custom_verify": "",
+   "data_label_list": null,
+   "endorsement_info_list": null,
+   "enterprise_verify_reason": "",
+   "favoriting_count": 53,
+   "follow_status": 0,
+   "follower_count": 162163,
+   "follower_list_secondary_information_struct": null,
+   "follower_status": 0,
+   "following_count": 0,
+   "hide_others_recommend_interest": 0,
+   "hide_self_recommend_interest": 0,
+   "im_role_ids": null,
+   "is_ad_fake": false,
+   "is_blocked_v2": false,
+   "is_blocking_v2": false,
+   "is_cf": 0,
+   "live_high_value": 0,
+   "mate_add_permission": 0,
+   "max_follower_count": 0,
+   "nickname": "山间的风",
+   "offline_info_list": null,
+   "personal_tag_list": null,
+   "prevent_download": false,
+   "risk_notice_text": "",
+   "sec_uid": "LE6cPeXBVOSLofJiPWcsNOuEtUjkCgOsMg0yGFVqX0p-UOKlke4M0XGZfauzc2fxu73QpOt-qnaZ",
+   "secret": 0,
+   "share_info": {
+    "share_desc": "",
+    "share_desc_info": "",
+    "share_qrcode_url": {
+     "height": 720,
+     "uri": "",
+     "url_list": [
+      "https://p3-pc-sign.douyinpic.com/wol/054f808l14x5s311tr06?as3w=220f54du&g-vyrsvsc=3034790813&t-hxmndkupq=HtmSy72YSRXPJiEzB3qreXPrC7Z%5P&nanf=321750511"
+     ],
+     "width": 720
+    },
+    "share_title": "",
+    "share_title_myself": "",
+    "share_title_other": "",
+    "share_url": "",
+    "share_weibo_desc": ""
+   },
+   "short_id": "42573790264",
+   "signature": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本",
+   "signature_extra": null,
+   "special_follow_status": 0,
+   "special_people_labels": null,
+   "status": 1,
+   "story25_comment": 0,
+   "story_interactive": 0,
+   "story_ttl": 0,
+   "text_extra": null,
+   "total_favorited": 1253021,
+   "uid": "2531895255440807326",
+   "unique_id": "",
+   "user_age": -1,
+   "user_canceled": false,
+   "user_permissions": null,
+   "verification_type": 1
+  },
+  "author_mask_tag": 0,
+  "author_user_id": 4715783677425528987,
+  "aweme_control": {
+   "can_comment": true,
+   "can_forward": true,
+   "can_share": true,
+   "can_show_comment": true
+  },
+  "aweme_id": "3415909217987970753",
+  "aweme_listen_struct": {
+   "trace_info": "{\"copyright_not_speech\":\"false\",\"copyright_reason\":\"has_listen_cp_new\",\"copyright_tag_hit\":\"\",\"copyright_use_aed_default\":\"false\",\"copyright_use_tag_default\":\"false\",\"cp_ab\":\"true\",\"desc\":\"\",\"duration_over\":\"false\",\"hit_high_risk\":\"false\",\"media_type\":\"4\",\"reason\":\"hit_ab_0\",\"show\":\"false\"}"
+  },
+  "aweme_type": 0,
+  "aweme_type_tags": "",
+  "boost_status": 0,
+  "can_be_oc_cover": true,
+  "can_cache_to_local": true,
+  "caption": "",
+  "cf_assets_type": 0,
+  "cf_recheck_ts": 0,
+  "challenge_position": null,
+  "chapter_list": null,
+  "collect_stat": 0,
+  "collection_corner_mark": 0,
+  "comment_gid": 6433220848077853544,
+  "comment_list": null,
+  "comment_permission_info": {
+   "can_comment": true,
+   "comment_permission_status": 0,
+   "item_detail_entry": false,
+   "press_entry": false,
+   "toast_guide": false
+  },
+  "commerce_config_data": null,
+  "component_control": {
+   "data_source_url": "/onixn/c6/bkn/mzsbw/tvvaht/"
+  },
+  "component_info_v2": "{\"desc_lines_limit\":0,\"hide_marquee\":false}",
+  "cover_labels": null,
+  "create_time": 1785916500,
+  "danmaku_control": {
+   "activities": [
+    {
+     "id": 1224,
+     "type": 1
+    }
+   ],
+   "danmaku_cnt": 0,
+   "enable_danmaku": true,
+   "first_danmaku_offset": 29426,
+   "is_post_denied": false,
+   "last_danmaku_offset": 29426,
+   "pass_through_params": "{}",
+   "post_denied_reason": "",
+   "post_privilege_level": 0,
+   "skip_danmaku": false,
+   "smart_mode_decision": 0
+  },
+  "desc": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内",
+  "disable_relation_bar": 0,
+  "dislike_dimension_list": null,
+  "dislike_dimension_list_v2": null,
+  "distribute_circle": {
+   "campus_block_interaction": false,
+   "distribute_type": 0,
+   "is_campus": false
+  },
+  "diversion_bar_info": [],
+  "douplus_user_type": 0,
+  "douyin_pc_video_extra_seo": "",
+  "duet_aggregate_in_music_tab": false,
+  "duration": 55612,
+  "ecom_comment_atmosphere_type": 0,
+  "enable_comment_sticker_rec": false,
+  "enable_decorated_emoji": true,
+  "ent_log_extra": {
+   "log_extra": "{\"global_log_extra\":null,\"page_log_extra\":null,\"aweme_log_extra\":{\"ce_current_group_id\":\"7670421962472115465\",\"author_id\":\"7593603835043349563\"},\"extra_log_extra\":null}"
+  },
+  "entertainment_product_info": {
+   "market_info": {
+    "limit_free": {
+     "in_free": false
+    }
+   }
+  },
+  "entertainment_recommend_info": "{\"recommend_free_count\":0,\"test_info\":\"\",\"recommend_playlet_trigger_reqid\":\"\",\"recommend_playlet_trigger_cid\":\"\",\"recommend_playlet_trigger_reqid_type\":\"\",\"playlet_continue_play_config\":null,\"roi3_mode\":0,\"predict_identity\":\"\"}",
+  "entertainment_video_paid_way": {
+   "enable_use_new_ent_data": false,
+   "paid_type": 0,
+   "paid_ways": []
+  },
+  "entertainment_video_type": 3,
+  "f_s_grouth_property": {
+   "is_client_pack": false,
+   "is_natural_traffic": false,
+   "is_related_path": false
+  },
+  "fall_card_struct": {
+   "recommend_reason_v2": "[]"
+  },
+  "feed_comment_config": {
+   "audio_comment_permission": 0,
+   "author_audit_status": 0,
+   "common_comment_permission": 0,
+   "common_flags": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容",
+   "double_publish_limit": 1,
+   "input_config_text": "合成样本数据内容仅供本",
+   "input_config_text_type": "default_guide"
+  },
+  "flash_mob_trends": 0,
+  "follow_shoot_clip_info": {
+   "clip_from_user": 3657612278630556507,
+   "clip_video_all": 6745486117020037021
+  },
+  "follow_shoot_property": {
+   "recommended_camera_mode": "video"
+  },
+  "friend_recommend_info": {
+   "disable_friend_recommend_guide_label": false,
+   "friend_recommend_source": 26
+  },
+  "galileo_pad_textcrop": {
+   "android_d_h_cut_ratio": [
+    1
+   ],
+   "ipad_d_h_cut_ratio": [
+    1
+   ],
+   "ipad_d_v_cut_ratio": [
+    1
+   ],
+   "version": 1
+  },
+  "game_tag_info": {
+   "is_game": false
+  },
+  "geofencing": [],
+  "geofencing_regions": null,
+  "group_id": "7631849104476235721",
+  "guide_scene_info": {},
+  "hybrid_label": null,
+  "image_album_music_info": {
+   "begin_time": -1,
+   "end_time": -1,
+   "volume": -1
+  },
+  "image_comment": {
+   "comment_highlight_text": ""
+  },
+  "image_crop_ctrl": 0,
+  "image_infos": null,
+  "image_list": null,
+  "images": null,
+  "img_bitrate": null,
+  "impression_data": {
+   "group_id_list_a": [
+    4815299171116412326
+   ],
+   "group_id_list_b": [],
+   "group_id_list_c": [],
+   "group_id_list_d": [],
+   "similar_id_list_a": null,
+   "similar_id_list_b": null
+  },
+  "incentive_item_type": 0,
+  "interaction_stickers": null,
+  "is_24_story": 0,
+  "is_25_story": 0,
+  "is_ads": false,
+  "is_aigc_media": false,
+  "is_collects_selected": 0,
+  "is_duet_sing": false,
+  "is_from_ad_auth": false,
+  "is_image_beat": false,
+  "is_life_item": false,
+  "is_moment_history": 0,
+  "is_moment_story": 0,
+  "is_new_text_mode": 0,
+  "is_share_post": false,
+  "is_story": 0,
+  "is_top": 0,
+  "is_use_music": false,
+  "item_aigc_follow_shot": 1,
+  "item_title": "",
+  "item_warn_notification": {
+   "content": "",
+   "show": false,
+   "type": 0
+  },
+  "label_top_text": null,
+  "libfinsert_task_id": "",
+  "long_video": null,
+  "mark_largely_following": false,
+  "media_type": 4,
+  "music": {
+   "album": "",
+   "artist_user_infos": null,
+   "artists": [],
+   "audition_duration": 0,
+   "author": "DJ Mag",
+   "author_deleted": false,
+   "author_position": null,
+   "author_status": 1,
+   "avatar_large": {
+    "height": 720,
+    "uri": "4564a9701/ncczc-hzupiv/zlz-ry-y-1243m537-nn_fWHBXXsjC7VvwGM3Dz7P2VNDjuIArHDiUulOSO",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/rjtrh/1800c2359/hppdb-knjccr/fzj-pg-v-9996t500-so_uHATCAabA0CifGK0Mg2N6BYSjxSLkQWmUjpJNE.kner?zboe=196510190"
+    ],
+    "width": 720
+   },
+   "avatar_medium": {
+    "height": 720,
+    "uri": "349u264/lnrfr-bbcqal/qmn-fz-t-8727z206-bm_eHPRBCauG3TeyPY9Qa8A3SZUjcWPfTDtTyzGLD",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/jpjjc/940b156/jxgwy-oyynrz/fwh-jz-s-9018r454-ci_xQZEUVvnN8ZvbON8Yq2Z7MMCzdDUyYOmMrhOQJ.hcxl?deiz=438285614"
+    ],
+    "width": 720
+   },
+   "avatar_thumb": {
+    "height": 720,
+    "uri": "976e250/salad-trvzue/zkc-al-s-0942k869-oq_fQNLDPtyC3DowUY4Jw4X9CPAypXArSXeLkbCRL",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/rrcxg/742v888/hhlwr-zkechy/dqw-lc-d-4536a504-kn_zQAZZXobC3XrxUR1Fo5R4UAYjuQXxUByIfzJIQ.csyy?uffb=845646449"
+    ],
+    "width": 720
+   },
+   "binded_challenge_id": 0,
+   "can_background_play": true,
+   "collect_stat": 0,
+   "cover_hd": {
+    "height": 720,
+    "uri": "pdt-jv-w-6272b022/yCSHiZmWCQJe98cgPXSHOuxgKKaRKOgK7o0DnW",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/mqksc/0938q0315/tjegi-tnvcaw/mxc-uw-d-4847z092-cm_uNIZPHlnR1LslVS1Yu2U0MDJwfLRfJZvShfCFP.wdiv?wbas=326296869"
+    ],
+    "width": 720
+   },
+   "cover_large": {
+    "height": 720,
+    "uri": "heg-hh-x-8346d657/vIVYiGdHLJMl56zjHDICIzouDCdYWFhF9u7TkB",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/yatjr/2629l7360/tilun-umcmub/myi-pb-x-3829g930-cg_vQIVXIieB1VbyGG8Vb3V5KMOvsSRiEIkOisVQN.gyzx?qoru=982796927"
+    ],
+    "width": 720
+   },
+   "cover_medium": {
+    "height": 720,
+    "uri": "hyf-lq-v-3975f565/oSOYhOgWIHOo39rcBXHZTzpoFOxZFDdM0j9TmI",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/wvoug/777j401/katyk-jnulfo/tmn-hd-v-4848p415-gb_dRGUZTldI9UzjYG5Hs0K8SGIspAKdFMwLftRQM.iutm?dpos=069751348"
+    ],
+    "width": 720
+   },
+   "cover_thumb": {
+    "height": 720,
+    "uri": "egj-cw-g-5672i721/aHHUuKpFHOPy83ajYRCPJsjeCXoBAIbQ1r5QvV",
+    "url_list": [
+     "https://p3-pc.douyinpic.com/wxzqv/355m872/usgid-kfrstj/khn-oi-z-1463n177-vn_nXHZVIdkT8CutMC7Rp0E6NPOloEWvWPuAtwSKW.iayw?wjho=332326547"
+    ],
+    "width": 720
+   },
+   "dmv_auto_show": false,
+   "dsp_status": 10,
+   "duration": 60,
+   "end_time": 0,
+   "external_song_info": [],
+   "extra": "{\"aed_music_score\":0.18,\"aed_singing_score\":0.1,\"aggregate_exempt_conf\":[],\"aigc_clip\":false,\"beats\":{},\"cover_colors\":null,\"douyin_beats_info\":{},\"dsp_switch\":0,\"extract_item_id\":7593203926648920498,\"has_edited\":0,\"hotsoon_review_time\":-1,\"is_aed_music\":0,\"is_red\":0,\"is_subsidy_exp\":false,\"long_pic_video_usable\":true,\"music_label_id\":null,\"music_tagging\":{\"AEDs\":null,\"Genres\":null,\"Instruments\":null,\"Languages\":null,\"Moods\":null,\"SingingVersions\":null,\"Themes\":null},\"review_unshelve_reason\":0,\"reviewed\":0,\"schedule_search_time\":0,\"uniqa_speech_score\":0.46,\"with_aed_model\":1}",
+   "id": 7631669906981614632,
+   "id_str": "8612133945916289717",
+   "is_audio_url_with_cookie": false,
+   "is_commerce_music": false,
+   "is_del_video": false,
+   "is_matched_metadata": false,
+   "is_original": false,
+   "is_original_sound": true,
+   "is_pgc": false,
+   "is_restricted": false,
+   "is_video_self_see": false,
+   "lyric_short_position": null,
+   "mid": "5786750575916387941",
+   "music_chart_ranks": null,
+   "music_collect_count": 0,
+   "music_cover_atmosphere_color_value": "",
+   "music_status": 1,
+   "musician_user_infos": null,
+   "mute_share": false,
+   "offline_desc": "",
+   "owner_handle": "",
+   "owner_id": "4563801176765241",
+   "owner_nickname": "深海打盹",
+   "pgc_music_type": 2,
+   "play_url": {
+    "height": 720,
+    "uri": "",
+    "url_key": "7947855665592310693",
+    "url_list": [
+     "https://sf11-cdn-tos.douyinstatic.com/plb/wcd-ywpdc/7025674135475889128.ar8"
+    ],
+    "width": 720
+   },
+   "position": null,
+   "prevent_download": false,
+   "prevent_item_download_status": 0,
+   "preview_end_time": 0,
+   "preview_start_time": 0,
+   "reason_type": 0,
+   "redirect": false,
+   "schema_url": "",
+   "search_impr": {
+    "entity_id": "6266112255859193380"
+   },
+   "sec_uid": "GO6wBmIGOIPN_Z3pkdjeN1hKDjec-3vs_PuGkMEgBw5qmGCFrdYEgGKndHqRzOYmbu2zCNztBIzh",
+   "shoot_duration": 0,
+   "show_origin_clip": false,
+   "source_platform": 23,
+   "start_time": 0,
+   "status": 1,
+   "tag_list": null,
+   "title": "合成样本数据内容仅供本地测试填",
+   "unshelve_countries": null,
+   "user_count": 0,
+   "video_duration": 0,
+   "song": {
+    "artists": null,
+    "id": 6455450532466793003,
+    "id_str": "9757507125371556102"
+   }
+  },
+  "nickname_position": null,
+  "origin_comment_ids": null,
+  "origin_duet_resource_uri": "",
+  "origin_text_extra": [],
+  "original": 0,
+  "original_images": null,
+  "pack_usage_scene_by_req_path": "/orejo/x8/igu/eoqoj/kfnmvl/",
+  "packed_clips": null,
+  "pc_need_login": false,
+  "personal_page_botton_diagnose_style": 0,
+  "photo_search_entrance": {
+   "ecom_type": 0
+  },
+  "play_progress": {
+   "last_modified_time": 0,
+   "play_progress": 0
+  },
+  "position": null,
+  "preview_title": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内",
+  "preview_video_status": 1,
+  "product_genre_info": {
+   "material_genre_sub_type_set": [
+    4
+   ],
+   "product_genre_type": 2,
+   "special_info": {
+    "recommend_group_name": 0
+   }
+  },
+  "promotions": [],
+  "publish_plus_alienation": {
+   "alienation_type": 0
+  },
+  "rate": 12,
+  "region": "CN",
+  "relation_labels": null,
+  "risk_infos": {
+   "content": "",
+   "risk_sink": false,
+   "type": 0,
+   "vote": false,
+   "warn": false
+  },
+  "sec_item_id": "BP4iMeJCOCBMQxK4QUilHAYeVNzNxp_UI3L52O23f3OdrVre0zY5LqnVZdXa6z99Jhass2ihe49r",
+  "select_anchor_expanded_content": 0,
+  "seo_info": {},
+  "series_basic_info": {},
+  "series_paid_info": {
+   "item_price": 0,
+   "series_paid_status": 0
+  },
+  "share_info": {
+   "share_desc": "合成样本数据内容仅供",
+   "share_desc_info": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合",
+   "share_link_desc": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成",
+   "share_url": "https://www.iesdouyin.com/gohqw/lflxw/1361111957905013091/?vbcjne=GG&phj=4349756244372612637&a_wouw=905u56x3j&wqf=QW9rJvEAFLAMuMotGH66VFT-wOvfeQS3Ji8oPBHY2J--YYgPaxSE2U5jGW-H2AjITDGlONQTWnxB&ivt=YI1cBkBHPUJZJbeOzRKKQXwk9vTzDTiBn0UK-BytvPuh-iXtWVyNcPQ&nnog_vfb_gcp=9&xkjml_pnxcr_mfytz_gjd=&wyaamGsjv=bjaem&bwaog_knks=IJsIWz04PzRbZ2Ru2fV827fk3kmt1NiooWZpEApfOMF-&xeezz_sukqeay=501414&cs=7321555925&vvsp_kqz=1712&qdqi_uic=0&arlcj_nvngj_onjj=%0H%81povz_zzdwvhbofwv_cmly%53%1C%86%13%9F"
+  },
+  "share_rec_extra": "",
+  "share_url": "https://www.iesdouyin.com/rlvgk/hrxjg/7666319950285126211/?kwzhql=NP&rxm=2823435249524013752&l_vjwu=158j51n9x&dap=IO9wAuULOKQYbEyqRU56FXO-mBpbeUQ8Nh5vZQYV9Q--YNxJkrPH7C7iMK-F1SdVHNMuUHQEUzoQ&dhp=VX4qNdIALQRUIdaGdDQFRRgj4iSqWMlNl6YA-ZzflCpp-uLxSGaPuQW&bxwu_ybn_gjo=6&ahjpx_nynbc_ggadp_gpu=&csxlxItem=fgmrn&rpoej_nzoe=LMbIXf47KoNlV4Vg8hW875vh8daj1LwdlCMyKHplPBP-&vxeiu_rtewtyn=918971&qb=9803762960&utas_fio=8336&nhrr_gun=8&jcghg_nwbkc_qfon=%6Q%94jpbn_qlfvhnsavtc_pomb%05%6Y%75%24%2T",
+  "shoot_way": "direct_shoot",
+  "should_open_ad_report": false,
+  "show_follow_button": {},
+  "social_tag_list": null,
+  "statistics": {
+   "admire_count": 0,
+   "aweme_id": "3963517785132526068",
+   "collect_count": 27947,
+   "comment_count": 487,
+   "digg_count": 29771,
+   "play_count": 0,
+   "recommend_count": 410,
+   "share_count": 10207
+  },
+  "status": {
+   "allow_friend_recommend": false,
+   "allow_friend_recommend_guide": true,
+   "allow_self_recommend_to_friend": true,
+   "allow_share": true,
+   "aweme_id": "6172363912677628418",
+   "enable_soft_delete": 0,
+   "in_reviewing": false,
+   "is_delete": false,
+   "is_prohibited": false,
+   "listen_video_status": 2,
+   "not_allow_soft_del_reason": "ab",
+   "part_see": 0,
+   "private_status": 0,
+   "review_result": {
+    "review_status": 0
+   }
+  },
+  "suggest_words": {
+   "suggest_words": [
+    {
+     "extra_info": "{\"is_life_intent\":1,\"resp_from\":\"hit_cache\"}",
+     "hint_text": "合成样本数据",
+     "icon_url": "",
+     "scene": "comment_top_rec",
+     "words": [
+      {
+       "info": "{\"End\":0,\"Start\":0,\"ecpm_boost_tag\":false,\"log_pb\":\"\",\"qrec_for_search\":\"{}\"}",
+       "word": "合成样本数据内容",
+       "word_id": "5823616714711451106"
+      }
+     ]
+    }
+   ]
+  },
+  "text_extra": [
+   {
+    "caption_end": 0,
+    "caption_start": 0,
+    "end": 43,
+    "hashtag_id": "7865072468013369",
+    "hashtag_name": "合成样本",
+    "is_commerce": false,
+    "start": 21,
+    "type": 1
+   }
+  ],
+  "trends_event_track": "{}",
+  "uniqid_position": null,
+  "user_digged": 0,
+  "user_recommend_status": 1,
+  "video": {
+   "audio": {},
+   "big_thumbs": [
+    {
+     "duration": 55.6,
+     "fext": "jpg",
+     "img_num": 75,
+     "img_url": "https://p3-sign.douyinpic.com/dkb-ii-t-2183/mMkyF3ZroIBfERfnMJMBU6lc77yovAWUpCBteO~ibms-pjup.fkrus?ozvjpp=676N_180q_356z_662A_794X&xk_x=8648167069&v=41308761884396G5F0880X89U6K9R434N3&y-jptarvd=4983312264&d-kurhhmsng=QPVBHmzgBF%7AU5%4P%3WC5gRL%6RjCpkne%3A",
+     "img_urls": [
+      "https://p3-sign.douyinpic.com/akp-nl-g-2129/mDunN8XsvSMtANyeQSQUG3ag43strXJGeGOiuQ~yadr-wmxi.gyzxc?tunqoh=861I_522r_439z_468V_886H&dm_e=7811863849&l=48008775291344M5E7827Y94Y8L5Y461C7&d-sphrjds=5174689738&t-ojvziekpa=DPHGLxgzBU%5QB2%1B%4DX9rJF%3YpWjuhh%4D"
+     ],
+     "img_x_len": 5,
+     "img_x_size": 136,
+     "img_y_len": 5,
+     "img_y_size": 240,
+     "interval": 1,
+     "uri": "cvx-kd-z-4539/hUYCqRfzgTJfhQYonjJyLWkeXiiX9EKY0ZKrF8",
+     "uris": [
+      "fjs-ka-z-9129/zSABuCthpFZuvRFlfhPeQYcqEttH5XAY7BStK6"
+     ]
+    }
+   ],
+   "bit_rate": [
+    {
+     "FPS": 30,
+     "HDR_bit": "",
+     "HDR_type": "",
+     "bit_rate": 2735667,
+     "format": "mp4",
+     "gear_name": "normal_1080_0",
+     "is_bytevc1": 0,
+     "is_h265": 0,
+     "play_addr": {
+      "data_size": 19016996,
+      "file_cs": "c:0-47068-58cb|d:0-9508497-e373,9508498-19016995-7b7b|a:v0200fg10000d9pcsenog65o2qepd5kg",
+      "file_hash": "3btut026ik4k0go1w8i7nq191410fn6z",
+      "height": 1920,
+      "uri": "x6917xa79934t1xhhidbi45i3uczo5qm",
+      "url_key": "h5608uy25599r3nykhnun79y2evcr3nc_k191_4237b_3582419",
+      "url_list": [
+       "https://v11-weba.douyinvod.com/3564j0e16189r10w9iv9um622y5ksf30/7d5966ql/mamae/fhf/kf/etb-ql-sv-28/zLVecwEFB4fCA4XOeDzVpW3s6INdNIVpht94Xe/?g=9841&sb=98&qd=2&st=5&rx=vmx&ew=5%2R7%5X7%2E2&fz=5&sx=8950&ok=2519&oe=0&ti=24&pd=RKioP_UKYE7xahQ7QZz3Ll1lCDqjyH~_txXN_0ZA5-LZFh9KJB&busl_drsn=zmbcx_eq8&fn=14&gs=LJrbEVz6Mwa8iVHnS3imPGSxaps0i721gqheLHYoMJamK3NmQCMuTJ2dYzEeMlObEIXnESGkJZQtLcOsmNCkXZ7xHE8tqn%0R%9X&idog=a1308y07527688&wfzzvf=713l_730B_775E_128W_893z&eu_u=0108666896&ttfrlgi_cb=766ndk15121363f4s8ot3l65x8r46899&f=08119814189885J2U2810H64I6Z8M489I4"
+      ],
+      "width": 1080
+     },
+     "quality_type": 1,
+     "video_extra": "{\"PktOffsetMap\":\"[{\\\"time\\\": 1, \\\"offset\\\": 636896}, {\\\"time\\\": 2, \\\"offset\\\": 1104315}, {\\\"time\\\": 3, \\\"offset\\\": 1391044}, {\\\"time\\\": 4, \\\"offset\\\": 1840253}, {\\\"time\\\": 5, \\\"offset\\\": 2308125}, {\\\"time\\\": 10, \\\"offset\\\": 3826923}]\",\"format\":\"mp4\",\"definition\":\"1080p\",\"quality\":\"normal\",\"file_id\":\"c811b714b09746ccb3a91b80e20f3598\",\"applog_map\":{\"feature_id\":\"37f92ebd2877ae8e7eba995d406c5150\"},\"mvmaf\":\"{\\\"mvmaf_sr_v1080\\\":97.776,\\\"mvmaf_sr_v960\\\":98.26,\\\"mvmaf_sr_v864\\\":98.664,\\\"mvmaf_sr_v720\\\":98.885,\\\"mvmaf_ori_v1080\\\":92.762,\\\"mvmaf_ori_v960\\\":93.828,\\\"mvmaf_ori_v864\\\":94.093,\\\"mvmaf_ori_v720\\\":95.432}\",\"audio_channels\":\"2.0\",\"audio_sample_rate\":\"44100\",\"audio_metrics\":null,\"audio_score\":null}"
+    }
+   ],
+   "bit_rate_audio": null,
+   "cdn_url_expired": 1788298441,
+   "cover": {
+    "height": 720,
+    "uri": "ubafu-wzd-udk-afkp/vo199u4o70w7r09p5m185862121w2891",
+    "url_list": [
+     "https://p3-pc-sign.douyinpic.com/epogk-bdf-awi-tdio/9276y1594i174v128771of81y5e6647x~tbki-ue-wzhjtc-lpvltnafr-wtfka-65:130.vjws?pd9g=977k94hq&h-yjaarcn=9040220796&u-ybampvdcm=mcIoStF8gk1iYAH8d0lwk9uv4O6%0K&gqao=203695826&t=ZtulLbgxjqOqnj_MOJOL_RSKJDZ&dl=rybco&vx=blxim&qky_xdm=ksoxp_etxof&t=23229372402860A1G6228M12Q4Z3R239J7"
+    ],
+    "width": 720
+   },
+   "cover_original_scale": {
+    "height": 640,
+    "uri": "qdv-ga-e-of/1o2y52i49461004c9ir99343ek4v07d6",
+    "url_list": [
+     "https://p3-pc-sign.douyinpic.com/paq-oa-h-qz/yz851c9as820489mr3w28e8d02ouz31g~wvsn-ub-476p.ibcj?bq1h=836m69nr&p-tyrgsqj=0419462561&b-urrdxkhgl=i8GY4TngDzNNC5avYnlIfQBfHgi%0K&gupp=488285158&j=EsmsCotrnvEgcc_HADJE_KQUSGQ&ip=veike&zj=wriwbz_exxqi&evw_fjs=cvxks_rnyil&q=44374730411186E4B7327V10S8Z1J225R8"
+    ],
+    "width": 360
+   },
+   "download_addr": {
+    "data_size": 18182052,
+    "file_cs": "c:0-61650-5fc0",
+    "height": 720,
+    "uri": "s3927li78296m5jofoact85s0ecro5wr",
+    "url_list": [
+     "https://www.douyin.com/nhxpf/z7/qxrf/?thomr_sj=d4636qn60242xjs49h9u66g83201kgru&qmky=7&tbrdc=872z&odesribrz=5&asjyg_mtyd=0&eb_luzh=7&cqnmkbd_yvoobeu=7&ngq_ssec=OKPK5aG4XpdqP6XO_d2RdyWaQLDSmhESnwKGbWegST36FwlzRX9DpOwo84UJ9TdjVjDt6ZM5Wt-R2U7VzAngt90x8ysFWEsUMrUQPBpkRXTEoK3i1gyET8qe9R7hr0qR&uidp_yhjf=eqhct_jieskq_gygtyk&ingbyha_bflt=62&uekfxx=TkaeGvpnyzHshf_JELUB_ZGUNBV"
+    ],
+    "width": 720
+   },
+   "download_suffix_logo_addr": {
+    "data_size": 18182052,
+    "file_cs": "c:0-61650-5fc0",
+    "height": 720,
+    "uri": "u9379rh57032l8mlpfhdi05o7ccyf3in",
+    "url_list": [
+     "https://v11-weba.douyinvod.com/f77agwp7865kh4m44j6tz42nf4t848f1/7o1283ci/budih/aji/nq/mma-uz-zd-88/j3PC8wjEzVXUBJygZbXuQ0A5yq1GjMOYX5JmnL/?p=4718&mc=94&qt=8&au=1&lp=tot&cq=7%2X7%2E3%2O0&tb=3&ya=1857&jt=1323&hy=6&xr=8&rr=CMycM_IBIV5tyxW9TSg6Oc0sNPdhmE~_ibSP_3EC1-OQEl3CBC&hazg_gtjn=ybrbt_rg6&ih=8&dw=XGazSKDuZwu6FvG3HsghFJIyeqw2c648yvyiYGJyOSxpK3PoPTLnR71kPqShQdF1VHCsTLAnLREaHbIsuQEoQJ5xPD7euf%8C%6G&gpoe=q3418k20247723&hnwkec=047S_568q_523s_002P_861O&im_g=9651316910&esrwekb_ck=00c1649g4634c715gi1g0ir9801nee9c&j=22650695788475G9P1817Y47I4K5C269P0"
+    ],
+    "width": 720
+   },
+   "duration": 55612,
+   "dynamic_cover": {
+    "height": 720,
+    "uri": "apw-js-i-qh/1o1g82u96831798m6ap96177pt9l60f2",
+    "url_list": [
+     "https://p3-pc-sign.douyinpic.com/fty/xlu-pz-p-yg/lp443q8jt678960uj3a99i3s07tqm83g?gy3a=217p29zt&x-kvqhwlm=2974228431&a-gnipwdhnz=8eVVw2fCfXs0nw4R%0CeKfr91mZNq%6G&fbqz=135847158_knciv&b=VsvoNmvasfFnda_HVDHC_FVHHKL&ei=uvdja&lp=tgibqhz_autnx&goc_pox=dpvrj_owfoo&d=20914640025218H1O2894W30L9Y7K197E6"
+    ],
+    "width": 720
+   },
+   "format": "mp4",
+   "gaussian_cover": {
+    "height": 720,
+    "uri": "qck-te-m-7924/mKZqUjyfALDk31GOmWCzmRLh0OzTMCxGyXLqe",
+    "url_list": [
+     "https://p3-pc-sign.douyinpic.com/fhi-id-q-7037/eJEeBmqeNOVc41HGqQSruLLz7FcOJKoUjLXoi~dzzn-cyn4qkf6li-mxtyr:94.hiob?ai4b=904p49rw&d-gpxjiev=5139580281&p-uqkciqotl=hRmKzHib1qIk%0Up4QKU21UI4kSGG%3X&sbqm=816922255"
+    ],
+    "width": 720
+   },
+   "has_download_suffix_logo_addr": true,
+   "has_watermark": true,
+   "height": 3840,
+   "is_h265": 0,
+   "is_source_HDR": 0,
+   "meta": "{\"bright_ratio_mean\":\"0.0461\",\"brightness_mean\":\"129.7261\",\"diff_overexposure_ratio\":\"0.0519\",\"enable_manual_ladder\":\"1\",\"format\":\"mp4\",\"gear_vqm\":\"{\\\"1080p_720p\\\":-1,\\\"720p_540p\\\":-1}\",\"hrids\":\"260309002\",\"is_cdn_peak\":\"false\",\"is_spatial_video\":\"0\",\"isad\":\"0\",\"loudness\":\"-17.8\",\"net_info\":\"{\\\"dns_list\\\":{},\\\"c_isp\\\":1}\",\"overexposure_ratio_mean\":\"0.0471\",\"peak\":\"0.51286\",\"play_time_prob_dist\":\"[800,0.9918,2997.0493]\",\"qprf\":\"1.000\",\"sdgs\":\"[\\\"normal_1080_0\\\",\\\"adapt_720_0\\\",\\\"adapt_540_0\\\",\\\"normal_720_0\\\",\\\"normal_540_0\\\",\\\"low_720_0\\\",\\\"low_540_0\\\",\\\"adapt_lower_540_0\\\",\\\"adapt_lowest_1080_1\\\",\\\"lower_540_0\\\",\\\"adapt_low_540_0\\\",\\\"adapt_lowest_720_1\\\",\\\"adapt_540_1\\\",\\\"adapt_lower_540_1\\\"]\",\"sr_potential\":\"{\\\"v1.0\\\":{\\\"score\\\":39.229}}\",\"sr_score\":\"1.000\",\"std_brightness\":\"16.5838\",\"strategy_tokens\":\"[\\\"online\\\",\\\"bytevc2_strategy_ab02_0711\\\",\\\"bytevc2_strategy_ab01_0711\\\"]\",\"title_info\":\"{\\\"ratio_br_l\\\": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0], \\\"ratio_edge_l\\\": [0.0, 0.07, 0.19, 0.32, 0.4, 0.45], \\\"progress_bar\\\": [0.0, 0.0, 0.0], \\\"bullet_zone\\\": 0.82, \\\"top_res_add\\\": [0.0, 0.0, 0.0, 0.0, 0.0, 57.27, 1.82], \\\"bottom_res_add\\\": [2.36, 3.91, 4.09, 2.73, 3.36, 2.0, 0.55, 0.64, 0.09, 17.55, 0.0, 0.0, 0.0, 0.0, 0.0], \\\"version\\\": \\\"v1.0\\\"}\",\"volume_info\":\"{\\\"Loudness\\\":-17.8,\\\"Peak\\\":0.51286}\",\"vqs_origin\":\"65.35\"}",
+   "origin_cover": {
+    "height": 640,
+    "uri": "tjl-un-x-0052/iANcNylfLLFd83TCqTByuRFv1RrKYHiBmRFzc",
+    "url_list": [
+     "https://p3-pc-sign.douyinpic.com/noj-aw-d-4206/sAQC9BaXtxAex2xe32DBf0YEhnFFw4HQTpPGys~laov-tx-537u.aqpc?jj6l=647u82ca&i-vvfkxne=6001975755&e-zkgmmjgsc=dXgj1WJdtjleMMYsCXRjKBCb26W%7N&mhxz=083445079&o=NhjqGamupaCqdn_ZDUJO_QDXLGO&de=nwuzo&sp=qycidl_hvbdr&rih_tns=nmpxw_hwcoi&q=71819203311686D6Q8633O35H4Q4W493B3"
+    ],
+    "width": 360
+   },
+   "play_addr": {
+    "data_size": 19016996,
+    "file_cs": "c:0-47068-58cb|d:0-9508497-e373,9508498-19016995-7b7b|a:v0200fg10000d9pcsenog65o2qepd5kg",
+    "file_hash": "2ouir157gr9w6af4a5b2po018989qc6w",
+    "height": 1920,
+    "uri": "a2010ru53805s3vhdwthm37s5gegc0jk",
+    "url_key": "s0833ux39772n0rjokbhu91d3tcve3bb_j979_5926z_1409349",
+    "url_list": [
+     "https://v11-weba.douyinvod.com/9ho782932pazo8394fg7qj0r6010821g/4d4988fh/gebfm/yxg/wh/qgz-lj-sv-00/am2JKsxVRkoDRply5T3xoMjQYMsCW4O6PN9XnM/?c=1278&qa=43&yt=7&on=0&on=oyv&kw=3%3Q3%2K3%4D5&mj=0&wn=0352&jd=3208&od=8&ve=4&ri=CDztU_QGMJ8hjwO9AEg5Vg2iLBwulR~_hqTY_0DS5-LPQn7ZMW&bkfc_btsq=mnhve_ug2&lp=8&nv=OTd6aMSdLYc8mEv9HGd8Z8Dqbiw4r593cxpsHBYdWFbbZ6R1LOBtGUMbPZ6cDIGoLz9kMCTcUURkPbUqwZDoUW5wES3khv%3J%6A&dpho=v0735z31883211&etrrrl=541z_867p_302Z_997H_841D&jy_y=4570334999&fvsyadf_fv=33y20egw5354vz4l3rzc650f125z9816&q=19910516997578B1V4432Z58A7P2Q987O0"
+    ],
+    "width": 1080
+   },
+   "play_addr_265": {
+    "data_size": 11481448,
+    "file_cs": "c:0-47499-d520|d:0-5740723-80aa,5740724-11481447-e7d7|a:v0200fg10000d9pcsenog65o2qepd5kg",
+    "file_hash": "zsjq6870u9t8igg1118t32369kk06d70",
+    "height": 2560,
+    "uri": "i3209vm95809z5dsfxhae24f1utzv1rx",
+    "url_key": "w8504ep46636n2njpeefs17r0mjyd7cb_hevkpi7_6796p_8977913",
+    "url_list": [
+     "https://v11-weba.douyinvod.com/70j6t72562318av125ug3sbm5y7e6015/0h8469fa/nqtyo/kap/as/bcs-wr-gi-69/fJoENB3GqD2VG5wQ3RpZVjSSBvsz4HYzmwhbid/?z=1311&ro=13&mw=5&rs=3&ax=tdb&rg=1%5V2%3W1%1W0&ht=7&ph=1407&iy=5952&lb=9&bt=VSpiC_JYSU9lcoN7FLl5Gu0tSMxaeS~_syLW_3UE9-RPFl7HBU&ygaj_xfpu=oglue_yc8&cb=49&is=sCv4LQcsQ6b6VBzkSjN1FZAnayj1g404phwlVLGkHNjzK1AuBWD8PwRzNf8lOQIhZe4iZFBqEKUdGfXurJLvSB7bUQ5yde%0X%3V&hqta=p0176v54055287&gbewmu=457Q_003n_701w_177C_013X&ii_s=8169935497&mjoskrc_ce=799bfn83894001n0t6aw1r61q3w24506&r=94556416774251D7I3093M23B2H5Y873F3"
+    ],
+    "width": 576
+   },
+   "play_addr_h264": {
+    "data_size": 19016996,
+    "file_cs": "c:0-47068-58cb|d:0-9508497-e373,9508498-19016995-7b7b|a:v0200fg10000d9pcsenog65o2qepd5kg",
+    "file_hash": "8sitk803ru1k4eu9b5j8gn389608qp1y",
+    "height": 1920,
+    "uri": "c2636dv21140l1hsrfuek60d3usgc4tc",
+    "url_key": "q1624ug08645s3gugfrrb28u1udai5zv_o303_2103z_1318453",
+    "url_list": [
+     "https://v11-weba.douyinvod.com/1mf209115pota5742vx3ep8z8651333d/9o9321cq/ouzfa/fno/vq/lpb-yi-pu-99/ql6JQzwDTmmLJuye9N4erVkDFUmRW5Z0HD7RsT/?u=6485&vg=96&ul=6&kz=5&xc=xxo&pc=0%0K5%5H2%9Q2&hq=7&ma=6394&tw=6072&ub=9&ns=8&sv=ATxqO_EXDI1tmrQ1ZYd9Uv0pMHqtpG~_zeUV_9BW2-BOIo7RIZ&mhdn_rdom=trmur_vg9&zr=6&cu=FIk9vIFoQSu3sXj7FZs7A1Tlndc0l413zplhOOGkBEgqL0I3URNhIHBiXX6iNLAoRm8wCWDzXDViKpEtzHNmBO7gGM3mhl%9V%7A&nqqo=o1939r63796990&aoxtym=872f_472x_333O_844D_642F&zm_l=3302092287&evhzcxc_fx=02i63mbq2204ht0o0fpz928v451g5268&r=77127175009319E7Y1616C85O7Z7A336X7"
+    ],
+    "width": 1080
+   },
+   "ratio": "1080p",
+   "video_model": "",
+   "width": 1080
+  },
+  "video_control": {
+   "allow_douplus": true,
+   "allow_download": true,
+   "allow_duet": true,
+   "allow_dynamic_wallpaper": false,
+   "allow_music": true,
+   "allow_react": true,
+   "allow_record": true,
+   "allow_share": true,
+   "allow_stitch": true,
+   "disable_record_reason": "",
+   "download_ignore_visibility": true,
+   "download_info": {
+    "level": 0
+   },
+   "draft_progress_bar": 1,
+   "duet_ignore_visibility": true,
+   "duet_info": {
+    "level": 0
+   },
+   "prevent_download_type": 0,
+   "share_grayed": false,
+   "share_ignore_visibility": true,
+   "share_type": 1,
+   "show_ai_corner": false,
+   "show_progress_bar": 1,
+   "show_watermark": false,
+   "timer_info": {},
+   "timer_status": 1
+  },
+  "video_game_data_channel_config": {},
+  "video_labels": null,
+  "video_share_edit_status": 0,
+  "video_tag": [
+   {
+    "level": 1,
+    "tag_id": 2001,
+    "tag_name": "合成"
+   }
+  ],
+  "video_text": [],
+  "visual_search_info": {
+   "is_ecom_img": false,
+   "is_high_accuracy_ecom": false,
+   "is_high_recall_ecom": false,
+   "is_show_img_entrance": false,
+   "visual_search_longpress": 1
+  },
+  "vtag_search": {
+   "vtag_delay_ts": 55614,
+   "vtag_enable": true
+  },
+  "xigua_base_info": {
+   "item_id": 0,
+   "star_altar_order_id": 0,
+   "star_altar_type": 0,
+   "status": 0
+  }
+ }
+}

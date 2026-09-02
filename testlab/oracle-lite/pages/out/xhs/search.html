@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<title>小红书 - 标记我的生活</title>
+<style>
+:root{--bg:#f5f6f7;--card:#fff;--txt:#222;--sub:#888;--brand:#fe2c55}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt)}
+header.site-header{display:flex;align-items:center;gap:16px;padding:14px 28px;background:#fff;border-bottom:1px solid #e8e8e8;position:sticky;top:0;z-index:9}
+.brand{font-size:20px;font-weight:700;color:var(--brand)}
+.nav a{margin-right:14px;color:#555;text-decoration:none}
+.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px}
+.searchbar .input-box{flex:1;border:1px solid #ddd;border-radius:18px;padding:8px 16px;background:#fafafa;display:flex;align-items:center;gap:8px}
+.searchbar input{border:0;outline:0;background:transparent;width:100%;font-size:14px}
+.searchbar .search-button{border:0;background:var(--brand);color:#fff;border-radius:18px;padding:8px 22px;cursor:pointer}
+main{max-width:1180px;margin:18px auto;padding:0 20px}
+.page-desc{color:var(--sub);margin:6px 2px 14px;font-size:12px}
+.cards{display:flex;flex-wrap:wrap;gap:14px;list-style:none}
+.cards .search-result-card,.cards .note-item,.cards .card-container{width:216px;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:transform .15s}
+.cards>*:hover{transform:translateY(-3px)}
+.card-link{display:block;text-decoration:none;color:inherit}
+.cover{position:relative;background:#eee}
+.cover img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
+.cover .duration{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
+.card-info{padding:8px 10px 10px}
+.card-info .title{font-size:13px;line-height:1.45;height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card-info .author-wrapper{color:var(--sub);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.metrics{display:flex;gap:12px;color:var(--sub);font-size:12px;margin-top:6px}
+.metrics .like-count{color:#e02040}
+.toolbar{display:flex;gap:10px;align-items:center;margin:4px 0 14px}
+.toolbar button.load-more{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer}
+.toolbar .status{color:var(--sub);font-size:12px}
+.detail-wrap{display:flex;gap:26px;background:#fff;border-radius:12px;padding:22px;margin-top:6px}
+.detail-cover{width:340px;border-radius:10px;overflow:hidden;flex:none}
+.detail-cover img{width:100%;display:block}
+.detail-main{flex:1}
+.detail-main h1.title{font-size:20px;line-height:1.5;margin-bottom:10px}
+.detail-main .author-wrapper{color:#666;margin-bottom:12px}
+.detail-main .metrics{font-size:15px;color:#444;display:flex;gap:22px;margin:8px 0 14px}
+.detail-main .metrics .like-count{color:#e02040;font-weight:600}
+.comments{margin-top:22px}
+.comments h3{margin:10px 0}
+.comment-item{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.comment-item .c-user{color:var(--sub);font-size:12px}
+.comment-item .c-content{margin-top:2px}
+footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
+</style>
+<!-- DOM structure cross-check against reference sample
+      搜索框：'search-input' 出现 1 次
+      卡片：'note-item' 出现 30 次
+      标题：'title' 出现 31 次
+      feed 容器：'exploreFeeds' 出现 1 次 -->
+<script>window.__INITIAL_STATE__=/*__STATE__*/null;</script>
+</head>
+<body>
+<header class="site-header">
+  <span class="brand">小红书</span>
+  <nav class="nav"><a href="/">首页</a><a href="/search_result">搜索</a></nav>
+  <form class="searchbar" id="searchForm" action="/search_result" method="get">
+    <div class="input-box"><input id="searchInput" class="search-input" type="text" placeholder="搜索你感兴趣的内容" value="美食探店" aria-label="搜索"></div>
+    <button class="search-button" data-e2e="searchbar-button" type="submit">搜索</button>
+  </form>
+</header>
+<main>
+
+  <div class="toolbar">
+    <button class="load-more" id="loadMoreBtn" type="button">加载更多</button>
+    <span class="status" id="loadStatus">初始化…</span>
+    <span class="status">卡片数：<span id="cardCount">0</span></span>
+  </div>
+  <div id="exploreFeeds" class="feeds-container cards" data-keyword=""></div>
+  <div class="toolbar"><button class="load-more" id="loadMoreBtn2" type="button">加载更多</button></div>
+
+</main>
+<footer>小红书 - 标记我的生活</footer>
+<script>
+
+function enc(s){return encodeURIComponent(s||'')}
+function str(v){return String(v==null?0:v)}
+function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c=='x'?r:(r&0x3|0x8)).toString(16)})}
+function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000)return (n/10000).toFixed(1)+'万';return String(n)}
+function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;return m+':'+(s<10?'0':'')+s}
+function coverUrl(seed,label,w,h){return '/sns-webpic/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+function contEl(){return document.querySelector('.cards');}
+/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError，红队修复复测暴露） */
+function setStatus(t){var e=document.getElementById('loadStatus');if(e)e.textContent=t;}
+var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0};
+
+var PS=20;
+function detailUrl(f){return '/explore/'+enc(f.id);}
+var BRAND="小红书";
+function fields(w){var n=w.note;var ii=n.interact_info||{};return {id:w.id, title:n.display_title||'(无标题)', like:str(ii.liked_count), play:'', comment:str(ii.comment_count), collect:str(ii.collected_count), author:(n.user&&n.user.nickname)||'', xsec:w.xsec, dur:0};}
+
+function fetchPage(kw){
+  var url = '/api/sns/web/v2/search/notes';
+  var body={keyword:kw, page:state.page, page_size:PS, search_id:state.searchId||'', sort:'general', note_type:0, ext_flags:[], geo:'', image_formats:['jpg','webp','avif'], message_id:'sending', session_id:uuid(), filters:[{tags:['time_descending'],type:'sort_type'},{tags:['不限'],type:'filter_note_type'}]};// 12 必填项全量（含 filters，QA P3-R2-1 兜底口径）
+  return fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},
+    body:JSON.stringify(body)}).then(function(r){
+    if(!r.ok) throw new Error('HTTP '+r.status+' @ '+url);
+    return r.json();
+  });
+}
+
+function renderCards(items, append){
+  var cont=contEl();
+  if(!append){cont.innerHTML='';}
+  cont.setAttribute('data-keyword', state.keyword);
+  items.forEach(function(w){ cont.appendChild(cardNode(fields(w))); });
+  document.getElementById('cardCount').textContent=cont.children.length;
+}
+function loadMore(){
+  if(state.loading||state.done) return;
+  var myseq=state.seq;               // 代际守卫：过期响应（换词瞬间）直接丢弃
+  state.loading=true; setStatus('加载中…');
+  fetchPage(state.keyword).then(function(resp){
+    if(myseq!==state.seq){return;}   // 已发起新搜索，本页作废
+    var items=(resp.data.items||[]).filter(function(it){return it.model_type==='note';}).map(function(it){return {note:it.note_card, id:it.id, xsec:it.xsec_token||''};});
+    renderCards(items, true);
+    var more=resp.data.has_more;
+    state.page += 1;;
+    if(!more){state.done=true;setStatus('没有更多了');}
+    else setStatus('已加载 '+contEl().children.length+' 条');
+  }).catch(function(e){if(myseq===state.seq)setStatus('加载失败: '+e.message)})
+    .then(function(){if(myseq===state.seq)state.loading=false});
+}
+function doSearch(kw){
+  state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1};
+  document.title=kw+' - '+BRAND;   /* 红队 R3-P1-3：搜索页 title 对齐真站「<kw> - <品牌>」形态 */
+  var cont=contEl(); cont.innerHTML=''; cont.setAttribute('data-keyword',kw);
+  document.getElementById('cardCount').textContent='0';
+  loadMore();
+}
+/* 红队 R2-P2-6：滚动到底自动加载下一页（真站无限滚动；按钮保留兜底）。
+   节流 1200ms + loading/done 守卫；仅视口接近底部时触发。 */
+var _scrollTick=0;
+window.addEventListener('scroll', function(){
+  var doc=document.documentElement;
+  var h=Math.max(doc.scrollHeight||0, document.body?document.body.scrollHeight||0:0);
+  if(!h) return;
+  if(window.scrollY + window.innerHeight <= h - 700) return;
+  var now=Date.now();
+  if(now-_scrollTick<1200) return;
+  _scrollTick=now;
+  loadMore();
+}, {passive:true});
+function initSearch(){
+  var form=document.getElementById('searchForm');
+  form.addEventListener('submit',function(ev){ev.preventDefault();
+    var v=(document.getElementById('searchInput')||document.querySelector('input')).value.trim()||"美食探店";
+    location.href='/search_result?keyword='+enc(v);});
+  document.querySelector('.search-button,button[data-e2e="searchbar-button"]').addEventListener('click',function(){
+    var v=(document.getElementById('searchInput')||document.querySelector('input')).value.trim()||"美食探店";
+    location.href='/search_result?keyword='+enc(v);});
+  var kw0=(function(){var q=new URLSearchParams(location.search);if(q.has('keyword'))return q.get('keyword');if(q.has('searchKey'))return q.get('searchKey');var m=location.pathname.match(/^\/search\/(.+)$/);if(m){try{return decodeURIComponent(m[1])}catch(e){return m[1]}}return "美食探店";})();
+  doSearch(kw0);
+}
+
+function cardNode(f){
+  var sec=el('section','note-item'); sec.setAttribute('data-id',f.id);
+  if(f.xsec){sec.setAttribute('data-xsec-token',f.xsec)}
+  var a=el('a','card-link'); a.href=detailUrl(f);
+  var cov=el('div','cover');
+  var img=new Image(); img.alt=f.title; img.loading='lazy'; img.src=coverUrl(f.id,f.title.slice(0,2));
+  cov.appendChild(img);
+  var foot=el('div','card-info footer-box');
+  var t=el('a','title'); t.textContent=f.title; t.href=detailUrl(f); foot.appendChild(t);
+  var aw=el('div','author-wrapper'); aw.textContent=f.author; foot.appendChild(aw);
+  var m=el('div','metrics like-wrapper');
+  m.appendChild(el('span','count like-count','点赞 '+fmt(f.like)));
+  m.appendChild(el('span','count comment-count','评论 '+fmt(f.comment)));
+  m.appendChild(el('span','count collected-count','收藏 '+fmt(f.collect)));
+  foot.appendChild(m);
+  a.appendChild(cov); a.appendChild(foot); sec.appendChild(a); return sec;
+}
+document.addEventListener('DOMContentLoaded', function(){ initSearch();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore; });
+</script>
+</body>
+</html>

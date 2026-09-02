@@ -1,0 +1,4235 @@
+{
+ "schema_version": "draft-contract/1",
+ "generated_by": "extract_contracts.py v2.1.0",
+ "site": "kuaishou",
+ "endpoint_id": "www.kuaishou.com_rest_v_search_feed",
+ "host": "www.kuaishou.com",
+ "path_template": "/rest/v/search/feed",
+ "url_template": "https://www.kuaishou.com/rest/v/search/feed",
+ "method": "POST",
+ "traffic_class": "api",
+ "scenarios": {
+  "ks_search_video": 37
+ },
+ "samples": [
+  "sample_0001",
+  "sample_0002",
+  "sample_0003",
+  "sample_0004",
+  "sample_0005",
+  "sample_0006",
+  "sample_0007",
+  "sample_0008",
+  "sample_0009",
+  "sample_0010",
+  "sample_0011",
+  "sample_0012",
+  "sample_0013",
+  "sample_0014",
+  "sample_0015",
+  "sample_0016",
+  "sample_0017",
+  "sample_0018",
+  "sample_0019",
+  "sample_0020"
+ ],
+ "request_count": 37,
+ "preflight_count": 0,
+ "resource_type": {
+  "XHR": 37
+ },
+ "response_status": {
+  "200": 37
+ },
+ "response_mime": {
+  "application/json": 37
+ },
+ "response_body_kind": {
+  "text": 37
+ },
+ "response_body_size": {
+  "min": 117079,
+  "avg": 161604,
+  "max": 175636,
+  "n": 37
+ },
+ "query_params": {
+  "__NS_hxfalcon": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "<TOKEN>",
+   "value_len": {
+    "min": 267,
+    "max": 267
+   },
+   "role": "signature",
+   "class": "token"
+  },
+  "caver": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:digits": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:digits",
+   "example": "<digits:len=1>",
+   "value_len": {
+    "min": 1,
+    "max": 1
+   },
+   "role": "signature",
+   "class": "snapshot"
+  }
+ },
+ "body_params": {
+  "keyword": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:cjk-text": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:cjk-text",
+   "example": "合成样本",
+   "value_len": {
+    "min": 2,
+    "max": 4
+   },
+   "role": "keyword",
+   "class": "scenario_param"
+  },
+  "page": {
+   "present": 20,
+   "total": 20,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 20,
+     "rate": 1.0
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "search",
+   "value_len": {
+    "min": 6,
+    "max": 6
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "pcursor": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:digits": {
+     "count": 17,
+     "rate": 0.4595
+    },
+    "str:empty": {
+     "count": 20,
+     "rate": 0.5405
+    }
+   },
+   "type": "str:empty",
+   "example": "",
+   "value_len": {
+    "min": 0,
+    "max": 1
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "searchSessionId": {
+   "present": 17,
+   "total": 17,
+   "required": true,
+   "observed_types": {
+    "str:opaque": {
+     "count": 17,
+     "rate": 1.0
+    }
+   },
+   "type": "str:opaque",
+   "example": "<TOKEN>",
+   "value_len": {
+    "min": 52,
+    "max": 60
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "webPageArea": {
+   "present": 20,
+   "total": 20,
+   "required": true,
+   "observed_types": {
+    "str:empty": {
+     "count": 20,
+     "rate": 1.0
+    }
+   },
+   "type": "str:empty",
+   "example": "",
+   "value_len": {
+    "min": 0,
+    "max": 0
+   },
+   "class": "snapshot"
+  }
+ },
+ "post_body_kind": {
+  "json": 37
+ },
+ "headers": {
+  "cookie_header_rate": 1.0,
+  "cookie_names_observed": [
+   "kpf",
+   "clientid",
+   "did",
+   "kwpsecproductname",
+   "userId",
+   "kuaishou.server.webday7_st",
+   "kuaishou.server.webday7_ph",
+   "kwfv1",
+   "ktrace-context",
+   "kpn",
+   "kwssectoken",
+   "kwscode"
+  ],
+  "referer_templates": [
+   "https://www.kuaishou.com/search/video"
+  ],
+  "sensitive_response_headers_present": {
+   "x-ksclient-ip(redacted)": 37
+  }
+ },
+ "response_schema": {
+  "path": "$",
+  "types": {
+   "object": 37
+  },
+  "class": "snapshot",
+  "object_count": 37,
+  "fields": {
+   "feeds": {
+    "path": "$.feeds",
+    "types": {
+     "array": 37
+    },
+    "class": "snapshot",
+    "len": {
+     "min": 14,
+     "max": 20,
+     "avg": 19.08
+    },
+    "items": {
+     "path": "$.feeds[]",
+     "types": {
+      "object": 706
+     },
+     "class": "snapshot",
+     "object_count": 706,
+     "fields": {
+      "author": {
+       "path": "$.feeds[].author",
+       "types": {
+        "object": 706
+       },
+       "class": "snapshot",
+       "object_count": 706,
+       "fields": {
+        "following": {
+         "path": "$.feeds[].author.following",
+         "types": {
+          "bool": 706
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "headerUrl": {
+         "path": "$.feeds[].author.headerUrl",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:url": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "id": {
+         "path": "$.feeds[].author.id",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:opaque": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "<opaque:len=15>",
+         "class": "id",
+         "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+         "present": 706,
+         "rate": 1.0
+        },
+        "livingInfo": {
+         "path": "$.feeds[].author.livingInfo",
+         "types": {
+          "object": 706
+         },
+         "class": "snapshot",
+         "object_count": 706,
+         "fields": {
+          "iconType": {
+           "path": "$.feeds[].author.livingInfo.iconType",
+           "types": {
+            "number": 706
+           },
+           "value_shapes": {
+            "int": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": 0,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "living": {
+           "path": "$.feeds[].author.livingInfo.living",
+           "types": {
+            "bool": 706
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "livingId": {
+           "path": "$.feeds[].author.livingInfo.livingId",
+           "types": {
+            "null": 706
+           },
+           "value_shapes": {
+            "null": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": null,
+           "class": "id",
+           "class_reason": "[A-Za-z][a-zA-Z]*Id$",
+           "present": 706,
+           "rate": 1.0
+          }
+         },
+         "present": 706,
+         "rate": 1.0
+        },
+        "name": {
+         "path": "$.feeds[].author.name",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:ascii-word": {
+           "count": 8,
+           "rate": 0.0113
+          },
+          "str:cjk-text": {
+           "count": 693,
+           "rate": 0.9816
+          },
+          "str:digits": {
+           "count": 1,
+           "rate": 0.0014
+          },
+          "str:text": {
+           "count": 4,
+           "rate": 0.0057
+          }
+         },
+         "example": "合成样本",
+         "enum": [
+          "Bboy Cc",
+          "Mummm",
+          "Plan A",
+          "Halis",
+          "super car",
+          "D-GTR",
+          "X s"
+         ],
+         "class": "pii",
+         "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+         "present": 706,
+         "rate": 1.0
+        },
+        "verifiedDetail": {
+         "path": "$.feeds[].author.verifiedDetail",
+         "types": {
+          "object": 46
+         },
+         "class": "snapshot",
+         "object_count": 46,
+         "fields": {
+          "description": {
+           "path": "$.feeds[].author.verifiedDetail.description",
+           "types": {
+            "string": 46
+           },
+           "value_shapes": {
+            "str:cjk-text": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": "合成样本数据内容仅供本地测试",
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          },
+          "iconType": {
+           "path": "$.feeds[].author.verifiedDetail.iconType",
+           "types": {
+            "number": 46
+           },
+           "value_shapes": {
+            "int": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": 1,
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          },
+          "musicCompany": {
+           "path": "$.feeds[].author.verifiedDetail.musicCompany",
+           "types": {
+            "bool": 46
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          },
+          "newVerified": {
+           "path": "$.feeds[].author.verifiedDetail.newVerified",
+           "types": {
+            "bool": 46
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": true,
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          },
+          "type": {
+           "path": "$.feeds[].author.verifiedDetail.type",
+           "types": {
+            "number": 46
+           },
+           "value_shapes": {
+            "int": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": 5,
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          },
+          "viceVerifiedType": {
+           "path": "$.feeds[].author.verifiedDetail.viceVerifiedType",
+           "types": {
+            "number": 46
+           },
+           "value_shapes": {
+            "int": {
+             "count": 46,
+             "rate": 1.0
+            }
+           },
+           "example": 0,
+           "class": "snapshot",
+           "present": 46,
+           "rate": 1.0
+          }
+         },
+         "present": 46,
+         "rate": 0.0652
+        }
+       },
+       "present": 706,
+       "rate": 1.0
+      },
+      "authorStatement": {
+       "path": "$.feeds[].authorStatement",
+       "types": {
+        "object": 108
+       },
+       "class": "snapshot",
+       "object_count": 108,
+       "fields": {
+        "content": {
+         "path": "$.feeds[].authorStatement.content",
+         "types": {
+          "string": 108
+         },
+         "value_shapes": {
+          "str:cjk-text": {
+           "count": 108,
+           "rate": 1.0
+          }
+         },
+         "example": "合成样本数据内容仅供",
+         "class": "snapshot",
+         "present": 108,
+         "rate": 1.0
+        },
+        "type": {
+         "path": "$.feeds[].authorStatement.type",
+         "types": {
+          "number": 108
+         },
+         "value_shapes": {
+          "int": {
+           "count": 108,
+           "rate": 1.0
+          }
+         },
+         "example": 1,
+         "class": "snapshot",
+         "present": 108,
+         "rate": 1.0
+        }
+       },
+       "present": 108,
+       "rate": 0.153
+      },
+      "comment": {
+       "path": "$.feeds[].comment",
+       "types": {
+        "object": 706
+       },
+       "class": "snapshot",
+       "object_count": 706,
+       "fields": {
+        "us_c": {
+         "path": "$.feeds[].comment.us_c",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 0,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        }
+       },
+       "present": 706,
+       "rate": 1.0
+      },
+      "danmakuSwitch": {
+       "path": "$.feeds[].danmakuSwitch",
+       "types": {
+        "bool": 706
+       },
+       "value_shapes": {
+        "bool": {
+         "count": 706,
+         "rate": 1.0
+        }
+       },
+       "example": true,
+       "class": "snapshot",
+       "present": 706,
+       "rate": 1.0
+      },
+      "photo": {
+       "path": "$.feeds[].photo",
+       "types": {
+        "object": 706
+       },
+       "class": "snapshot",
+       "object_count": 706,
+       "fields": {
+        "animatedCoverUrl": {
+         "path": "$.feeds[].photo.animatedCoverUrl",
+         "types": {
+          "string": 697
+         },
+         "value_shapes": {
+          "str:url": {
+           "count": 697,
+           "rate": 1.0
+          }
+         },
+         "example": "https://p23.a.yximgs.com/whbr/7619/85/55/48/{xxzv}",
+         "class": "snapshot",
+         "present": 697,
+         "rate": 0.9873
+        },
+        "caption": {
+         "path": "$.feeds[].photo.caption",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:cjk-text": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本",
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "collectCount": {
+         "path": "$.feeds[].photo.collectCount",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 0,
+         "class": "count",
+         "class_reason": "[A-Za-z][a-zA-Z]*Count$",
+         "present": 706,
+         "rate": 1.0
+        },
+        "collected": {
+         "path": "$.feeds[].photo.collected",
+         "types": {
+          "bool": 706
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "coverUrl": {
+         "path": "$.feeds[].photo.coverUrl",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:url": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "https://p2.a.yximgs.com/mzzv/5913/83/36/60/{htsr}",
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "disableSensitivePhoto": {
+         "path": "$.feeds[].photo.disableSensitivePhoto",
+         "types": {
+          "bool": 706
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "duration": {
+         "path": "$.feeds[].photo.duration",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 41133,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "expTag": {
+         "path": "$.feeds[].photo.expTag",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:opaque": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "<opaque:len=43>",
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "height": {
+         "path": "$.feeds[].photo.height",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 1280,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "id": {
+         "path": "$.feeds[].photo.id",
+         "types": {
+          "string": 706
+         },
+         "value_shapes": {
+          "str:opaque": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "<opaque:len=15>",
+         "class": "id",
+         "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+         "present": 706,
+         "rate": 1.0
+        },
+        "likeCount": {
+         "path": "$.feeds[].photo.likeCount",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 622,
+         "class": "count",
+         "class_reason": "[A-Za-z][a-zA-Z]*Count$",
+         "present": 706,
+         "rate": 1.0
+        },
+        "liked": {
+         "path": "$.feeds[].photo.liked",
+         "types": {
+          "bool": 706
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "manifest": {
+         "path": "$.feeds[].photo.manifest",
+         "types": {
+          "object": 706
+         },
+         "class": "snapshot",
+         "object_count": 706,
+         "fields": {
+          "adaptationSet": {
+           "path": "$.feeds[].photo.manifest.adaptationSet",
+           "types": {
+            "array": 706
+           },
+           "class": "snapshot",
+           "len": {
+            "min": 1,
+            "max": 1,
+            "avg": 1.0
+           },
+           "items": {
+            "path": "$.feeds[].photo.manifest.adaptationSet[]",
+            "types": {
+             "object": 706
+            },
+            "class": "snapshot",
+            "object_count": 706,
+            "fields": {
+             "duration": {
+              "path": "$.feeds[].photo.manifest.adaptationSet[].duration",
+              "types": {
+               "number": 706
+              },
+              "value_shapes": {
+               "int": {
+                "count": 706,
+                "rate": 1.0
+               }
+              },
+              "example": 41168,
+              "class": "snapshot",
+              "present": 706,
+              "rate": 1.0
+             },
+             "id": {
+              "path": "$.feeds[].photo.manifest.adaptationSet[].id",
+              "types": {
+               "number": 706
+              },
+              "value_shapes": {
+               "int": {
+                "count": 706,
+                "rate": 1.0
+               }
+              },
+              "example": 1,
+              "class": "id",
+              "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+              "present": 706,
+              "rate": 1.0
+             },
+             "representation": {
+              "path": "$.feeds[].photo.manifest.adaptationSet[].representation",
+              "types": {
+               "array": 706
+              },
+              "class": "snapshot",
+              "len": {
+               "min": 1,
+               "max": 1,
+               "avg": 1.0
+              },
+              "items": {
+               "path": "$.feeds[].photo.manifest.adaptationSet[].representation[]",
+               "types": {
+                "object": 706
+               },
+               "class": "snapshot",
+               "object_count": 706,
+               "fields": {
+                "agc": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].agc",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "avgBitrate": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].avgBitrate",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 3899,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "backupUrl": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].backupUrl",
+                 "types": {
+                  "array": 706
+                 },
+                 "class": "snapshot",
+                 "len": {
+                  "min": 1,
+                  "max": 1,
+                  "avg": 1.0
+                 },
+                 "items": {
+                  "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].backupUrl[]",
+                  "types": {
+                   "string": 706
+                  },
+                  "value_shapes": {
+                   "str:url": {
+                    "count": 706,
+                    "rate": 1.0
+                   }
+                  },
+                  "example": "https://v4.oskwai.com/fdx4/{noie}",
+                  "class": "snapshot",
+                  "present": 706,
+                  "arrays": 706
+                 },
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "bitratePattern": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].bitratePattern",
+                 "types": {
+                  "array": 505
+                 },
+                 "class": "snapshot",
+                 "len": {
+                  "min": 5,
+                  "max": 5,
+                  "avg": 5.0
+                 },
+                 "items": {
+                  "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].bitratePattern[]",
+                  "types": {
+                   "number": 2525
+                  },
+                  "value_shapes": {
+                   "int": {
+                    "count": 2525,
+                    "rate": 1.0
+                   }
+                  },
+                  "example": 4767,
+                  "class": "snapshot",
+                  "present": 2525,
+                  "arrays": 505
+                 },
+                 "present": 505,
+                 "rate": 0.7153
+                },
+                "codecs": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].codecs",
+                 "types": {
+                  "string": 201
+                 },
+                 "value_shapes": {
+                  "str:empty": {
+                   "count": 201,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "",
+                 "enum": [
+                  ""
+                 ],
+                 "class": "snapshot",
+                 "present": 201,
+                 "rate": 0.2847
+                },
+                "colorInfo": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo",
+                 "types": {
+                  "object": 678
+                 },
+                 "class": "snapshot",
+                 "object_count": 678,
+                 "fields": {
+                  "bright": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.bright",
+                   "types": {
+                    "number": 216
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 216,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 4.1078,
+                   "class": "snapshot",
+                   "present": 216,
+                   "rate": 0.3186
+                  },
+                  "contrast": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.contrast",
+                   "types": {
+                    "number": 216
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 216,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 3.0634,
+                   "class": "snapshot",
+                   "present": 216,
+                   "rate": 0.3186
+                  },
+                  "saturation": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.saturation",
+                   "types": {
+                    "number": 216
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 216,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 2.9589,
+                   "class": "snapshot",
+                   "present": 216,
+                   "rate": 0.3186
+                  },
+                  "yMean": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.yMean",
+                   "types": {
+                    "number": 377
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 377,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 122.2412,
+                   "class": "snapshot",
+                   "present": 377,
+                   "rate": 0.556
+                  },
+                  "yMeanMax": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.yMeanMax",
+                   "types": {
+                    "number": 377
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 377,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 134.0854,
+                   "class": "snapshot",
+                   "present": 377,
+                   "rate": 0.556
+                  },
+                  "yMeanMin": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].colorInfo.yMeanMin",
+                   "types": {
+                    "number": 377
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 377,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 114.8809,
+                   "class": "snapshot",
+                   "present": 377,
+                   "rate": 0.556
+                  }
+                 },
+                 "present": 678,
+                 "rate": 0.9603
+                },
+                "comment": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].comment",
+                 "types": {
+                  "string": 706
+                 },
+                 "value_shapes": {
+                  "str:cjk-text": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "<str:cjk-text:len=67>",
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "defaultSelect": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].defaultSelect",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "disableAdaptive": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].disableAdaptive",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "featureP2sp": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].featureP2sp",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "fileSize": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].fileSize",
+                 "types": {
+                  "number": 505
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 505,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 20066126,
+                 "class": "snapshot",
+                 "present": 505,
+                 "rate": 0.7153
+                },
+                "frameRate": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].frameRate",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 60.0,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "hdrType": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].hdrType",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 0,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "height": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].height",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1280,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "hidden": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].hidden",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "id": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].id",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1,
+                 "class": "id",
+                 "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "kvqScore": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore",
+                 "types": {
+                  "object": 706
+                 },
+                 "class": "snapshot",
+                 "object_count": 706,
+                 "fields": {
+                  "FR": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.FR",
+                   "types": {
+                    "number": 706
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 706,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 706,
+                   "rate": 1.0
+                  },
+                  "FRPost": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.FRPost",
+                   "types": {
+                    "number": 706
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 706,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 706,
+                   "rate": 1.0
+                  },
+                  "NR": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.NR",
+                   "types": {
+                    "number": 706
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 706,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": "<digits:len=18>",
+                   "class": "snapshot",
+                   "present": 706,
+                   "rate": 1.0
+                  },
+                  "NRPost": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.NRPost",
+                   "types": {
+                    "number": 706
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 706,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 706,
+                   "rate": 1.0
+                  },
+                  "blur": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.blur",
+                   "types": {
+                    "number": 678
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 678,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": "<digits:len=19>",
+                   "class": "snapshot",
+                   "present": 678,
+                   "rate": 0.9603
+                  },
+                  "nnvcScore": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.nnvcScore",
+                   "types": {
+                    "number": 706
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 706,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 706,
+                   "rate": 1.0
+                  },
+                  "sharpness": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].kvqScore.sharpness",
+                   "types": {
+                    "number": 678
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 678,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": "<digits:len=18>",
+                   "class": "snapshot",
+                   "present": 678,
+                   "rate": 0.9603
+                  }
+                 },
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "m3u8Slice": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].m3u8Slice",
+                 "types": {
+                  "string": 201
+                 },
+                 "value_shapes": {
+                  "str:text": {
+                   "count": 201,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "<str:text:len=368>",
+                 "class": "snapshot",
+                 "present": 201,
+                 "rate": 0.2847
+                },
+                "makeupGain": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].makeupGain",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 0.0,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "maxBitrate": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].maxBitrate",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 4900,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "mute": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].mute",
+                 "types": {
+                  "bool": 706
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "normalizeGain": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].normalizeGain",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 0.0,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "oriLoudness": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].oriLoudness",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 0.0,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "p2spCode": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].p2spCode",
+                 "types": {
+                  "string": 706
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "<str:len=103>",
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "quality": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].quality",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1.5,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "qualityLabel": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].qualityLabel",
+                 "types": {
+                  "string": 706
+                 },
+                 "value_shapes": {
+                  "str:cjk-text": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "合成",
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "qualityType": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].qualityType",
+                 "types": {
+                  "string": 706
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "720p",
+                 "enum": [
+                  "720p"
+                 ],
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "realLoudness": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].realLoudness",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": -16.289,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "realNormalizeGain": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].realNormalizeGain",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1.413,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "url": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].url",
+                 "types": {
+                  "string": 706
+                 },
+                 "value_shapes": {
+                  "str:url": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "https://k0u24y88y60y1bzw2409x8c5cx120x600xx1bz.djvod.ndcimgs.com/byeo/8388/89/36/77/{vwjr}",
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                },
+                "videoCodec": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].videoCodec",
+                 "types": {
+                  "string": 60
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 60,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "avc-rt",
+                 "enum": [
+                  "avc-rt"
+                 ],
+                 "class": "snapshot",
+                 "present": 60,
+                 "rate": 0.085
+                },
+                "volumeInfo": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo",
+                 "types": {
+                  "object": 705
+                 },
+                 "class": "snapshot",
+                 "object_count": 705,
+                 "fields": {
+                  "chCorr": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.chCorr",
+                   "types": {
+                    "number": 41
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 41,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 0.7325,
+                   "class": "snapshot",
+                   "present": 41,
+                   "rate": 0.0582
+                  },
+                  "loudness": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.loudness",
+                   "types": {
+                    "number": 705
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 705,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -16.0,
+                   "class": "snapshot",
+                   "present": 705,
+                   "rate": 1.0
+                  },
+                  "lra": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.lra",
+                   "types": {
+                    "number": 701
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 701,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 3.7,
+                   "class": "snapshot",
+                   "present": 701,
+                   "rate": 0.9943
+                  },
+                  "lraHigh": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.lraHigh",
+                   "types": {
+                    "number": 701
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 701,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -14.5,
+                   "class": "snapshot",
+                   "present": 701,
+                   "rate": 0.9943
+                  },
+                  "lraLow": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.lraLow",
+                   "types": {
+                    "number": 701
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 701,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -18.2,
+                   "class": "snapshot",
+                   "present": 701,
+                   "rate": 0.9943
+                  },
+                  "lraTh": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.lraTh",
+                   "types": {
+                    "number": 701
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 701,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -36.2,
+                   "class": "snapshot",
+                   "present": 701,
+                   "rate": 0.9943
+                  },
+                  "th": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.th",
+                   "types": {
+                    "number": 701
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 701,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -26.0,
+                   "class": "snapshot",
+                   "present": 701,
+                   "rate": 0.9943
+                  },
+                  "tp": {
+                   "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].volumeInfo.tp",
+                   "types": {
+                    "number": 691
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 691,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 0.7,
+                   "class": "snapshot",
+                   "present": 691,
+                   "rate": 0.9801
+                  }
+                 },
+                 "present": 705,
+                 "rate": 0.9986
+                },
+                "width": {
+                 "path": "$.feeds[].photo.manifest.adaptationSet[].representation[].width",
+                 "types": {
+                  "number": 706
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 706,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 720,
+                 "class": "snapshot",
+                 "present": 706,
+                 "rate": 1.0
+                }
+               },
+               "present": 706,
+               "arrays": 706
+              },
+              "present": 706,
+              "rate": 1.0
+             }
+            },
+            "present": 706,
+            "arrays": 706
+           },
+           "present": 706,
+           "rate": 1.0
+          },
+          "audioFeature": {
+           "path": "$.feeds[].photo.manifest.audioFeature",
+           "types": {
+            "object": 705
+           },
+           "class": "snapshot",
+           "object_count": 705,
+           "fields": {
+            "audioClip": {
+             "path": "$.feeds[].photo.manifest.audioFeature.audioClip",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 0.0034,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "audioQuality": {
+             "path": "$.feeds[].photo.manifest.audioFeature.audioQuality",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 79.6189,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "audioSnr": {
+             "path": "$.feeds[].photo.manifest.audioFeature.audioSnr",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 2.3067,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "backgroundSoundProbability": {
+             "path": "$.feeds[].photo.manifest.audioFeature.backgroundSoundProbability",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 0.0503,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "dialogProbability": {
+             "path": "$.feeds[].photo.manifest.audioFeature.dialogProbability",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 0.4518,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "effectiveBandwidthInHz": {
+             "path": "$.feeds[].photo.manifest.audioFeature.effectiveBandwidthInHz",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 14446.402,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "musicProbability": {
+             "path": "$.feeds[].photo.manifest.audioFeature.musicProbability",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 0.498,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            },
+            "stereophonicRichness": {
+             "path": "$.feeds[].photo.manifest.audioFeature.stereophonicRichness",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": 100.0,
+             "class": "snapshot",
+             "present": 705,
+             "rate": 1.0
+            }
+           },
+           "present": 705,
+           "rate": 0.9986
+          },
+          "businessType": {
+           "path": "$.feeds[].photo.manifest.businessType",
+           "types": {
+            "number": 706
+           },
+           "value_shapes": {
+            "int": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": 2,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "hideAuto": {
+           "path": "$.feeds[].photo.manifest.hideAuto",
+           "types": {
+            "bool": 706
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "manualDefaultSelect": {
+           "path": "$.feeds[].photo.manifest.manualDefaultSelect",
+           "types": {
+            "bool": 706
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "mediaType": {
+           "path": "$.feeds[].photo.manifest.mediaType",
+           "types": {
+            "number": 706
+           },
+           "value_shapes": {
+            "int": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": 2,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "playInfo": {
+           "path": "$.feeds[].photo.manifest.playInfo",
+           "types": {
+            "object": 706
+           },
+           "class": "snapshot",
+           "object_count": 706,
+           "fields": {
+            "bizType": {
+             "path": "$.feeds[].photo.manifest.playInfo.bizType",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "int": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": 0,
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "cdnTimeRangeLevel": {
+             "path": "$.feeds[].photo.manifest.playInfo.cdnTimeRangeLevel",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "int": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": 0,
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "strategyBus": {
+             "path": "$.feeds[].photo.manifest.playInfo.strategyBus",
+             "types": {
+              "string": 706
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 638,
+               "rate": 0.9037
+              },
+              "str:text": {
+               "count": 68,
+               "rate": 0.0963
+              }
+             },
+             "example": "{ }",
+             "enum": [
+              "{ }"
+             ],
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            }
+           },
+           "present": 706,
+           "rate": 1.0
+          },
+          "stereoType": {
+           "path": "$.feeds[].photo.manifest.stereoType",
+           "types": {
+            "number": 706
+           },
+           "value_shapes": {
+            "int": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": 0,
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "version": {
+           "path": "$.feeds[].photo.manifest.version",
+           "types": {
+            "string": 706
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": "1.0.0",
+           "enum": [
+            "1.0.0"
+           ],
+           "class": "snapshot",
+           "present": 706,
+           "rate": 1.0
+          },
+          "videoFeature": {
+           "path": "$.feeds[].photo.manifest.videoFeature",
+           "types": {
+            "object": 706
+           },
+           "class": "snapshot",
+           "object_count": 706,
+           "fields": {
+            "avgEntropy": {
+             "path": "$.feeds[].photo.manifest.videoFeature.avgEntropy",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "float": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=17>",
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "blockyProbability": {
+             "path": "$.feeds[].photo.manifest.videoFeature.blockyProbability",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "float": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=18>",
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "blurProbability": {
+             "path": "$.feeds[].photo.manifest.videoFeature.blurProbability",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "float": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=19>",
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "capSrc": {
+             "path": "$.feeds[].photo.manifest.videoFeature.capSrc",
+             "types": {
+              "number": 621
+             },
+             "value_shapes": {
+              "float": {
+               "count": 621,
+               "rate": 1.0
+              }
+             },
+             "example": 8.34465e-08,
+             "class": "snapshot",
+             "present": 621,
+             "rate": 0.8796
+            },
+            "contrast": {
+             "path": "$.feeds[].photo.manifest.videoFeature.contrast",
+             "types": {
+              "number": 705
+             },
+             "value_shapes": {
+              "float": {
+               "count": 705,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 705,
+             "rate": 0.9986
+            },
+            "mosScore": {
+             "path": "$.feeds[].photo.manifest.videoFeature.mosScore",
+             "types": {
+              "number": 706
+             },
+             "value_shapes": {
+              "float": {
+               "count": 706,
+               "rate": 1.0
+              }
+             },
+             "example": 0.802734375,
+             "class": "snapshot",
+             "present": 706,
+             "rate": 1.0
+            },
+            "overExposed": {
+             "path": "$.feeds[].photo.manifest.videoFeature.overExposed",
+             "types": {
+              "number": 642
+             },
+             "value_shapes": {
+              "float": {
+               "count": 642,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 642,
+             "rate": 0.9093
+            },
+            "underExposed": {
+             "path": "$.feeds[].photo.manifest.videoFeature.underExposed",
+             "types": {
+              "number": 576
+             },
+             "value_shapes": {
+              "float": {
+               "count": 576,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 576,
+             "rate": 0.8159
+            },
+            "yMean": {
+             "path": "$.feeds[].photo.manifest.videoFeature.yMean",
+             "types": {
+              "number": 565
+             },
+             "value_shapes": {
+              "float": {
+               "count": 565,
+               "rate": 1.0
+              }
+             },
+             "example": 122.99347,
+             "class": "snapshot",
+             "present": 565,
+             "rate": 0.8003
+            },
+            "yMeanMax": {
+             "path": "$.feeds[].photo.manifest.videoFeature.yMeanMax",
+             "types": {
+              "number": 565
+             },
+             "value_shapes": {
+              "float": {
+               "count": 565,
+               "rate": 1.0
+              }
+             },
+             "example": 134.92223,
+             "class": "snapshot",
+             "present": 565,
+             "rate": 0.8003
+            },
+            "yMeanMin": {
+             "path": "$.feeds[].photo.manifest.videoFeature.yMeanMin",
+             "types": {
+              "number": 563
+             },
+             "value_shapes": {
+              "float": {
+               "count": 563,
+               "rate": 1.0
+              }
+             },
+             "example": 62.04675,
+             "class": "snapshot",
+             "present": 563,
+             "rate": 0.7975
+            }
+           },
+           "present": 706,
+           "rate": 1.0
+          },
+          "videoId": {
+           "path": "$.feeds[].photo.manifest.videoId",
+           "types": {
+            "string": 706
+           },
+           "value_shapes": {
+            "str:hex": {
+             "count": 706,
+             "rate": 1.0
+            }
+           },
+           "example": "<hex:len=16>",
+           "class": "id",
+           "class_reason": "[A-Za-z][a-zA-Z]*Id$",
+           "present": 706,
+           "rate": 1.0
+          }
+         },
+         "present": 706,
+         "rate": 1.0
+        },
+        "manifestH265": {
+         "path": "$.feeds[].photo.manifestH265",
+         "types": {
+          "object": 665
+         },
+         "class": "snapshot",
+         "object_count": 665,
+         "fields": {
+          "adaptationSet": {
+           "path": "$.feeds[].photo.manifestH265.adaptationSet",
+           "types": {
+            "array": 665
+           },
+           "class": "snapshot",
+           "len": {
+            "min": 1,
+            "max": 1,
+            "avg": 1.0
+           },
+           "items": {
+            "path": "$.feeds[].photo.manifestH265.adaptationSet[]",
+            "types": {
+             "object": 665
+            },
+            "class": "snapshot",
+            "object_count": 665,
+            "fields": {
+             "duration": {
+              "path": "$.feeds[].photo.manifestH265.adaptationSet[].duration",
+              "types": {
+               "number": 665
+              },
+              "value_shapes": {
+               "int": {
+                "count": 665,
+                "rate": 1.0
+               }
+              },
+              "example": 41200,
+              "class": "snapshot",
+              "present": 665,
+              "rate": 1.0
+             },
+             "id": {
+              "path": "$.feeds[].photo.manifestH265.adaptationSet[].id",
+              "types": {
+               "number": 665
+              },
+              "value_shapes": {
+               "int": {
+                "count": 665,
+                "rate": 1.0
+               }
+              },
+              "example": 1,
+              "class": "id",
+              "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+              "present": 665,
+              "rate": 1.0
+             },
+             "representation": {
+              "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation",
+              "types": {
+               "array": 665
+              },
+              "class": "snapshot",
+              "len": {
+               "min": 1,
+               "max": 1,
+               "avg": 1.0
+              },
+              "items": {
+               "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[]",
+               "types": {
+                "object": 665
+               },
+               "class": "snapshot",
+               "object_count": 665,
+               "fields": {
+                "agc": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].agc",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": true,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "avgBitrate": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].avgBitrate",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1536,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "backupUrl": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].backupUrl",
+                 "types": {
+                  "array": 665
+                 },
+                 "class": "snapshot",
+                 "len": {
+                  "min": 1,
+                  "max": 1,
+                  "avg": 1.0
+                 },
+                 "items": {
+                  "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].backupUrl[]",
+                  "types": {
+                   "string": 665
+                  },
+                  "value_shapes": {
+                   "str:url": {
+                    "count": 665,
+                    "rate": 1.0
+                   }
+                  },
+                  "example": "https://v23-3.kwaicdn.com/kw9/skkok-zmmee-tz/{rfwy}",
+                  "class": "snapshot",
+                  "present": 665,
+                  "arrays": 665
+                 },
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "colorInfo": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo",
+                 "types": {
+                  "object": 664
+                 },
+                 "class": "snapshot",
+                 "object_count": 664,
+                 "fields": {
+                  "bright": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.bright",
+                   "types": {
+                    "number": 218
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 218,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 4.1224,
+                   "class": "snapshot",
+                   "present": 218,
+                   "rate": 0.3283
+                  },
+                  "contrast": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.contrast",
+                   "types": {
+                    "number": 218
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 218,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 3.0774,
+                   "class": "snapshot",
+                   "present": 218,
+                   "rate": 0.3283
+                  },
+                  "saturation": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.saturation",
+                   "types": {
+                    "number": 218
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 218,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 2.9697,
+                   "class": "snapshot",
+                   "present": 218,
+                   "rate": 0.3283
+                  },
+                  "yMean": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.yMean",
+                   "types": {
+                    "number": 388
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 388,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 118.8799,
+                   "class": "snapshot",
+                   "present": 388,
+                   "rate": 0.5843
+                  },
+                  "yMeanMax": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.yMeanMax",
+                   "types": {
+                    "number": 388
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 388,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 133.2209,
+                   "class": "snapshot",
+                   "present": 388,
+                   "rate": 0.5843
+                  },
+                  "yMeanMin": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].colorInfo.yMeanMin",
+                   "types": {
+                    "number": 386
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 386,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 101.1868,
+                   "class": "snapshot",
+                   "present": 386,
+                   "rate": 0.5813
+                  }
+                 },
+                 "present": 664,
+                 "rate": 0.9985
+                },
+                "comment": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].comment",
+                 "types": {
+                  "string": 665
+                 },
+                 "value_shapes": {
+                  "str:cjk-text": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "<str:cjk-text:len=63>",
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "defaultSelect": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].defaultSelect",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "disableAdaptive": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].disableAdaptive",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "featureP2sp": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].featureP2sp",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "fileSize": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].fileSize",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 7912540,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "frameRate": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].frameRate",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 30.0,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "hdrType": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].hdrType",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 0,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "height": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].height",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1280,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "hidden": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].hidden",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "id": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].id",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1,
+                 "class": "id",
+                 "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "kvqScore": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore",
+                 "types": {
+                  "object": 665
+                 },
+                 "class": "snapshot",
+                 "object_count": 665,
+                 "fields": {
+                  "FR": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.FR",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "FRPost": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.FRPost",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "NR": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.NR",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 3.958984375,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "NRPost": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.NRPost",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "blur": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.blur",
+                   "types": {
+                    "number": 664
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 664,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": "<digits:len=18>",
+                   "class": "snapshot",
+                   "present": 664,
+                   "rate": 0.9985
+                  },
+                  "nnvcScore": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.nnvcScore",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -1.0,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "sharpness": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].kvqScore.sharpness",
+                   "types": {
+                    "number": 664
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 664,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": "<digits:len=19>",
+                   "class": "snapshot",
+                   "present": 664,
+                   "rate": 0.9985
+                  }
+                 },
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "makeupGain": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].makeupGain",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 2.666,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "maxBitrate": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].maxBitrate",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 3000,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "mute": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].mute",
+                 "types": {
+                  "bool": 665
+                 },
+                 "value_shapes": {
+                  "bool": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": false,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "normalizeGain": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].normalizeGain",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1.778,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "oriLoudness": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].oriLoudness",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": -18.516,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "p2spCode": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].p2spCode",
+                 "types": {
+                  "string": 665
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "<str:len=103>",
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "quality": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].quality",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1.5,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "qualityLabel": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].qualityLabel",
+                 "types": {
+                  "string": 665
+                 },
+                 "value_shapes": {
+                  "str:cjk-text": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "合成",
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "qualityType": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].qualityType",
+                 "types": {
+                  "string": 665
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "720p",
+                 "enum": [
+                  "720p"
+                 ],
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "realLoudness": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].realLoudness",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": -16.33,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "realNormalizeGain": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].realNormalizeGain",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "float": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 1.585,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "url": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].url",
+                 "types": {
+                  "string": 665
+                 },
+                 "value_shapes": {
+                  "str:url": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "https://k0u24y88y60y1bzw2409x8c5cx120x600xx1bz.djvod.ndcimgs.com/jw1/gbvhj-wgmph-hm/{qkrs}",
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "volumeInfo": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo",
+                 "types": {
+                  "object": 665
+                 },
+                 "class": "snapshot",
+                 "object_count": 665,
+                 "fields": {
+                  "chCorr": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.chCorr",
+                   "types": {
+                    "number": 39
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 39,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 0.7325,
+                   "class": "snapshot",
+                   "present": 39,
+                   "rate": 0.0586
+                  },
+                  "loudness": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.loudness",
+                   "types": {
+                    "number": 665
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 665,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -16.0,
+                   "class": "snapshot",
+                   "present": 665,
+                   "rate": 1.0
+                  },
+                  "lra": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.lra",
+                   "types": {
+                    "number": 661
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 661,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 3.7,
+                   "class": "snapshot",
+                   "present": 661,
+                   "rate": 0.994
+                  },
+                  "lraHigh": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.lraHigh",
+                   "types": {
+                    "number": 661
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 661,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -14.5,
+                   "class": "snapshot",
+                   "present": 661,
+                   "rate": 0.994
+                  },
+                  "lraLow": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.lraLow",
+                   "types": {
+                    "number": 661
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 661,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -18.2,
+                   "class": "snapshot",
+                   "present": 661,
+                   "rate": 0.994
+                  },
+                  "lraTh": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.lraTh",
+                   "types": {
+                    "number": 661
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 661,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -36.2,
+                   "class": "snapshot",
+                   "present": 661,
+                   "rate": 0.994
+                  },
+                  "th": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.th",
+                   "types": {
+                    "number": 661
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 661,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": -26.0,
+                   "class": "snapshot",
+                   "present": 661,
+                   "rate": 0.994
+                  },
+                  "tp": {
+                   "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].volumeInfo.tp",
+                   "types": {
+                    "number": 651
+                   },
+                   "value_shapes": {
+                    "float": {
+                     "count": 651,
+                     "rate": 1.0
+                    }
+                   },
+                   "example": 0.7,
+                   "class": "snapshot",
+                   "present": 651,
+                   "rate": 0.9789
+                  }
+                 },
+                 "present": 665,
+                 "rate": 1.0
+                },
+                "width": {
+                 "path": "$.feeds[].photo.manifestH265.adaptationSet[].representation[].width",
+                 "types": {
+                  "number": 665
+                 },
+                 "value_shapes": {
+                  "int": {
+                   "count": 665,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": 720,
+                 "class": "snapshot",
+                 "present": 665,
+                 "rate": 1.0
+                }
+               },
+               "present": 665,
+               "arrays": 665
+              },
+              "present": 665,
+              "rate": 1.0
+             }
+            },
+            "present": 665,
+            "arrays": 665
+           },
+           "present": 665,
+           "rate": 1.0
+          },
+          "audioFeature": {
+           "path": "$.feeds[].photo.manifestH265.audioFeature",
+           "types": {
+            "object": 665
+           },
+           "class": "snapshot",
+           "object_count": 665,
+           "fields": {
+            "audioClip": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.audioClip",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0.0034,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "audioQuality": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.audioQuality",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 79.6189,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "audioSnr": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.audioSnr",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 2.3067,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "backgroundSoundProbability": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.backgroundSoundProbability",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0.0503,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "dialogProbability": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.dialogProbability",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0.4518,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "effectiveBandwidthInHz": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.effectiveBandwidthInHz",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 14446.402,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "musicProbability": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.musicProbability",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0.498,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "stereophonicRichness": {
+             "path": "$.feeds[].photo.manifestH265.audioFeature.stereophonicRichness",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 100.0,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            }
+           },
+           "present": 665,
+           "rate": 1.0
+          },
+          "businessType": {
+           "path": "$.feeds[].photo.manifestH265.businessType",
+           "types": {
+            "number": 665
+           },
+           "value_shapes": {
+            "int": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": 2,
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "hideAuto": {
+           "path": "$.feeds[].photo.manifestH265.hideAuto",
+           "types": {
+            "bool": 665
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "manualDefaultSelect": {
+           "path": "$.feeds[].photo.manifestH265.manualDefaultSelect",
+           "types": {
+            "bool": 665
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "mediaType": {
+           "path": "$.feeds[].photo.manifestH265.mediaType",
+           "types": {
+            "number": 665
+           },
+           "value_shapes": {
+            "int": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": 2,
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "playInfo": {
+           "path": "$.feeds[].photo.manifestH265.playInfo",
+           "types": {
+            "object": 665
+           },
+           "class": "snapshot",
+           "object_count": 665,
+           "fields": {
+            "bizType": {
+             "path": "$.feeds[].photo.manifestH265.playInfo.bizType",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "int": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "cdnTimeRangeLevel": {
+             "path": "$.feeds[].photo.manifestH265.playInfo.cdnTimeRangeLevel",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "int": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "strategyBus": {
+             "path": "$.feeds[].photo.manifestH265.playInfo.strategyBus",
+             "types": {
+              "string": 665
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 603,
+               "rate": 0.9068
+              },
+              "str:text": {
+               "count": 62,
+               "rate": 0.0932
+              }
+             },
+             "example": "{ }",
+             "enum": [
+              "{ }"
+             ],
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            }
+           },
+           "present": 665,
+           "rate": 1.0
+          },
+          "stereoType": {
+           "path": "$.feeds[].photo.manifestH265.stereoType",
+           "types": {
+            "number": 665
+           },
+           "value_shapes": {
+            "int": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": 0,
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "version": {
+           "path": "$.feeds[].photo.manifestH265.version",
+           "types": {
+            "string": 665
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": "1.0.0",
+           "enum": [
+            "1.0.0"
+           ],
+           "class": "snapshot",
+           "present": 665,
+           "rate": 1.0
+          },
+          "videoFeature": {
+           "path": "$.feeds[].photo.manifestH265.videoFeature",
+           "types": {
+            "object": 665
+           },
+           "class": "snapshot",
+           "object_count": 665,
+           "fields": {
+            "avgEntropy": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.avgEntropy",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=17>",
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "blockyProbability": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.blockyProbability",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=18>",
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "blurProbability": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.blurProbability",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=19>",
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "capSrc": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.capSrc",
+             "types": {
+              "number": 589
+             },
+             "value_shapes": {
+              "float": {
+               "count": 589,
+               "rate": 1.0
+              }
+             },
+             "example": 8.34465e-08,
+             "class": "snapshot",
+             "present": 589,
+             "rate": 0.8857
+            },
+            "contrast": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.contrast",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "mosScore": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.mosScore",
+             "types": {
+              "number": 665
+             },
+             "value_shapes": {
+              "float": {
+               "count": 665,
+               "rate": 1.0
+              }
+             },
+             "example": 0.802734375,
+             "class": "snapshot",
+             "present": 665,
+             "rate": 1.0
+            },
+            "overExposed": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.overExposed",
+             "types": {
+              "number": 605
+             },
+             "value_shapes": {
+              "float": {
+               "count": 605,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 605,
+             "rate": 0.9098
+            },
+            "underExposed": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.underExposed",
+             "types": {
+              "number": 543
+             },
+             "value_shapes": {
+              "float": {
+               "count": 543,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=13>",
+             "class": "snapshot",
+             "present": 543,
+             "rate": 0.8165
+            },
+            "yMean": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.yMean",
+             "types": {
+              "number": 545
+             },
+             "value_shapes": {
+              "float": {
+               "count": 545,
+               "rate": 1.0
+              }
+             },
+             "example": 122.99347,
+             "class": "snapshot",
+             "present": 545,
+             "rate": 0.8195
+            },
+            "yMeanMax": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.yMeanMax",
+             "types": {
+              "number": 545
+             },
+             "value_shapes": {
+              "float": {
+               "count": 545,
+               "rate": 1.0
+              }
+             },
+             "example": 134.92223,
+             "class": "snapshot",
+             "present": 545,
+             "rate": 0.8195
+            },
+            "yMeanMin": {
+             "path": "$.feeds[].photo.manifestH265.videoFeature.yMeanMin",
+             "types": {
+              "number": 543
+             },
+             "value_shapes": {
+              "float": {
+               "count": 543,
+               "rate": 1.0
+              }
+             },
+             "example": 62.04675,
+             "class": "snapshot",
+             "present": 543,
+             "rate": 0.8165
+            }
+           },
+           "present": 665,
+           "rate": 1.0
+          },
+          "videoId": {
+           "path": "$.feeds[].photo.manifestH265.videoId",
+           "types": {
+            "string": 665
+           },
+           "value_shapes": {
+            "str:hex": {
+             "count": 665,
+             "rate": 1.0
+            }
+           },
+           "example": "<hex:len=16>",
+           "class": "id",
+           "class_reason": "[A-Za-z][a-zA-Z]*Id$",
+           "present": 665,
+           "rate": 1.0
+          }
+         },
+         "present": 665,
+         "rate": 0.9419
+        },
+        "overrideCoverUrl": {
+         "path": "$.feeds[].photo.overrideCoverUrl",
+         "types": {
+          "string": 33
+         },
+         "value_shapes": {
+          "str:url": {
+           "count": 33,
+           "rate": 1.0
+          }
+         },
+         "example": "https://p4.a.yximgs.com/xipv/4718/42/06/38/{ukwy}",
+         "class": "snapshot",
+         "present": 33,
+         "rate": 0.0467
+        },
+        "photoH265Urls": {
+         "path": "$.feeds[].photo.photoH265Urls",
+         "types": {
+          "array": 665
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 2,
+          "max": 2,
+          "avg": 2.0
+         },
+         "items": {
+          "path": "$.feeds[].photo.photoH265Urls[]",
+          "types": {
+           "object": 1330
+          },
+          "class": "snapshot",
+          "object_count": 1330,
+          "fields": {
+           "cdn": {
+            "path": "$.feeds[].photo.photoH265Urls[].cdn",
+            "types": {
+             "string": 1330
+            },
+            "value_shapes": {
+             "str:ascii-word": {
+              "count": 1330,
+              "rate": 1.0
+             }
+            },
+            "example": "<str:len=56>",
+            "enum": [
+             "v23-3.kwaicdn.com",
+             "v4.oskwai.com"
+            ],
+            "class": "snapshot",
+            "present": 1330,
+            "rate": 1.0
+           },
+           "url": {
+            "path": "$.feeds[].photo.photoH265Urls[].url",
+            "types": {
+             "string": 1330
+            },
+            "value_shapes": {
+             "str:url": {
+              "count": 1330,
+              "rate": 1.0
+             }
+            },
+            "example": "https://k0u24y88y60y1bzw2409x8c5cx120x600xx1bz.djvod.ndcimgs.com/du1/awwyz-qqmzl-xq/{wdmk}",
+            "class": "snapshot",
+            "present": 1330,
+            "rate": 1.0
+           }
+          },
+          "present": 1330,
+          "arrays": 665
+         },
+         "present": 665,
+         "rate": 0.9419
+        },
+        "photoUrls": {
+         "path": "$.feeds[].photo.photoUrls",
+         "types": {
+          "array": 706
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 2,
+          "max": 2,
+          "avg": 2.0
+         },
+         "items": {
+          "path": "$.feeds[].photo.photoUrls[]",
+          "types": {
+           "object": 1412
+          },
+          "class": "snapshot",
+          "object_count": 1412,
+          "fields": {
+           "cdn": {
+            "path": "$.feeds[].photo.photoUrls[].cdn",
+            "types": {
+             "string": 1412
+            },
+            "value_shapes": {
+             "str:ascii-word": {
+              "count": 1412,
+              "rate": 1.0
+             }
+            },
+            "example": "<str:len=56>",
+            "enum": [
+             "v4.oskwai.com",
+             "v23-3.kwaicdn.com"
+            ],
+            "class": "snapshot",
+            "present": 1412,
+            "rate": 1.0
+           },
+           "url": {
+            "path": "$.feeds[].photo.photoUrls[].url",
+            "types": {
+             "string": 1412
+            },
+            "value_shapes": {
+             "str:url": {
+              "count": 1412,
+              "rate": 1.0
+             }
+            },
+            "example": "https://k0u24y88y60y1bzw2409x8c5cx120x600xx1bz.djvod.ndcimgs.com/vfrb/6136/43/17/33/{prry}",
+            "class": "snapshot",
+            "present": 1412,
+            "rate": 1.0
+           }
+          },
+          "present": 1412,
+          "arrays": 706
+         },
+         "present": 706,
+         "rate": 1.0
+        },
+        "riskTagContent": {
+         "path": "$.feeds[].photo.riskTagContent",
+         "types": {
+          "null": 659,
+          "string": 47
+         },
+         "value_shapes": {
+          "null": {
+           "count": 659,
+           "rate": 0.9334
+          },
+          "str:cjk-text": {
+           "count": 47,
+           "rate": 0.0666
+          }
+         },
+         "example": null,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "riskTagUrl": {
+         "path": "$.feeds[].photo.riskTagUrl",
+         "types": {
+          "null": 659,
+          "string": 47
+         },
+         "value_shapes": {
+          "null": {
+           "count": 659,
+           "rate": 0.9334
+          },
+          "str:empty": {
+           "count": 47,
+           "rate": 0.0666
+          }
+         },
+         "example": null,
+         "enum": [
+          ""
+         ],
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "stereoType": {
+         "path": "$.feeds[].photo.stereoType",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 0,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        },
+        "timestamp": {
+         "path": "$.feeds[].photo.timestamp",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": "<digits:len=13>",
+         "class": "timestamp",
+         "class_reason": "(?i)(_time$|_at$|timestamp|_ts$|^ts$|^time$|create_time|publish|expire|login_time|last_update)",
+         "present": 706,
+         "rate": 1.0
+        },
+        "viewCount": {
+         "path": "$.feeds[].photo.viewCount",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 110747,
+         "class": "count",
+         "class_reason": "[A-Za-z][a-zA-Z]*Count$",
+         "present": 706,
+         "rate": 1.0
+        },
+        "width": {
+         "path": "$.feeds[].photo.width",
+         "types": {
+          "number": 706
+         },
+         "value_shapes": {
+          "int": {
+           "count": 706,
+           "rate": 1.0
+          }
+         },
+         "example": 720,
+         "class": "snapshot",
+         "present": 706,
+         "rate": 1.0
+        }
+       },
+       "present": 706,
+       "rate": 1.0
+      },
+      "tags": {
+       "path": "$.feeds[].tags",
+       "types": {
+        "array": 673
+       },
+       "class": "snapshot",
+       "len": {
+        "min": 1,
+        "max": 5,
+        "avg": 3.19
+       },
+       "items": {
+        "path": "$.feeds[].tags[]",
+        "types": {
+         "object": 2144
+        },
+        "class": "snapshot",
+        "object_count": 2144,
+        "fields": {
+         "name": {
+          "path": "$.feeds[].tags[].name",
+          "types": {
+           "string": 2144
+          },
+          "value_shapes": {
+           "str:ascii-word": {
+            "count": 29,
+            "rate": 0.0135
+           },
+           "str:cjk-text": {
+            "count": 2115,
+            "rate": 0.9865
+           }
+          },
+          "example": "合成样本",
+          "enum": [
+           "NCTWISH",
+           "badboy",
+           "hiphop",
+           "gimmemore",
+           "breaking",
+           "leftrightgo",
+           "redred",
+           "cortis",
+           "…"
+          ],
+          "class": "snapshot",
+          "present": 2144,
+          "rate": 1.0
+         },
+         "type": {
+          "path": "$.feeds[].tags[].type",
+          "types": {
+           "number": 2144
+          },
+          "value_shapes": {
+           "int": {
+            "count": 2144,
+            "rate": 1.0
+           }
+          },
+          "example": 1,
+          "class": "snapshot",
+          "present": 2144,
+          "rate": 1.0
+         }
+        },
+        "present": 2144,
+        "arrays": 673
+       },
+       "present": 673,
+       "rate": 0.9533
+      },
+      "type": {
+       "path": "$.feeds[].type",
+       "types": {
+        "number": 706
+       },
+       "value_shapes": {
+        "int": {
+         "count": 706,
+         "rate": 1.0
+        }
+       },
+       "example": 1,
+       "class": "snapshot",
+       "present": 706,
+       "rate": 1.0
+      }
+     },
+     "present": 706,
+     "arrays": 37
+    },
+    "present": 37,
+    "rate": 1.0
+   },
+   "host-name": {
+    "path": "$.host-name",
+    "types": {
+     "string": 37
+    },
+    "value_shapes": {
+     "str:ascii-word": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": "<str:len=52>",
+    "class": "snapshot",
+    "present": 37,
+    "rate": 1.0
+   },
+   "llsid": {
+    "path": "$.llsid",
+    "types": {
+     "string": 37
+    },
+    "value_shapes": {
+     "str:digits": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": "<digits:len=19>",
+    "class": "id",
+    "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+    "present": 37,
+    "rate": 1.0
+   },
+   "pcursor": {
+    "path": "$.pcursor",
+    "types": {
+     "string": 37
+    },
+    "value_shapes": {
+     "str:digits": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": "<digits:len=1>",
+    "class": "cursor",
+    "class_reason": "(?i)(^|\\.)(cursor|pcursor|next_cursor|cursor_score|offset|page|page_size|has_more|searchSessionId|search_id|logid|request_id|top_comment_id)($|\\.|\\[\\])",
+    "present": 37,
+    "rate": 1.0
+   },
+   "result": {
+    "path": "$.result",
+    "types": {
+     "number": 37
+    },
+    "value_shapes": {
+     "int": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": 1,
+    "class": "snapshot",
+    "present": 37,
+    "rate": 1.0
+   },
+   "searchSessionId": {
+    "path": "$.searchSessionId",
+    "types": {
+     "string": 37
+    },
+    "value_shapes": {
+     "str:opaque": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "class": "cursor",
+    "class_reason": "(?i)(^|\\.)(cursor|pcursor|next_cursor|cursor_score|offset|page|page_size|has_more|searchSessionId|search_id|logid|request_id|top_comment_id)($|\\.|\\[\\])",
+    "present": 37,
+    "rate": 1.0
+   },
+   "webPageArea": {
+    "path": "$.webPageArea",
+    "types": {
+     "string": 20
+    },
+    "value_shapes": {
+     "str:ascii-word": {
+      "count": 20,
+      "rate": 1.0
+     }
+    },
+    "example": "searchxxnull",
+    "enum": [
+     "searchxxnull"
+    ],
+    "class": "snapshot",
+    "present": 20,
+    "rate": 0.5405
+   }
+  }
+ },
+ "response_parse": {
+  "json": 37
+ },
+ "pagination": {
+  "request_cursor_params": {
+   "page": {
+    "observed": [
+     "search"
+    ],
+    "n_obs": 20
+   },
+   "pcursor": {
+    "observed": [
+     "",
+     "1",
+     "2"
+    ],
+    "n_obs": 37
+   },
+   "searchSessionId": {
+    "observed": [
+     "<opaque:len=60>",
+     "<opaque:len=52>",
+     "<opaque:len=55>",
+     "<opaque:len=59>",
+     "<opaque:len=56>"
+    ],
+    "n_obs": 17
+   }
+  },
+  "response_cursor_fields": {
+   "$.pcursor": {
+    "observed": [
+     "1",
+     "2",
+     "3"
+    ],
+    "n_obs": 37
+   },
+   "$.searchSessionId": {
+    "observed": [
+     "<opaque:len=60>",
+     "<opaque:len=59>",
+     "<opaque:len=52>",
+     "<opaque:len=55>",
+     "<opaque:len=56>"
+    ],
+    "n_obs": 37
+   }
+  }
+ },
+ "field_stats": {
+  "total": 249,
+  "must_vary": 17,
+  "must_vary_by_class": {
+   "count": 3,
+   "cursor": 2,
+   "id": 10,
+   "pii": 1,
+   "timestamp": 1
+  }
+ }
+}

@@ -1,0 +1,365 @@
+{
+  "rows": [
+    {
+      "site": "douyin",
+      "check": "manifest.lines",
+      "passed": true,
+      "detail": "300 == 300"
+    },
+    {
+      "site": "douyin",
+      "check": "manifest.sha256",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "site": "douyin",
+      "check": "gt.rowcount",
+      "passed": true,
+      "detail": "labels=300, distinct=300, lines=300"
+    },
+    {
+      "site": "douyin",
+      "check": "field.completeness",
+      "passed": true,
+      "detail": "51 required fields, missing=无"
+    },
+    {
+      "site": "douyin",
+      "check": "field.contract_crosscheck",
+      "passed": true,
+      "detail": "未在契约子树找到: 无"
+    },
+    {
+      "site": "douyin",
+      "check": "mustvary.id_unique",
+      "passed": true,
+      "detail": "{'aweme_id': '300/300', 'group_id': '300/300'}"
+    },
+    {
+      "site": "douyin",
+      "check": "mustvary.nonconst",
+      "passed": true,
+      "detail": "恒定字段: 无"
+    },
+    {
+      "site": "douyin",
+      "check": "dist.view_lognormal_ks",
+      "passed": true,
+      "detail": "KS p=0.6792, fitted mu=10.924 sigma=1.356"
+    },
+    {
+      "site": "douyin",
+      "check": "dist.like_view_corr",
+      "passed": true,
+      "detail": "Pearson(log view, log like)=0.8851 ≥ 0.7"
+    },
+    {
+      "site": "douyin",
+      "check": "invariant.comment_le_like03",
+      "passed": true,
+      "detail": "comment > like×0.3 违例 0/300（要求 0）"
+    },
+    {
+      "site": "douyin",
+      "check": "invariant.like_le_view",
+      "passed": true,
+      "detail": "like > view 反事实 0/300（要求 0）"
+    },
+    {
+      "site": "douyin",
+      "check": "morphology.id_structure",
+      "passed": true,
+      "detail": "非19位=0, 首位非'7'=0（语料 382/385 '7'，容差 5%）, 时间编码违例=0（id>>32 == create_time-(0..3)s）"
+    },
+    {
+      "site": "douyin",
+      "check": "invariant.comment_time_ge_publish",
+      "passed": true,
+      "detail": "render 抽样 40 作品 / 772 条评论：早于发布=0（R2-P2-3，要求 0）；cid 形态违例=0"
+    },
+    {
+      "site": "douyin",
+      "check": "anomaly.proportion",
+      "passed": true,
+      "detail": "{'high_collect_low_like': 1, 'high_like_low_view': 7, 'low_like_high_view': 2, 'new_hot': 2, 'normal': 286, 'old_hot': 2}"
+    },
+    {
+      "site": "douyin",
+      "check": "consistency.author",
+      "passed": true,
+      "detail": "authors=35, conflicts=0"
+    },
+    {
+      "site": "douyin",
+      "check": "leak.no_labels_in_jsonl",
+      "passed": true,
+      "detail": "ground_truth 字样命中 0 行（标记集 ('\"anomaly', '\"class\"', '\"label\"', '\"ground_truth\"', 'anomaly_class', '\"is_anomaly\"', '\"cls\"')）"
+    },
+    {
+      "site": "douyin",
+      "check": "repro.same_seed",
+      "passed": true,
+      "detail": "前300行 sha256 一致"
+    },
+    {
+      "site": "douyin",
+      "check": "second_impl.pandas",
+      "passed": true,
+      "detail": "like median: numpy=4056.0 pandas=4056.0; view median: numpy=59135.5 pandas=59135.5; corr: numpy=0.885139 pandas=0.885139"
+    },
+    {
+      "site": "xhs",
+      "check": "manifest.lines",
+      "passed": true,
+      "detail": "300 == 300"
+    },
+    {
+      "site": "xhs",
+      "check": "manifest.sha256",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "site": "xhs",
+      "check": "gt.rowcount",
+      "passed": true,
+      "detail": "labels=300, distinct=300, lines=300"
+    },
+    {
+      "site": "xhs",
+      "check": "field.completeness",
+      "passed": true,
+      "detail": "17 required fields, missing=无"
+    },
+    {
+      "site": "xhs",
+      "check": "field.contract_crosscheck",
+      "passed": true,
+      "detail": "未在契约子树找到: 无"
+    },
+    {
+      "site": "xhs",
+      "check": "mustvary.id_unique",
+      "passed": true,
+      "detail": "{'id': '300/300', 'comments[].id': '5579/5579'}"
+    },
+    {
+      "site": "xhs",
+      "check": "mustvary.nonconst",
+      "passed": true,
+      "detail": "恒定字段: 无"
+    },
+    {
+      "site": "xhs",
+      "check": "dist.like_lognormal_quantiles",
+      "passed": true,
+      "detail": "分位数偏差%={'q05': 1.0, 'q25': 0.6, 'q50': -1.4, 'q75': 0.8, 'q95': -1.8}（全量 KS D=0.0311 仅作参考）"
+    },
+    {
+      "site": "xhs",
+      "check": "dist.like_comment_corr",
+      "passed": true,
+      "detail": "Pearson(log like, log comment)=0.7527 ≥ 0.7"
+    },
+    {
+      "site": "xhs",
+      "check": "invariant.comment_le_like03",
+      "passed": true,
+      "detail": "comment > like×0.3 违例 0/300（要求 0）"
+    },
+    {
+      "site": "xhs",
+      "check": "invariant.like_le_view",
+      "passed": true,
+      "detail": "like > view 反事实（index.db 口径）0/300（要求 0）"
+    },
+    {
+      "site": "xhs",
+      "check": "morphology.id_structure",
+      "passed": true,
+      "detail": "note/评论/子评论 id 非 hex(ts)+00000000+hex8 结构=0（语料 738/738+183/183，R2-P2-2）"
+    },
+    {
+      "site": "xhs",
+      "check": "invariant.comment_time_ge_publish",
+      "passed": true,
+      "detail": "评论 id/时间早于笔记发布=0（5579 条评论，要求 0，R2-P2-3）"
+    },
+    {
+      "site": "xhs",
+      "check": "invariant.comment_count_matches_retrievable",
+      "passed": true,
+      "detail": "comment_count 与内嵌（可翻）条数不同源=0/300（claim ∈ [k, 3k]，语料 label/可得 ∈ [1, 2.7]，R2-P1-2）"
+    },
+    {
+      "site": "xhs",
+      "check": "anomaly.proportion",
+      "passed": true,
+      "detail": "{'high_collect_low_like': 7, 'high_like_low_view': 5, 'low_like_high_view': 2, 'new_hot': 3, 'normal': 280, 'old_hot': 3}"
+    },
+    {
+      "site": "xhs",
+      "check": "consistency.author",
+      "passed": true,
+      "detail": "authors=30, conflicts=0"
+    },
+    {
+      "site": "xhs",
+      "check": "leak.no_labels_in_jsonl",
+      "passed": true,
+      "detail": "ground_truth 字样命中 0 行（标记集 ('\"anomaly', '\"class\"', '\"label\"', '\"ground_truth\"', 'anomaly_class', '\"is_anomaly\"', '\"cls\"')）"
+    },
+    {
+      "site": "xhs",
+      "check": "repro.same_seed",
+      "passed": true,
+      "detail": "前300行 sha256 一致"
+    },
+    {
+      "site": "xhs",
+      "check": "second_impl.pandas",
+      "passed": true,
+      "detail": "like median: numpy=340.5 pandas=340.5"
+    },
+    {
+      "site": "kuaishou",
+      "check": "manifest.lines",
+      "passed": true,
+      "detail": "300 == 300"
+    },
+    {
+      "site": "kuaishou",
+      "check": "manifest.sha256",
+      "passed": true,
+      "detail": ""
+    },
+    {
+      "site": "kuaishou",
+      "check": "gt.rowcount",
+      "passed": true,
+      "detail": "labels=300, distinct=300, lines=300"
+    },
+    {
+      "site": "kuaishou",
+      "check": "field.completeness",
+      "passed": true,
+      "detail": "32 required fields, missing=无"
+    },
+    {
+      "site": "kuaishou",
+      "check": "field.contract_crosscheck",
+      "passed": true,
+      "detail": "未在契约子树找到: 无"
+    },
+    {
+      "site": "kuaishou",
+      "check": "mustvary.id_unique",
+      "passed": true,
+      "detail": "{'photo.id': '300/300', 'photo.manifest.videoId': '300/300'}"
+    },
+    {
+      "site": "kuaishou",
+      "check": "mustvary.nonconst",
+      "passed": true,
+      "detail": "恒定字段: 无"
+    },
+    {
+      "site": "kuaishou",
+      "check": "dist.view_lognormal_ks",
+      "passed": true,
+      "detail": "KS p=0.8497, fitted mu=9.870 sigma=1.367"
+    },
+    {
+      "site": "kuaishou",
+      "check": "dist.like_view_corr",
+      "passed": true,
+      "detail": "Pearson(log view, log like)=0.8792 ≥ 0.7"
+    },
+    {
+      "site": "kuaishou",
+      "check": "invariant.comment_le_like03",
+      "passed": true,
+      "detail": "comment > like×0.3 违例 0/300（要求 0）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "invariant.like_le_view",
+      "passed": true,
+      "detail": "like > view 反事实 0/300（要求 0）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "morphology.id_structure",
+      "passed": true,
+      "detail": "photo.id 非 '3x'+13 位小写字母数字形态=0/300（语料 45+ 契约 URL 样本一致，R2-P2-2）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "anomaly.proportion",
+      "passed": true,
+      "detail": "{'high_collect_low_like': 2, 'high_like_low_view': 8, 'low_like_high_view': 3, 'new_hot': 3, 'normal': 282, 'old_hot': 2}"
+    },
+    {
+      "site": "kuaishou",
+      "check": "consistency.author",
+      "passed": true,
+      "detail": "authors=38, conflicts=0"
+    },
+    {
+      "site": "kuaishou",
+      "check": "leak.no_labels_in_jsonl",
+      "passed": true,
+      "detail": "ground_truth 字样命中 0 行（标记集 ('\"anomaly', '\"class\"', '\"label\"', '\"ground_truth\"', 'anomaly_class', '\"is_anomaly\"', '\"cls\"')）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "repro.same_seed",
+      "passed": true,
+      "detail": "前300行 sha256 一致"
+    },
+    {
+      "site": "kuaishou",
+      "check": "second_impl.pandas",
+      "passed": true,
+      "detail": "like median: numpy=1593.0 pandas=1593.0; view median: numpy=19540.0 pandas=19540.0; corr: numpy=0.879216 pandas=0.879216"
+    }
+  ],
+  "metrics": {
+    "douyin": {
+      "n": 300,
+      "like_median": 4056.0,
+      "view_median": 59135.5,
+      "view_p99": 1259224.939999991,
+      "view_mu": 10.923622954547136,
+      "view_sigma": 1.3556000253367548,
+      "like_view_corr": 0.8851390992952171,
+      "invariant_comment_violations": 0,
+      "invariant_like_gt_view": 0,
+      "repro_count": 300
+    },
+    "xhs": {
+      "n": 300,
+      "like_median": 340.5,
+      "like_lognorm_mu": 5.915480353230399,
+      "like_lognorm_sigma": 1.3338494998088175,
+      "like_comment_corr": 0.7527164619940377,
+      "invariant_comment_violations": 0,
+      "invariant_like_gt_view": 0,
+      "repro_count": 300
+    },
+    "kuaishou": {
+      "n": 300,
+      "like_median": 1593.0,
+      "view_median": 19540.0,
+      "view_p99": 382478.44999999914,
+      "view_mu": 9.869671473032987,
+      "view_sigma": 1.3672002977930722,
+      "like_view_corr": 0.8792162598202381,
+      "invariant_comment_violations": 0,
+      "invariant_like_gt_view": 0,
+      "repro_count": 300
+    }
+  },
+  "all_passed": true
+}

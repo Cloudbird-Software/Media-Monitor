@@ -1,0 +1,104 @@
+{
+ "family": "xhs_comment_item",
+ "source_endpoints": [
+  "edith.xiaohongshu.com/api/sns/web/v2/comment/page"
+ ],
+ "n_samples": 247,
+ "min_parent_rate": 0.5,
+ "keep_paths": 66,
+ "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地",
+ "template": {
+  "sub_comments": [
+   {
+    "liked": false,
+    "user_info": {
+     "user_id": "9cvrf41301qj063326t7a268",
+     "nickname": "拾光者",
+     "image": "https://sns-avatar-qc.xhscdn.com/gtnlhq/6982s2ff52oz1tv1x3l952x4jg9wy7bbhhzj1zc4?khmomNjvt9/6/b/802/gztecl/gsd",
+     "ai_agent": false,
+     "xsec_token": "FDkqA4jyXArZb1EgwqS6WlxUV_WaueBWBEA2uFbubxPlY="
+    },
+    "show_tags": [
+     "is_author"
+    ],
+    "ip_location": "合成",
+    "target_comment": {
+     "id": "17b1j666056302306468293b",
+     "user_info": {
+      "xsec_token": "OFMmyHOkrVxZISAJ8IL31sX2caYmGapwFJDSFq1-2tQeU=",
+      "user_id": "0m281kt8851323614506x147",
+      "nickname": "一颗青梅",
+      "image": "https://sns-avatar-qc.xhscdn.com/soztsc/545l571239r02kj4b0ewu6j6.cut?bhiusKmxh3/2/f/847/zwsjia/agg",
+      "ai_agent": false
+     }
+    },
+    "id": "7z1i60w93738938192971650",
+    "content": "",
+    "like_count": "0",
+    "create_time": 1782468778000,
+    "pictures": [
+     {
+      "width": 1920,
+      "url_pre": "http://sns-webpic-qc.xhscdn.com/288640086135/61q3o3i4y14rb938av4198kh80u160l1/duuwsgr/1961r6y86698pthq71v9270eb9jmv0re5ga74gc6!og_c_jpog_bs_6",
+      "url_default": "http://sns-webpic-qc.xhscdn.com/175569426946/783602n6gr1o6i3167695zs446t2u7l8/tgrropq/5834j9w37215bgij53v6331kr1cwz4zf7rr22cj5!ie_pcke00_gtmx_ka_3",
+      "info_list": [
+       {
+        "image_scene": "WB_PRV",
+        "url": "http://sns-webpic-qc.xhscdn.com/462800630288/58y6p6j0d09jc361jj3133fe64n951d3/zumfyzy/4620y7d23982pygy17y2916qb5fwo5pg2bm17as5!mq_m_gsmi_ut_8"
+       }
+      ],
+      "height": 2560
+     }
+    ],
+    "invalid": false,
+    "note_id": "5r817tgr651013325330e175",
+    "status": 0,
+    "at_users": []
+   }
+  ],
+  "note_id": "0z85798r938208433426ysq6",
+  "status": 0,
+  "content": "合成",
+  "liked": false,
+  "like_count": "0",
+  "sub_comment_cursor": "",
+  "pictures": [
+   {
+    "info_list": [
+     {
+      "image_scene": "WB_PRV",
+      "url": "http://sns-webpic-qc.xhscdn.com/552661736193/jrw0bok9w4nnox2y33ny0326852r820a/uextpeo/2888t1x3121frirp4wz991bykpta3941mvrsi5f8!dg_y_uxau_ze_8"
+     }
+    ],
+    "height": 2560,
+    "width": 1920,
+    "url_pre": "http://sns-webpic-qc.xhscdn.com/432090966751/pkh6jnw1l9fotf3g92fn9955524b254c/mntakad/6773y1s9191fttnl8bv228vnsvvx1526neafg0j6!lb_q_bznj_dz_9",
+    "url_default": "http://sns-webpic-qc.xhscdn.com/132053540933/sl0z71208oe02k71lv9xdnwx35399vw6/vytblsb/0112u4v7761xklip9ff685tspmpt0559lqqda0m5!zx_daso92_zffm_tj_1"
+   }
+  ],
+  "id": "60e4b107659477672368668g",
+  "user_info": {
+   "image": "https://sns-avatar-qc.xhscdn.com/ojwdoz/074u802687h44su4w6uxo7s9.qqw?qrsdbEkoj5/7/k/998/jxolek/kpc",
+   "ai_agent": false,
+   "xsec_token": "YD0W-FSDmjHwEXbJS9x4Tz4ITJC2gtgi11YC2uHEN5Sqw=",
+   "user_id": "6o6t43t54vlolx68aj6lmj0x",
+   "nickname": "跑步的树懒"
+  },
+  "show_tags": [
+   "is_author"
+  ],
+  "ip_location": "合成",
+  "at_users": [
+   {
+    "user_id": "6993euq7100705232088h475",
+    "nickname": "半糖去冰",
+    "ai_agent": false,
+    "xsec_token": "VIsoJSYzFsWmPyj-SSnVEO6PY7ml3vsMDROKso0T-cg5x="
+   }
+  ],
+  "create_time": 1774576792000,
+  "sub_comment_count": "0",
+  "sub_comment_has_more": false,
+  "invalid": false
+ }
+}

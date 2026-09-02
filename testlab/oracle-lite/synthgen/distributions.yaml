@@ -1,0 +1,83 @@
+# 三站合成数据分布引擎配置（阶段 4）
+# 所有数值分布集中在此，调参无需改代码；--dist-config 可整体替换。
+# 语义：
+#   view  = 潜在曝光/播放量（对数正态，长尾）；仅在契约含播放字段的站点外显（抖音 statistics.play_count、快手 photo.viewCount）
+#   like  = view × like_rate，like_rate ~ Beta(a,b) × 类目互动率 × 作者质量
+#   comment/collect/share = like × 比率(Beta)，并施加一致性上界（如 comment ≤ like × ratios.comment.cap_like_frac）
+#   publish_time = anchor_time - age，age 服从幂律（近期加权），单位天
+# anchor_time 固定值（保证数据集字节级可复现；渲染/生成时不读系统时钟）
+
+meta:
+  anchor_time: "2026-09-01T12:00:00+08:00"   # ISO8601，东八区
+  version: 1
+
+time:
+  powerlaw:
+    scale_days: 2.0        # 幂律尺度：中位发布年龄约 1.7 天
+    shape: 1.35            # 形状参数，越大越集中近期
+    max_age_days: 730      # 截断：最老内容约 2 年
+
+defaults:
+  ratios:
+    comment: {beta_a: 2.0, beta_b: 26.0, cap_like_frac: 0.30}   # comment/like 均值≈0.07，上界 0.30（契约一致性约束）
+    collect: {beta_a: 3.0, beta_b: 15.0, cap_like_frac: 1.50}   # 收藏可超过赞（干货类内容）
+    share:   {beta_a: 2.0, beta_b: 24.0, cap_like_frac: 0.30}
+
+# 异常类注入：frac 为默认占比（CLI --anomaly-classes 可覆盖）
+# view_quantile: 在 view 分布的分位区间内采样（与类目乘子叠加）
+# like_mult/engage_mult/collect_mult: 互动率/互动量放大倍数区间
+anomalies:
+  high_like_low_view:      # 高赞低播放：互动率异常高
+    frac: 0.02
+    view_quantile: [0.02, 0.45]
+    like_mult: [8.0, 28.0]
+    like_rate_cap: 0.55
+  low_like_high_view:      # 低赞高播放：流量大但内容承接差
+    frac: 0.015
+    view_quantile: [0.60, 0.995]
+    like_div: [20.0, 80.0]
+  new_hot:                 # 新发布高互动：48h 内发布且互动量放大
+    frac: 0.01
+    max_age_hours: 48
+    view_mult: [1.5, 4.0]
+    engage_mult: [3.0, 10.0]
+  old_hot:                 # 老内容高互动：发布超 365 天仍有高互动
+    frac: 0.01
+    min_age_days: 365
+    view_mult: [1.2, 3.0]
+    engage_mult: [5.0, 15.0]
+  high_collect_low_like:   # 高收藏低赞：工具/干货型异常
+    frac: 0.01
+    like_mult: [0.25, 0.6]
+    collect_mult: [10.0, 40.0]
+
+sites:
+  douyin:
+    # 中位播放 ≈ e^10.82 ≈ 5.0w，P99 ≈ e^(10.82+2.33*1.4) ≈ 130w
+    view: {mu: 10.82, sigma: 1.40, min: 200}
+    like:  {beta_a: 5.0, beta_b: 70.0}     # 基准点赞率均值 ≈ 0.067
+    author_pool: 30000
+    author_popularity_shape: 1.8           # 作者被引用幂律
+    follower: {mu: 8.5, sigma: 1.8, min: 0}  # 粉丝对数正态（粉丝中位 ≈ 5k）
+    durations_ms: {mu: 4.8, sigma: 0.45, min: 5000, max: 600000}
+  xhs:
+    # 笔记无外显播放（契约实证），view 为潜在曝光，仅驱动 liked_count 生成
+    view: {mu: 8.00, sigma: 1.20, min: 50}
+    like:  {beta_a: 7.0, beta_b: 55.0}     # 点赞率均值 ≈ 0.113（小红书互动高于短视频）
+    ratios:                                # 站点级比率覆盖：收藏文化更强
+      collect: {beta_a: 4.0, beta_b: 10.0, cap_like_frac: 2.50}
+    author_pool: 30000
+    author_popularity_shape: 1.8
+    follower: {mu: 7.6, sigma: 1.8, min: 0}
+    images_per_note: {min: 1, max: 6, mean: 3.5}
+    # 每条笔记内嵌（comment/page 可翻取）评论条数上限——R2-P1-2：计数与可得同源
+    # （comment_count = 内嵌条数 + 右偏噪声，量级一致；上限即大计数笔记的可得封顶）
+    comments_per_note: {min: 0, max: 40}
+  kuaishou:
+    # 中位播放 ≈ e^9.90 ≈ 2.0w
+    view: {mu: 9.90, sigma: 1.35, min: 100}
+    like:  {beta_a: 6.0, beta_b: 65.0}     # 均值 ≈ 0.085
+    author_pool: 30000
+    author_popularity_shape: 1.8
+    follower: {mu: 8.2, sigma: 1.9, min: 0}
+    durations_ms: {mu: 5.0, sigma: 0.5, min: 5000, max: 900000}
