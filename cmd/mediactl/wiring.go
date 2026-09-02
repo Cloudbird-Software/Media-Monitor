@@ -6,6 +6,9 @@ import (
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/kuaishou"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
 )
 
 // wiring.go — shared cmd-layer wiring: account-pool injection, the UA
@@ -63,4 +66,16 @@ func uaPoolUserAgents() []string {
 // engines, with the UA pool injected when available.
 func sharedHTTPClient() *httpclient.Client {
 	return httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()})
+}
+
+// browserHeaderDefaults assembles the per-platform browser-grade header sets
+// (silent-scraping B1): referer/accept/accept-language/sec-fetch-*/priority
+// defaults the engine merges under every request; contract transport.headers
+// can still override each value.
+func browserHeaderDefaults() map[string]map[string]string {
+	return map[string]map[string]string{
+		douyin.Platform:   douyin.BrowserHeaders(),
+		kuaishou.Platform: kuaishou.BrowserHeaders(),
+		xhs.Platform:      xhs.BrowserHeaders(),
+	}
 }

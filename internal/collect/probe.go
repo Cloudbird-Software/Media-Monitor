@@ -68,7 +68,7 @@ func (e *Engine) probeFetch(ctx context.Context, c *contracts.Contract, pathPara
 		return probePage{status: http.StatusForbidden, err: err}
 	}
 	_, proxy, _, _ := e.accountContext(c.Platform)
-	hc := e.clientFor(proxy)
+	hc := e.fetchClient(c.Platform, proxy)
 	status, resp, err := hc.WithContract(c.Name).Do(ctx, c.Transport.Method, full, headers, body)
 	if err != nil {
 		return probePage{err: err}

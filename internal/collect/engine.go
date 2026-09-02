@@ -48,6 +48,11 @@ type Context struct {
 	// Pacing overrides the inter-page think-time config (nil = env/defaults,
 	// see pacing.go). The zero Context keeps pacing ON with defaults.
 	Pacing *PacingConfig
+	// BrowserHeaders carries per-platform browser-grade default header sets
+	// (see internal/platforms/<platform>.BrowserHeaders). Merged UNDER the
+	// contract transport.headers; empty map = engine sends no browser
+	// defaults (legacy behavior).
+	BrowserHeaders map[string]map[string]string
 }
 
 // Engine executes contracts. Safe for concurrent use once built.
@@ -66,7 +71,11 @@ type Engine struct {
 	pacing      PacingConfig                  // inter-page think time (pacing.go)
 	pacingMu    sync.Mutex
 	pacingRand  *rand.Rand
-	sleepHook   func() time.Duration // test seam: replaces the random sample
+	sleepHook   func() time.Duration          // test seam: replaces the random sample
+	browserHdrs map[string]map[string]string  // platform -> browser default headers
+	sess        *sessionCache                 // cookie-jar clients per identity (shared across clones)
+	uaMu        sync.Mutex
+	uaByPlat    map[string]string // platform -> pinned session UA (uapool binding)
 }
 
 // New builds an Engine from its wiring context.
@@ -76,16 +85,19 @@ func New(ctx Context) *Engine {
 		pacing = *ctx.Pacing
 	}
 	e := &Engine{
-		reg:        ctx.Registry,
-		obs:        ctx.Obs,
-		signers:    ctx.Signers,
-		cookies:    ctx.Cookies,
-		names:      ctx.Names,
-		accounts:   ctx.Accounts,
-		accountID:  ctx.AccountID,
-		proxyCache: map[string]*httpclient.Client{},
-		pacing:     pacing,
-		pacingRand: newPacingRand(),
+		reg:         ctx.Registry,
+		obs:         ctx.Obs,
+		signers:     ctx.Signers,
+		cookies:     ctx.Cookies,
+		names:       ctx.Names,
+		accounts:    ctx.Accounts,
+		accountID:   ctx.AccountID,
+		proxyCache:  map[string]*httpclient.Client{},
+		pacing:      pacing,
+		pacingRand:  newPacingRand(),
+		browserHdrs: ctx.BrowserHeaders,
+		sess:        newSessionCache(),
+		uaByPlat:    map[string]string{},
 	}
 	if ctx.HTTP != nil {
 		e.hc = ctx.HTTP
@@ -288,6 +300,12 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		full += "?" + q.Encode()
 	}
 	headers := map[string]string{}
+	// Precedence (low → high): platform browser defaults < signer output
+	// riding headers < contract static headers < UA-consistent client hints
+	// < per-identity Cookie/User-Agent set below.
+	for k, v := range e.browserHeadersFor(c.Platform) {
+		headers[k] = v
+	}
 	for k, v := range sigHeaders {
 		headers[k] = v
 	}
@@ -309,9 +327,17 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 	if ck != "" {
 		headers["Cookie"] = ck
 	}
-	// UA priority: the account's pinned UA overrides the client's rotating
-	// pool (the shared pool UA applies when no account is selected).
+	// UA priority: the account's pinned UA overrides the engine's
+	// session-pinned UA (which itself overrides the client's rotating pool).
+	if ua == "" {
+		ua = e.resolveUA(c.Platform)
+	}
 	if ua != "" {
+		// Client hints must match the UA being sent (sec-ch-ua family
+		// derived from the same string — report B1/B2).
+		for k, v := range deriveClientHints(ua) {
+			headers[k] = v
+		}
 		headers["User-Agent"] = ua
 	}
 	if len(c.Cookie.Required) > 0 {
@@ -362,9 +388,10 @@ func (e *Engine) Fetch(ctx context.Context, name string, pathParams, query map[s
 		return nil, err
 	}
 	// Route through the account's proxy client when an account is selected;
-	// otherwise use the shared client.
+	// every fetch rides the session-bound (cookie-jar) client so Set-Cookie
+	// rotations persist within one identity (report B1/B3).
 	_, proxy, _, _ := e.accountContext(c.Platform)
-	hc := e.clientFor(proxy)
+	hc := e.fetchClient(c.Platform, proxy)
 	status, resp, err := hc.WithContract(name).Do(ctx, c.Transport.Method, full, headers, body)
 	if err != nil {
 		e.fetchErr()

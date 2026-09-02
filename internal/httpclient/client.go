@@ -1,8 +1,9 @@
 // Package httpclient is a thin HTTP client for the media collectors: it adds
 // a rotating User-Agent pool, retry with exponential backoff on 429/5xx, and
 // an injectable request signer that can attach query parameters (e.g. a_bogus
-// / msToken) computed per contract. There is no cookie jar on purpose —
-// cookies are stateless and travel via the caller-supplied headers.
+// / msToken) computed per contract. Cookies are stateless by default and
+// travel via the caller-supplied headers; Session() clones get a real cookie
+// jar so server Set-Cookie rotations persist within one identity.
 package httpclient
 
 import (
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"sync/atomic"
 	"time"
@@ -97,6 +99,21 @@ func (c *Client) WithSigner(s Signer) *Client {
 func (c *Client) WithContract(name string) *Client {
 	c.contract = name
 	return c
+}
+
+// Session returns a clone backed by its own cookie jar (sharing the config,
+// signer, UA pool and transport of the receiver). Use one Session per
+// identity/cookie-lifetime so Set-Cookie rotations (msToken, ttwid refresh)
+// persist within the session and never leak across identities. Caller-set
+// Cookie headers are still honored — jar cookies are appended after them.
+func (c *Client) Session() *Client {
+	nc := *c
+	base := &http.Client{Timeout: c.hc.Timeout, Transport: c.hc.Transport}
+	if jar, err := cookiejar.New(nil); err == nil {
+		base.Jar = jar
+	}
+	nc.hc = base
+	return &nc
 }
 
 // UA returns the next User-Agent in the pool (round-robin rotation).

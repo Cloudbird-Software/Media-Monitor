@@ -239,6 +239,11 @@ func (d *daemon) wireAdapt(dataDir string) {
 		Cookies:  cookies,
 		Names:    names,
 		Accounts: d.accounts,
+		BrowserHeaders: map[string]map[string]string{
+			douyin.Platform:   douyin.BrowserHeaders(),
+			kuaishou.Platform: kuaishou.BrowserHeaders(),
+			xhs.Platform:      xhs.BrowserHeaders(),
+		},
 	}
 	d.engine = collect.New(d.collectCtx)
 	d.reg = reg

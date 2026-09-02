@@ -280,11 +280,12 @@ func probeEngine(reg *contracts.Registry, pool *accounts.Pool, accountID string)
 	names[kuaishou.Platform] = ks.Names
 	names[xhs.Platform] = xh.Names
 	return collect.New(collect.Context{
-		Registry:  reg,
-		HTTP:      sharedHTTPClient(),
-		Obs:       obs.NewCounterMap(),
-		Names:     names,
-		Accounts:  pool,
-		AccountID: accountID,
+		Registry:      reg,
+		HTTP:          sharedHTTPClient(),
+		Obs:           obs.NewCounterMap(),
+		Names:         names,
+		Accounts:      pool,
+		AccountID:     accountID,
+		BrowserHeaders: browserHeaderDefaults(),
 	})
 }

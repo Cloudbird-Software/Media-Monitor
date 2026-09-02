@@ -188,6 +188,11 @@ func newApp(adaptDir, dataDir string) (*app, error) {
 		Cookies:  cookies,
 		Names:    names,
 		Accounts: pool,
+		BrowserHeaders: map[string]map[string]string{
+			douyin.Platform:   douyin.BrowserHeaders(),
+			kuaishou.Platform: kuaishou.BrowserHeaders(),
+			xhs.Platform:      xhs.BrowserHeaders(),
+		},
 	}
 	return &app{
 		reg:      reg,
