@@ -11,9 +11,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -22,14 +26,19 @@ import (
 type Config struct {
 	// BaseHeaders are merged into every request first (caller headers win).
 	BaseHeaders map[string]string
-	// UserAgents is the rotation pool; a built-in pool of generic desktop
-	// and mobile UAs is used when empty.
+	// UserAgents is the rotation pool; a built-in pool of real desktop
+	// Chrome/Edge UAs is used when empty.
 	UserAgents []string
 	// Timeout per request (0 selects a 30s default).
 	Timeout time.Duration
 	// MaxRetries is the number of extra attempts after the first one for
 	// 429/Too Many Requests and 5xx responses. 0 means a single attempt.
 	MaxRetries int
+	// RetryBase is the exponential backoff base for retries (0 = 250ms).
+	// Each retry waits RetryBase·2^(n-1) with ±20% jitter (silent-scraping
+	// A2/E: constant-cadence error storms are a bot signature), and never
+	// less than a server-sent Retry-After (capped at 30s).
+	RetryBase time.Duration
 	// Proxy is an optional proxy URL (e.g. "http://user:pass@host:port",
 	// "socks5://host:port"). When set, every request is routed through it.
 	Proxy string
@@ -40,6 +49,25 @@ type Config struct {
 // into the outgoing query string.
 type Signer interface {
 	Sign(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error)
+}
+
+// DefaultMaxRetries is the silent-scraping default for collect traffic
+// (report item 5 / E: MaxRetries=0 meant a single attempt and an instant
+// error storm). Override with MEDIAMON_MAX_RETRIES.
+const DefaultMaxRetries = 2
+
+// MaxRetriesFromEnv resolves the retry budget: MEDIAMON_MAX_RETRIES wins
+// (0 = single attempt, the legacy explicit opt-out), default 2.
+func MaxRetriesFromEnv() int {
+	v := strings.TrimSpace(os.Getenv("MEDIAMON_MAX_RETRIES"))
+	if v == "" {
+		return DefaultMaxRetries
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return DefaultMaxRetries
+	}
+	return n
 }
 
 // StaticSigner adapts a plain function to the Signer interface.
@@ -123,8 +151,9 @@ func (c *Client) UA() string {
 
 // Do performs one request with retry: transport errors and non-429/5xx
 // responses return immediately; 429/5xx responses retry with exponential
-// backoff starting at 100ms, honoring ctx cancellation between attempts.
-// Returns the last HTTP status and body (last attempt on exhaustion).
+// backoff plus ±20% jitter (never below a server Retry-After, capped at
+// 30s), honoring ctx cancellation between attempts. Returns the last HTTP
+// status and body (last attempt on exhaustion).
 func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -138,20 +167,20 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 	}
 	var lastStatus int
 	var lastBody []byte
+	var lastRetryAfter time.Duration
 	for i := 0; i < attempts; i++ {
 		if i > 0 {
-			backoff := time.Duration(100*time.Millisecond) << uint(i-1)
 			select {
 			case <-ctx.Done():
 				return 0, nil, fmt.Errorf("httpclient: %w", ctx.Err())
-			case <-time.After(backoff):
+			case <-time.After(c.backoffFor(i, lastRetryAfter)):
 			}
 		}
-		status, rb, err := c.doOnce(ctx, method, rawURL, headers, body)
+		status, rb, ra, err := c.doOnce(ctx, method, rawURL, headers, body)
 		if err != nil {
 			return 0, nil, err
 		}
-		lastStatus, lastBody = status, rb
+		lastStatus, lastBody, lastRetryAfter = status, rb, ra
 		if status == http.StatusTooManyRequests || status >= 500 {
 			continue
 		}
@@ -161,17 +190,73 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 		fmt.Errorf("httpclient: %s %s failed after %d attempt(s), last status %d", method, rawURL, attempts, lastStatus)
 }
 
-func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, error) {
+// retryJitter spreads the ±20% jitter factor for backoffFor.
+func retryJitterFactor() float64 {
+	return 0.8 + 0.4*rand.Float64()
+}
+
+// backoffFor computes attempt n's wait: RetryBase·2^(n-1) scaled by ±20%
+// jitter, raised to the server's Retry-After when larger, capped at 30s.
+func (c *Client) backoffFor(attempt int, retryAfter time.Duration) time.Duration {
+	base := c.cfg.RetryBase
+	if base <= 0 {
+		base = 250 * time.Millisecond
+	}
+	d := time.Duration(float64(base<<uint(attempt-1)) * retryJitterFactor())
+	if retryAfter > d {
+		d = retryAfter
+	}
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	return d
+}
+
+// parseRetryAfter converts a Retry-After header value (delta-seconds or
+// HTTP-date) into a duration; ok=false when absent/invalid. The result is
+// clamped to [0, 30s] — a hostile/huge value must not stall the client.
+func parseRetryAfter(v string, now time.Time) (time.Duration, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0, false
+	}
+	if secs, err := strconv.Atoi(v); err == nil {
+		if secs < 0 {
+			return 0, true
+		}
+		d := time.Duration(secs) * time.Second
+		if d > 30*time.Second {
+			d = 30 * time.Second
+		}
+		return d, true
+	}
+	if ts, err := http.ParseTime(v); err == nil {
+		d := ts.Sub(now)
+		if d < 0 {
+			d = 0
+		}
+		if d > 30*time.Second {
+			d = 30 * time.Second
+		}
+		return d, true
+	}
+	return 0, false
+}
+
+// doOnce performs one attempt and also surfaces the server's Retry-After
+// (parsed against the attempt time) for the retry loop.
+func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, time.Duration, error) {
 	resp, err := c.doRequest(ctx, method, rawURL, headers, body)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, 0, err
 	}
 	defer resp.Body.Close()
 	rb, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return 0, nil, fmt.Errorf("httpclient: read body: %w", err)
+		return 0, nil, 0, fmt.Errorf("httpclient: read body: %w", err)
 	}
-	return resp.StatusCode, rb, nil
+	ra, _ := parseRetryAfter(resp.Header.Get("Retry-After"), time.Now())
+	return resp.StatusCode, rb, ra, nil
 }
 
 // DoStream performs a single-attempt request and returns the response body

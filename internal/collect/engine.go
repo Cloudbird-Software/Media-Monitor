@@ -556,13 +556,16 @@ func (e *Engine) SearchItems(ctx context.Context, platform, keyword, filter stri
 		query["type"] = filter
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, pathParams, query, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	c, _ := e.reg.Get(name)
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	// Partial-data semantics (report t03): a late-page failure still returns
+	// the records already collected alongside the error — callers flush them
+	// to disk before exiting.
+	if err != nil {
+		return items, nxt, err
 	}
 	if filter != "" {
 		f := items[:0]
@@ -596,12 +599,12 @@ func (e *Engine) ItemComments(ctx context.Context, platform, itemID string, cur 
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "item_id"): itemID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	cmts := make([]model.Comment, 0, len(recs))
 	for _, r := range recs {
 		cmts = append(cmts, bindComment(c, r))
+	}
+	if err != nil {
+		return cmts, nxt, err // partial data + error (flush-before-exit)
 	}
 	return cmts, nxt, nil
 }
@@ -620,12 +623,12 @@ func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid strin
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "comment_id"): cid}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	cmts := make([]model.Comment, 0, len(recs))
 	for _, r := range recs {
 		cmts = append(cmts, bindComment(c, r))
+	}
+	if err != nil {
+		return cmts, nxt, err // partial data + error (flush-before-exit)
 	}
 	return cmts, nxt, nil
 }
@@ -662,12 +665,12 @@ func (e *Engine) GroupMembers(ctx context.Context, platform, groupID string, cur
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "group_id"): groupID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	members := make([]model.GroupMember, 0, len(recs))
 	for _, r := range recs {
 		members = append(members, bindMember(c, r, groupID))
+	}
+	if err != nil {
+		return members, nxt, err // partial data + error (flush-before-exit)
 	}
 	return members, nxt, nil
 }
@@ -815,12 +818,12 @@ func (e *Engine) CollectFolders(ctx context.Context, platform string, cur model.
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, nil, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	if err != nil {
+		return items, nxt, err // partial data + error (flush-before-exit)
 	}
 	return items, nxt, nil
 }
@@ -836,12 +839,12 @@ func (e *Engine) CollectVideos(ctx context.Context, platform, collectsID string,
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholderFrom(e.reg, name, "collects_id"): collectsID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	if err != nil {
+		return items, nxt, err // partial data + error (flush-before-exit)
 	}
 	return items, nxt, nil
 }

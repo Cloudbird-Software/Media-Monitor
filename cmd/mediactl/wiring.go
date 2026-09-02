@@ -64,8 +64,12 @@ func uaPoolUserAgents() []string {
 
 // sharedHTTPClient builds the HTTP client shared by the collect/send/live
 // engines, with the UA pool injected when available.
+// sharedHTTPClient builds the HTTP client shared by the collect/send/live
+// engines, with the UA pool injected when available and the silent-scraping
+// retry budget (MaxRetries default 2, MEDIAMON_MAX_RETRIES override — report
+// item 5 / E: the collector used to fire a single attempt).
 func sharedHTTPClient() *httpclient.Client {
-	return httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()})
+	return httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents(), MaxRetries: httpclient.MaxRetriesFromEnv()})
 }
 
 // browserHeaderDefaults assembles the per-platform browser-grade header sets

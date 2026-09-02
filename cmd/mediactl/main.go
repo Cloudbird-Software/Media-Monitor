@@ -672,11 +672,22 @@ func collectSearch(args []string) error {
 		defer st.Close()
 	}
 	items, _, err := eng.SearchItems(context.Background(), o.platform, o.keyword, o.mediaType, model.Cursor{}, o.limit)
-	if err != nil {
-		return err
+	// Flush-before-exit (report t03): rows collected before a failure are
+	// emitted to stdout/--out-dir first; the error still surfaces after.
+	if eerr := emitAll(st, "items", items); eerr != nil {
+		return eerr
 	}
-	for _, it := range items {
-		if err := emitRow(st, "items", it); err != nil {
+	if err != nil {
+		return fmt.Errorf("search failed after %d row(s): %w", len(items), err)
+	}
+	return nil
+}
+
+// emitAll writes every row (generic over the row type); first write error
+// stops the flush and is returned.
+func emitAll[T any](st *store.Store, collection string, rows []T) error {
+	for _, r := range rows {
+		if err := emitRow(st, collection, r); err != nil {
 			return err
 		}
 	}
@@ -705,13 +716,11 @@ func collectComments(args []string) error {
 		defer st.Close()
 	}
 	cmts, _, err := eng.ItemComments(context.Background(), o.platform, o.item, model.Cursor{}, o.limit)
-	if err != nil {
-		return err
+	if eerr := emitAll(st, "comments", cmts); eerr != nil { // flush-before-exit
+		return eerr
 	}
-	for _, cm := range cmts {
-		if err := emitRow(st, "comments", cm); err != nil {
-			return err
-		}
+	if err != nil {
+		return fmt.Errorf("comments failed after %d row(s): %w", len(cmts), err)
 	}
 	return nil
 }
@@ -741,13 +750,11 @@ func collectReplies(args []string) error {
 	// douyin and xhs declare replies contracts; a platform without one fails
 	// closed with the explicit "replies contract not declared" error.
 	cmts, _, err := eng.CommentReplies(context.Background(), o.platform, o.item, o.cid, model.Cursor{}, o.limit)
-	if err != nil {
-		return err
+	if eerr := emitAll(st, "comments", cmts); eerr != nil { // flush-before-exit
+		return eerr
 	}
-	for _, cm := range cmts {
-		if err := emitRow(st, "comments", cm); err != nil {
-			return err
-		}
+	if err != nil {
+		return fmt.Errorf("replies failed after %d row(s): %w", len(cmts), err)
 	}
 	return nil
 }
@@ -802,13 +809,11 @@ func collectGroup(args []string) error {
 		defer st.Close()
 	}
 	members, _, err := eng.GroupMembers(context.Background(), o.platform, o.group, model.Cursor{}, o.limit)
-	if err != nil {
-		return err
+	if eerr := emitAll(st, "members", members); eerr != nil { // flush-before-exit
+		return eerr
 	}
-	for _, m := range members {
-		if err := emitRow(st, "members", m); err != nil {
-			return err
-		}
+	if err != nil {
+		return fmt.Errorf("group members failed after %d row(s): %w", len(members), err)
 	}
 	return nil
 }

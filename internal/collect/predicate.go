@@ -267,17 +267,20 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 		doc, err := fe.Fetch(ctx, name, pathParams, query)
 		if err != nil {
 			if fe.isAutoAccount() && (errorsIs(err, ErrAuthWall) || errorsIs(err, ErrEmptyPage)) {
+				// Human-shaped pause BEFORE switching (report A2: the old
+				// code re-fired within 0-16ms of a 401/403).
+				fe.sleepBeforeRotation(ctx, st.rotations)
 				// Auto rotation (IR AC-9): auth wall / empty page switches
 				// to the next health-ranked account and retries the SAME
 				// page (cursor untouched — the walk never restarts).
 				nfe, rerr := fe.rotateOn(name, err, st.tried, &st.rotations)
 				if rerr != nil {
-					return nil, ccur, rerr
+					return truncate(out, limit), ccur, rerr
 				}
 				fe = nfe
 				continue
 			}
-			return nil, ccur, err
+			return truncate(out, limit), ccur, err
 		}
 		if id := fe.currentAccount(); id != "" && fe.accounts != nil {
 			_ = fe.accounts.MarkSuccess(id)

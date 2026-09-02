@@ -827,8 +827,11 @@ func TestAccountContextUA(t *testing.T) {
 	if len(uas) != 2 || uas[0] != "pinned-ua-1" {
 		t.Fatalf("account UA = %v, want first request pinned-ua-1", uas)
 	}
-	if uas[1] != "test-ua" {
-		t.Fatalf("shared pool UA = %q, want test-ua", uas[1])
+	// Silent-scraping (B3): without an account the engine pins its own
+	// session UA (real-Chrome fallback here — no UAPool wired) instead of
+	// letting the client rotate per request.
+	if uas[1] != fallbackSessionUA {
+		t.Fatalf("shared session UA = %q, want engine-pinned %q", uas[1], fallbackSessionUA)
 	}
 }
 
