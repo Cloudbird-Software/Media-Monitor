@@ -21,11 +21,12 @@ testlab/oracle-lite/
 ├── synth_api.py           合成站 API 服务（改：默认路径指向包内、端口独立段 876x）
 ├── synthgen/              合成数据生成器（整包自包含）
 │   ├── generator.py       生成 CLI（种子化可复现）
-│   ├── validate.py        数据集验收自测（68 项检查）
+│   ├── validate.py        数据集验收自测（105 项检查）
 │   ├── render.py          契约形态响应组装（synth_api 的渲染层）
 │   ├── sites/ data/ distributions.yaml ...
 │   └── datasets/          预生成迷你数据集（300 条/站，seed=20260902）
 ├── contracts/             validate 所需 4 个契约文件（字段交叉核对子集）
+├── fixtures/              R6 契约差集端点的静态常量（emoji 名录/筛选层等公开目录数据）
 └── pages/
     ├── build_pages.py     页面骨架生成（改：脱敏语料缺失时跳过 DOM 对照）
     └── out/               预生成三站页面骨架（home/search/detail/profile）
@@ -35,7 +36,8 @@ testlab/oracle-lite/
 
 ### 第 1 步：生成（或复用）迷你数据集
 
-包内已预生成（300 条/站，固定种子，`validate.py` 验收 68/68 全绿）；重生成：
+包内已预生成（300 条/站，固定种子，`validate.py` 验收 101/105，4 只不过项均为
+迷你集小样本统计涨落——见下文「验收口径」）；重生成：
 
 ```bash
 cd testlab/oracle-lite
@@ -43,14 +45,14 @@ python synthgen/generator.py --site all --count 300 --seed 20260902 --with-index
 python synthgen/validate.py --datasets-dir synthgen/datasets --repro-count 300
 ```
 
-体积口径：douyin ≈2.6MB / xhs ≈4.8MB / kuaishou ≈1.4MB（含 index.db 与
+体积口径：douyin ≈2.6MB / xhs ≈5.0MB / kuaishou ≈1.5MB（含 index.db 与
 ground_truth.db）。同种子重生成逐字节一致（repro.same_seed 检查项）。
 
-### 本数据集体现的修复点（红队第 5 轮同步）
+### 本数据集体现的修复点（红队第 5 ~ 12 轮同步）
 
-本包的 synthgen / synth_api / pages 已同步**红队第 5 轮修复**（R5A/R5B/R5C，
-2026-09-03），迷你数据集（300 条/站、seed 20260902）与 validate 68 项检查
-直接体现以下前后对照：
+本包的 synthgen / synth_api / pages 已同步**红队第 5 ~ 12 轮修复**（R5A~R12C，
+2026-09-03 ~ 09-04；R5 前 7 项见下表，R6~R12 代表项随其后），迷你数据集
+（300 条/站、seed 20260902）与 validate 105 项检查直接体现以下前后对照：
 
 | 修复项 | 旧实现（同步前） | 本数据集 |
 |---|---|---|
@@ -68,6 +70,42 @@ validate 中对应的检查项：`author.longtail` / `author.window_repeat` /
 distinct/top1 阈值按迷你集规模自适应（完整台架 10 万条时与原阈值 ≥5000/≤2%
 等价），`comment.window_text_unique` 的单窗口重复上限按语料唯一率取口径
 （dy 语料 100% 唯一仍要求 0；xhs/ks 语料本身 98%/94%）。
+
+红队第 6 ~ 12 轮同步的代表修复（synthgen 整包 / synth_api.py / pages /
+fixtures 均为本轮同步；完整 24 分册报告在 oracle 侧 `verify/`）：
+
+| 轮 | 修复项 | 旧实现（同步前） | 本包 |
+|---|---|---|---|
+| R6 | ks GraphQL `visionCommentList` 键集/游标键位（R5A-P2-3） | 缺 `__typename/rootCommentsV2/pcursorV2`，续页游标放 `pcursor` | 信封对齐契约 7 键，`pcursor` 恒 null、续页在 `pcursorV2`（28/28 语料实证） |
+| R6 | 契约差集端点补面 12 个（R6A C-2） | dy `suggest_words`/`emoji/list`/`mix`/`series`/`multi`/`profile/self`、xhs `search/recommend`/`filter`/`onebox`/`homefeed/category`/`feed`/`widgets` 全 404 | 形态按契约渲染；静态常量随包（`fixtures/round6_static_payloads.json`，公开 emoji 名录/筛选层） |
+| R6 | 空关键词统一空态族（R6C-P3-1）/ backlog 512（R6C-P3-3） | 空词行为三站各异；高并发拒连 | dy `data=[]`、xhs 无 items 键、ks `feeds=[]+no_more`；50 并发 0 拒连 |
+| R7 | 关键词→类目映射（R6A-P2-1） | 搜索结果与关键词零耦合（严格命中 ~0） | `search.relevance` 类目耦合 0.60-0.66（≥0.5，语料口径）；ladder 14 词全映射 |
+| R7 | dy 搜索上下文隐藏面（R6C-P2-1） | `play_count` 有值（真站搜索上下文恒 0） | `dy.play_count_hidden_true_site` PASS：stream/single/item 61 卡 play_count=0、detail 有值（语料 849/849） |
+| R7 | 评论延迟长尾/文本风格带（R6A-P2-2、R7A-P3-2/3） | 评论时间即时爆发（p50 0.03 天）、语气词率 0.40-0.59 | `comment.delay_longtail` p50 5.9-6.5 天（语料 8.1）、语气词/网络用语/@提及进 ±30% 带（完整台架口径） |
+| R8/R9 | **ks 评论 id / 子评论 id 全局唯一**（R8A-P2-1、R9A-P2-1） | ks 评论 id 照片局部重启，跨照片碰撞 | id/游标掺 photo_id 种子、子评论掺 root 序号——跨照片/跨 root 唯一（rt8fix 39/39、rt9fix 34/34 同源代码） |
+| R9 | 子-根评论时间因果（R9A-P2-2） | 子评论时间可早于根评论（51% 违例） | 子时间 = 根时间 + 正偏移（语料公理 0/168 违例，0 违例） |
+| R8/R10 | JSON 序列化紧凑化（R8C-P3-1）+ dy/ks 转义表（R10A-P3-1） | 体带空格分隔；dy raw `&` 外露、ks emoji 原生 | 全出口 `separators=(",",":")`；dy `&<>`/U+2028 转义为 `\uXXXX`、ks REST emoji 转代理对 |
+| R10 | 媒体 URL 按次签发盐（R10A-P3-4）+ GET/HEAD 带体排空（R10C-P3-2） | 同实体跨端点媒体 URL 恒同串；带体 GET 打断 keep-alive | 同端点恒同串、跨端点必异；body 排空后连接复用洁净 |
+| R11 | **页面路由幻影 404**（R11C-P1-1） | 别名路由真响应后同连接追加第二个 404 站点页（curl 双 URL 第二请求必 404） | `_send` 哨兵防二次发包——`curl 页面 任意URL` 第二响应 200（8/8 别名路由；rt11fix 62/62 同源代码） |
+| R12 | dy 可选键族三态携带率（R12A-P3-3） | 实体级可选键族携带率与语料断裂 | `sites/templates/dy_optfam.json`（随包脱敏）按语料众数携带率物化（携带=键在/不携带=键缺/例外 null） |
+| R12 | SSR wire 表单 value 恒空（R12A-P3-1）+ 404/根路由落点（R12C-P3-2~5） | 输入框预填关键词；404 落点状态码/路由形态与语料断裂 | 语料六面 value="" 恒空；三站 404 页与根路由对齐语料（含 ks `/404` 200 页） |
+
+### 验收口径（105 项检查）
+
+`validate.py` 自完整台架同步后为 **105 项**检查；迷你集（300 条/站）实跑
+**101/105**，规模自适应与不过项说明：
+
+- **阈值按规模自适应**（完整台架 10 万条时与原阈值等价）：`author.longtail`
+  （≥min(5000, 80%×n) / top1 ≤2%+2/n）、`search.relevance` 与
+  `search.ladder_words_mapped` 的供给阈值（≥24 → 按记录数等比缩放；严格命中
+  下带在小供给下退化为 ≥0，类目耦合 ≥0.5 上带照常生效）、`ks.duration_variance`
+  （≥min(900, 90%×n)）、`comment.deep_list_unique` 扫描上限（min(2000, n)）。
+- **4 只不过项均为 300 条小样本统计涨落**，非缺陷（同一代码在完整台架 10 万条
+  105/105 全绿，报告存档于 oracle 侧 `synthgen/datasets/validation_report.json`）：
+  dy/xhs `comment.text_style_band`（网络用语 +32%、@提及 +81%——按内容聚类的
+  评论文本风格率，迷你集仅 40 内容聚类单元）、xhs
+  `dist.like_lognormal_quantiles`（q05 尾分位偏差 6.4% vs 带宽 5%）、xhs
+  `time.publish_rhythm`（星期 max 0.220 vs 0.21，n=300 的 ±2σ 涨落）。
 
 ### 第 2 步：起合成站（三站一次拉起）
 
@@ -132,4 +170,5 @@ go test ./internal/collect -run TestSilentMockChainReport -count=1
    入包前做了形态保持的确定性替换（昵称→通用池、URL 保留 host 扰动路径、
    id/hex/b64 同形扰动、CJK 自由文本→等长通用文案；种子 20260902）。
    清洗只动值不动结构——渲染层（render.py）对 URL/时间/pii/id 类本就在运行时
-   重造，数据集字段经绑定优先透出，故 validate 68/68 与端点冒烟不受影响。
+   重造，数据集字段经绑定优先透出，故 validate 101/105（4 只统计涨落见上）
+   与端点冒烟不受影响。
