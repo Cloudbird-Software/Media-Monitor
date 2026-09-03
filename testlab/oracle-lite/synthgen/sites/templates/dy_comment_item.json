@@ -8,20 +8,20 @@
  "keep_paths": 121,
  "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地",
  "template": {
-  "cid": "4950918509777748379",
+  "cid": "3632793935556980232",
   "text": "",
-  "aweme_id": "2811036566793564356",
+  "aweme_id": "9552598583689559936",
   "create_time": 1774765841,
   "digg_count": 0,
   "status": 1,
   "user": {
-   "uid": "1507269293640320",
-   "short_id": "6302931989",
-   "nickname": "南方小满",
+   "uid": "2821251311155059",
+   "short_id": "8776317739",
+   "nickname": "合成样",
    "avatar_thumb": {
     "uri": "100x100/aweme-avatar/aweme_default_avatar.png",
     "url_list": [
-     "https://p3-pc.douyinpic.com/isuqy/222v472/nencu-hjaxci/tpqlr_wqokoyh_tagsya.ssq.pmnh?wayh=5858150173"
+     "https://p3-pc.douyinpic.com/lwpge/494j187/zqoka-jgmpxg/kiusm_gmlisib_qljnwg.uhz.bdmr?qemr=1678659550"
     ],
     "width": 720,
     "height": 720
@@ -50,7 +50,7 @@
    "ad_cover_url": null,
    "relative_users": null,
    "cha_list": null,
-   "sec_uid": "NC8dDiASTYQKWgkQAuSMOzPppsSEaVOmmPwJ6eLAki2ijLC3Fr89xws6k1OmXB5tK3Cy5oH_yS6T",
+   "sec_uid": "qxJmzf1PGQ2K_z7PZe4yH0IrQW7sumGLhNLOZaQFOyln5HNPp1s0Me32drDFtbv5VVxd0L5dCcPB",
    "need_points": null,
    "homepage_bottom_toast": null,
    "can_set_geofencing": null,
@@ -104,11 +104,11 @@
    {
     "start": 0,
     "end": 5,
-    "user_id": "7475568900672202",
+    "user_id": "5136545528911500",
     "type": 0,
     "hashtag_name": "",
     "hashtag_id": "",
-    "sec_uid": "XH2qOgOWCMYMGENdQen0waqvfYpPQWBew9JnMftBI328XkNLu5QGx893OG7UqJhvyNpp1Hb2dvXZ"
+    "sec_uid": "CNr6qywHmWaCxQVtTTxawdNm4nNMzzIM0Rzub9kEE_nKG9EV6vGZH4iAP8Xxlum2pfYwq65zo3XM"
    }
   ],
   "label_text": "",

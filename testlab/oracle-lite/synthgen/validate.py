@@ -16,6 +16,11 @@
       作者长尾（distinct ≥5000、top1 ≤2%）、随机 1000 个 20 卡窗同作者重复 ≤2、
       评论窗口完全重复文本 =0、评论者 100% 可回查（存在该作者+昵称一致）、
       ks commentCountV2 中位 ~1.5e3 无零值 且 数据集 us_c 恒 0
+  4f. 红队 round7A 新断言（R7A-P2-1/P2-2/P3-1..P3-7）：
+      ks collectCount 渲染恒 0、xhs sub target_comment 同源有效、ladder 14 词
+      全映射且主词严格命中进带、语气词/网络用语/@提及率进语料带（±30%）、
+      dy ip 属地海外 ≤3% 且 42 种、dy custom_verify 渲染恒空、dy 楼中楼二层
+      嵌套 ~1/3、dy collect/like 上尾 + 作者粉丝量级、xhs collect/like 中位
 
 用法：python synthgen/validate.py [--datasets-dir synthgen/datasets] [--sites douyin,xhs,kuaishou]
                                     [--repro-count 10000] [--skip-repro]
@@ -41,7 +46,14 @@ if _PKG_PARENT not in sys.path:
 from synthgen import SITES
 from synthgen.config import CONTRACT_DIR
 
+import re as _re
+import datetime as _dt
+
 LEAK_MARKERS = ('"anomaly', '"class"', '"label"', '"ground_truth"', 'anomaly_class', '"is_anomaly"', '"cls"')
+
+# 红队 round6 新断言用到的 render 侧引用（延迟导入避免与 4c/4d 的局部引用重复）
+from synthgen import commentext as _commentext_mod
+from synthgen import render as _render_mod
 
 
 class Report:
@@ -198,9 +210,23 @@ def validate_site(site: str, site_dir: Path, rep: Report, repro_count: int, skip
     n_comments_checked = 0
     # 红队 round5A 新增收集器（R5A-P1-1/P2-2）：作者序列/头部占比/ks us_c
     author_seq: list = []          # 按行序的 author_id（窗口重复检查用）
-    author_counts = {}             # author_id -> 出现次数
+    author_counts: dict = {}       # author_id -> 出现次数
     author_sec_uids: set = set()   # dy：作者 sec_uid 实体空间（评论者可回查）
     ks_usc_nonzero = 0             # ks：数据集 us_c 非零条数（语料真值恒 0）
+    # 红队 round6 新增收集器（R6A-P2-3/P3-1/P3-2 + R6C-P3-4）：
+    pub_hours = [0] * 24           # 发布小时直方图（本地时）
+    pub_weekdays = [0] * 7         # 发布星期直方图
+    title_emoji_n = 0              # 标题 unicode emoji 文本数（dy/ks）
+    xhs_bracket_n = 0              # xhs 标题 [xxR] 站内表情数
+    tag_names: set = set()         # hashtag 池多样性（dy/ks，容量封顶）
+    activity_tags_seen: set = set()
+    ks_durations: list = []        # duration 方差（旧恒 5000 unique=1）
+    ks_manifest_meta: list = []    # (underExposed, oriLoudness) 抽样
+    _UNI_EMOJI = _re.compile(r"[\U0001F000-\U0001FAFF\u2600-\u27BF\uFE0F]")
+    _BRACKET_R = _re.compile(r"\[[^\[\]]{1,6}R\]")
+    _ACT_TAG_PREFIX = ("抖音", "开放赛道", "喜爱度", "快成长", "全民任务", "光合计划",
+                       "快手", "万能生活指南", "磁力", "老铁", "村口", "人间烟火")
+    n_title_checked = 0
     for rec in iter_records(jsonl):
         n += 1
         for fld in site_mod.REQUIRED_FIELDS:
@@ -263,6 +289,53 @@ def validate_site(site: str, site_dir: Path, rep: Report, repro_count: int, skip
         comment.append(m["comment"])
         if m["publish_ts"] is not None:
             publish.append(m["publish_ts"])
+        # ---- R6A-P3-1 节律 / R6A-P2-3 文本形态 / R6C-P3-4 元数据 收集 ----
+        ts = m["publish_ts"]
+        if site == "xhs" and ts is None:
+            nid = str(rec.get("id") or "")
+            ts = int(nid[0:8], 16) if len(nid) == 24 and nid[:8].isalnum() else None
+        if ts:
+            _lt = _dt.datetime.fromtimestamp(ts + 8 * 3600, _dt.timezone.utc)
+            pub_hours[_lt.hour] += 1
+            pub_weekdays[_lt.weekday()] += 1
+        if site == "douyin":
+            _t = rec.get("desc") or ""
+            n_title_checked += 1
+            if _UNI_EMOJI.search(_t):
+                title_emoji_n += 1
+            for te in rec.get("text_extra") or []:
+                nm = te.get("hashtag_name") if isinstance(te, dict) else None
+                if nm and len(tag_names) < 6000:
+                    tag_names.add(nm)
+                    if nm.startswith(_ACT_TAG_PREFIX):
+                        activity_tags_seen.add(nm)
+        elif site == "xhs":
+            _t = (rec.get("note_card") or {}).get("display_title") or ""
+            n_title_checked += 1
+            if _BRACKET_R.search(_t):
+                xhs_bracket_n += 1
+        else:
+            ph = rec.get("photo") or {}
+            _t = ph.get("caption") or ""
+            n_title_checked += 1
+            if _UNI_EMOJI.search(_t):
+                title_emoji_n += 1
+            if len(ks_durations) < 5000:
+                ks_durations.append(int(ph.get("duration") or 0))
+            for tg in rec.get("tags") or []:
+                nm = tg.get("name") if isinstance(tg, dict) else None
+                if nm and len(tag_names) < 6000:
+                    tag_names.add(nm)
+                    if nm.startswith(_ACT_TAG_PREFIX):
+                        activity_tags_seen.add(nm)
+            if len(ks_manifest_meta) < 2000:
+                mf = ph.get("manifest") or {}
+                vf = mf.get("videoFeature") or {}
+                try:
+                    _rep_item = (((mf.get("adaptationSet") or [{}])[0]).get("representation") or [{}])[0]
+                    ks_manifest_meta.append((vf.get("underExposed"), _rep_item.get("oriLoudness")))
+                except Exception:
+                    pass
         # R5A-P1-1：作者序列（窗口重复/头部占比）
         aid = m["author_id"]
         author_seq.append(aid)
@@ -430,16 +503,15 @@ def validate_site(site: str, site_dir: Path, rep: Report, repro_count: int, skip
         mx = max(c.values()) if c else 0
         win_max_rep = max(win_max_rep, mx)
         win_dist[2 if mx >= 2 else 1] += 1
-    # oracle-lite：迷你数据集（300 条/站）阈值按规模自适应——
-    # distinct 下限 min(5000, 80%×n)（完整台架 10 万条时两式等价于 ≥5000；
-    # 迷你集窗口约束下多数 slot 作者唯一，300 条 → ≥240）；top1 容差附加
-    # 小样本计数噪声 ±2 条（完整台架时上限仍 ≈2%）。
-    min_distinct = min(5000, int(n * 0.8))
-    top1_cap = 0.02 + 2.0 / max(n, 1)
+    # oracle-lite：迷你数据集（300 条/站）阈值按规模自适应——distinct 下限
+    # min(5000, 80%×n)（完整台架 10 万条时与 ≥5000 等价；300 条 → ≥240）、
+    # top1 容差附加小样本计数噪声 ±2 条（完整台架时上限仍 ≈2%）。
+    _min_distinct = min(5000, int(n * 0.8))
+    _top1_cap = 0.02 + 2.0 / max(n, 1)
     rep.add(site, "author.longtail",
-            distinct_authors >= min_distinct and top1_share <= top1_cap,
-            f"distinct={distinct_authors}（≥{min_distinct}，旧实现 ~90-183），"
-            f"top1={top1_share:.4f}（≤{top1_cap:.4f}，旧 ~0.54；语料 ≈0.01）")
+            distinct_authors >= _min_distinct and top1_share <= _top1_cap,
+            f"distinct={distinct_authors}（≥{_min_distinct}，旧实现 ~90-183），"
+            f"top1={top1_share:.4f}（≤{_top1_cap:.4f}，旧 ~0.54；语料 ≈0.01）")
     rep.add(site, "author.window_repeat",
             win_max_rep <= 2,
             f"{n_windows} 个随机 20 卡窗：同作者最大重复={win_max_rep}（≤2，旧 6-16；"
@@ -501,15 +573,9 @@ def validate_site(site: str, site_dir: Path, rep: Report, repro_count: int, skip
             xfile_texts.add(t)
     corpus_unique = {"douyin": "100%", "xhs": "98%", "kuaishou": "94%"}[site]
     xfile_rate = xfile_shared / max(1, n_cmt)
-    # oracle-lite：单窗口重复上限按语料唯一率取口径——dy 语料 100% 唯一仍要求 0；
-    # xhs/ks 语料本身 98%/94% 唯一，允许重复率 ≤ 1−语料唯一率（迷你集 300 条全量
-    # 嵌入抽样时组合空间话题替换偶发同文 ~0.3%，仍在语料水平内；完整台架 10 万条
-    # 抽样通常为 0，阈值同样覆盖）。
-    dup_rate_cap = {"douyin": 0.0, "xhs": 0.02, "kuaishou": 0.06}[site]
-    dup_ok = dup_texts <= dup_rate_cap * n_cmt
-    rep.add(site, "comment.window_text_unique", dup_ok,
+    rep.add(site, "comment.window_text_unique", dup_texts == 0,
             f"render 抽样 40 内容 / {n_cmt} 条评论：单窗口完全重复={dup_texts}"
-            f"（重复率 ≤ {dup_rate_cap:.0%}，语料唯一率 {corpus_unique}；旧 dy 20 条仅 12 种/8 组重复）；"
+            f"（0 ≤ 语料唯一率 {corpus_unique}；旧 dy 20 条仅 12 种/8 组重复）；"
             f"跨内容重叠率={xfile_rate:.3f}（参考线 <0.1）")
     rep.add(site, "comment.commenter_resolvable", commenter_bad == 0,
             f"{commenter_checked} 条评论的评论者：不可回查/昵称不一致={commenter_bad}"
@@ -535,6 +601,446 @@ def validate_site(site: str, site_dir: Path, rep: Report, repro_count: int, skip
                 f"数据集 comment.us_c 非零={ks_usc_nonzero}/{n}（语料真值恒 0；旧 38% 非零）")
         metrics["ks_comment_total_median"] = med
         metrics["ks_us_c_nonzero"] = int(ks_usc_nonzero)
+
+    # ---- 4e. 红队 round6 新断言（R6A-P2-1/P2-2/P2-3/P3-1/P3-2/P3-3/P3-4 + R6C-P2-1/P3-4）----
+
+    # (a) R6C-P2-1：dy 真站口径——play_count 恒 0（语料 799/799 搜索 + 50/50 详情）；
+    #     total_favorited 搜索上下文 0（799/799，detail 上下文有值）；
+    #     follower_count single 端点 0（210/210，search/item 上下文有值 609 条）
+    if site == "douyin":
+        _st = _render_all.render_douyin_stream(rdr2, 1, 20, keyword="美食探店", start=0)
+        _si_req, _si = _render_all.render_douyin_single(rdr2, 1, 20, keyword="美食探店", start=20)
+        _it_req, _it = _render_all.render_douyin_search_item(rdr2, 1, 20, keyword="美食探店", start=40)
+        _det = _render_all.render_douyin_detail(rdr2, 0)["aweme_detail"]
+        def _aw_list(resp):
+            return [d.get("aweme_info") or {} for d in (resp.get("data") or [])]
+        _a_all = _aw_list(_st) + _aw_list(_si) + _aw_list(_it) + [_det]
+        _pc0 = all((a.get("statistics") or {}).get("play_count") == 0 for a in _a_all)
+        _tf0 = all((a.get("author") or {}).get("total_favorited") == 0
+                   for a in _aw_list(_st) + _aw_list(_si) + _aw_list(_it))
+        _fc0 = all((a.get("author") or {}).get("follower_count") == 0
+                   for a in _aw_list(_st) + _aw_list(_si))
+        _fc_item = any((a.get("author") or {}).get("follower_count") for a in _aw_list(_it))
+        _tf_det = ((_det.get("author") or {}).get("total_favorited") or 0) > 0
+        rep.add(site, "dy.play_count_hidden_true_site",
+                _pc0 and _tf0 and _fc0 and _fc_item and _tf_det,
+                f"stream/single/item/detail 抽样 61 卡：play_count=0 {_pc0}（语料 849/849）、"
+                f"搜索 total_favorited=0 {_tf0}（799/799）、single follower=0 {_fc0}（210/210）、"
+                f"item follower 有值 {_fc_item}（609 条）、detail total_favorited 有值 {_tf_det}（50/50）")
+        metrics["dy_play_count_zeroed"] = bool(_pc0 and _tf0 and _fc0)
+
+    # (b) R6A-P2-1：搜索相关性——严格命中率进语料区间（dy 47.1/xhs 17.7/ks 37.4%），
+    #     类目耦合（映射类目占比 ≥ 50%，旧 0 耦合/近似均匀）、乱码词退化背景
+    _rel_kws = {"douyin": ["美食探店", "穿搭分享", "咖啡拉花"],
+                "xhs": ["穿搭分享", "美食探店", "旅行攻略"],
+                "kuaishou": ["美食探店", "穿搭分享", "赶集"]}[site]
+    _strict_tot = _strict_n = 0
+    _cat_tot = _cat_n = 0
+    _kw_strict_modes = 0
+    for _kw in _rel_kws:
+        _view = _render_all._kw_view(rdr2, site, _kw)
+        if _view is None:
+            continue
+        _cat_all = set(_view.hits) | set(_view.cat_lines)
+        # oracle-lite：供给阈值按规模缩放（完整台架 ≥24 等价；300 条 → ≥1），
+        # 严格命中下带 0.08 在小供给下无统计意义，迷你集退化为 ≥0（上带不变）。
+        _supply_min = max(1, int(round(24 * n / 100000)))
+        _strict_lb = 0.08 if n >= 20000 else 0.0
+        _kw_strict = len(_view.hits) >= _supply_min   # 命中供给充足才计入严格命中率口径
+        _kw_strict_modes += 1 if _kw_strict else 0
+        for _pg in (0, 1):
+            _lines = _render_all.search_window_lines(rdr2, site, _kw, _pg * 20, 20) or []
+            _recs = [rdr2.read(ln) for ln in _lines]
+            for _rec, _ln in zip(_recs, _lines):
+                _txt = _render_all._search_text(site, _rec)
+                _cat_n += 1
+                _cat_tot += 1 if _ln in _cat_all else 0
+                if _kw_strict:
+                    _strict_n += 1
+                    _strict_tot += 1 if _kw in _txt else 0
+    _strict_rate = _strict_tot / max(1, _strict_n)
+    _cat_rate = _cat_tot / max(1, _cat_n)
+    _gk_lines = _render_all.search_window_lines(rdr2, site, "qzwkjxvbpq", 0, 20)
+    rep.add(site, "search.relevance",
+            _kw_strict_modes >= 1 and _strict_n >= 40
+            and _strict_lb <= _strict_rate <= 0.60 and _cat_rate >= 0.50,
+            f"映射关键词 {_strict_n} 卡（{ _kw_strict_modes }/3 个关键词命中供给充足）："
+            f"严格命中 {_strict_rate:.3f}（语料 dy 0.471/xhs 0.177/ks 0.374，旧 0.00-0.033）、"
+            f"类目耦合 {_cat_rate:.3f}（≥0.5，旧≈0）；"
+            f"乱码词退化为背景={_gk_lines is None}（R5C 乱码词出结果口径保持）")
+    metrics["search_strict_hit_rate"] = float(_strict_rate)
+    metrics["search_category_coupling"] = float(_cat_rate)
+
+    # (c) R6A-P2-2：评论延迟长尾（语料 p50=8.1 天、22.1%>1 月、<1h 仅 2.7%）
+    _delays: list = []
+    _cmt_texts: list = []
+    _cmt_pub_bad = 0
+    for _ln in sample_lines[::2]:
+        _ln = int(_ln)
+        if site == "douyin":
+            _rec_c = rdr2.read(_ln)
+            if int((_rec_c.get("statistics") or {}).get("comment_count") or 0) < 50:
+                continue
+            _resp_c = _render_all.render_douyin_comment_list(rdr2, _ln, 0, 60)
+            _pub = int(_rec_c.get("create_time") or 0)
+            for _c in _resp_c.get("comments") or []:
+                _d = int(_c.get("create_time") or 0) - _pub
+                _delays.append(_d / 86400.0)
+                _cmt_texts.append(_c.get("text") or "")
+                if _d < 0:
+                    _cmt_pub_bad += 1
+        elif site == "xhs":
+            _rec_c = rdr2.read(_ln)
+            _pub = int(str(_rec_c.get("id"))[:8], 16)
+            for _c in _rec_c.get("comments") or []:
+                _d = (int(_c.get("create_time") or 0) // 1000) - _pub
+                _delays.append(_d / 86400.0)
+                _cmt_texts.append(_c.get("content") or "")
+                if _d < 0:
+                    _cmt_pub_bad += 1
+        else:
+            _resp_c = _render_all.render_ks_comment_list(rdr2, _ln, "", 40)
+            _rec_c = rdr2.read(_ln)
+            _pub = int((_rec_c.get("photo") or {}).get("timestamp") or 0) // 1000
+            for _c in _resp_c.get("rootCommentsV2") or []:
+                _d = (int(_c.get("timestamp") or 0) // 1000) - _pub
+                _delays.append(_d / 86400.0)
+                _cmt_texts.append(_c.get("content") or "")
+                if _d < 0:
+                    _cmt_pub_bad += 1
+    _dl = np.array(_delays)
+    _d_p50 = float(np.median(_dl)) if len(_dl) else -1
+    _d_gt1mo = float(np.mean(_dl > 30)) if len(_dl) else -1
+    _d_p90 = float(np.percentile(_dl, 90)) if len(_dl) else -1
+    rep.add(site, "comment.delay_longtail",
+            _cmt_pub_bad == 0 and len(_dl) >= 200 and 0.5 <= _d_p50 <= 12.0
+            and _d_gt1mo >= 0.08 and _d_p90 >= 20,
+            f"render 抽样 {len(_dl)} 条：p50={_d_p50:.2f} 天（语料 8.1，旧 0.03）、"
+            f"p90={_d_p90:.0f} 天（语料 183，旧 0.11）、>1 月 {_d_gt1mo:.3f}（语料 0.221，旧 0）、"
+            f"早于发布 {_cmt_pub_bad}（0，R2-P2-3 保持）")
+    metrics["comment_delay_p50_days"] = _d_p50
+    metrics["comment_delay_gt1mo"] = _d_gt1mo
+
+    # (d) R6A-P2-3①②：评论括号表情率 30-40%（语料 dy 40.2/xhs 31.7/ks 39.1）+ 长度离散
+    from synthgen.commentext import has_emoji_marker as _has_emoji
+    _emoji_rate = sum(1 for t in _cmt_texts if _has_emoji(t, site)) / max(1, len(_cmt_texts))
+    _lens = sorted(len(t) for t in _cmt_texts)
+    _l_p10 = _lens[max(0, len(_lens) // 10)] if _lens else -1
+    _l_p90 = _lens[min(len(_lens) - 1, 9 * len(_lens) // 10)] if _lens else -1
+    _l_max = max(_lens) if _lens else -1
+    rep.add(site, "comment.emoji_and_length",
+            0.24 <= _emoji_rate <= 0.46 and len(_cmt_texts) >= 200
+            and _l_p10 <= 8 and _l_p90 >= 18 and _l_max >= 26,
+            f"评论 {len(_cmt_texts)} 条：括号表情率 {_emoji_rate:.3f}（语料 0.317-0.402，旧 0）、"
+            f"长度 p10/p90/max={_l_p10}/{_l_p90}/{_l_max}（语料 [3-4, 26-33]，旧 [10-12, 17]）")
+    metrics["comment_emoji_rate"] = float(_emoji_rate)
+    metrics["comment_len_p10"], metrics["comment_len_p90"] = _l_p10, _l_p90
+
+    # (e) R6A-P2-3①③：标题表情 + hashtag 池多样性/活动 tag
+    if site == "xhs":
+        _tb = xhs_bracket_n / max(1, n_title_checked)
+        rep.add(site, "title.emoji_form",
+                0.18 <= _tb <= 0.45,
+                f"xhs 标题 [xxR] 站内表情率 {_tb:.3f}（旧 0；xhs 语料表情形态 [xxR]）")
+        metrics["xhs_title_bracket_rate"] = float(_tb)
+    else:
+        _te = title_emoji_n / max(1, n_title_checked)
+        _band = (0.04, 0.15) if site == "douyin" else (0.01, 0.09)
+        rep.add(site, "title.emoji_form",
+                _band[0] <= _te <= _band[1],
+                f"{site} 标题 unicode emoji 率 {_te:.3f}（语料 dy 0.088/ks 0.040，旧 0）")
+        metrics["title_unicode_emoji_rate"] = float(_te)
+        _need = 400 if site == "douyin" else 300
+        rep.add(site, "hashtag.pool_diversity",
+                len(tag_names) >= _need and len(activity_tags_seen) >= 6,
+                f"全库 distinct tag {len(tag_names)}（≥{_need}；语料 dy 2.5 tag/文本，旧池 "
+                f"61/38 个）、活动运营 tag {len(activity_tags_seen)} 种（旧 0；语料 top tag 族）")
+        metrics["hashtag_distinct"] = len(tag_names)
+        metrics["activity_tag_kinds"] = len(activity_tags_seen)
+
+    # (f) R6A-P3-1：发布节律——小时 CV/峰谷比（语料 CV 0.913、68.5×）+ 星期平坦
+    _tot = sum(pub_hours) or 1
+    _hr_arr = np.array(pub_hours, dtype=float) / _tot
+    _hr_cv = float(_hr_arr.std() / _hr_arr.mean())
+    _hr_pt = float(_hr_arr.max() / max(_hr_arr.min(), 1e-9))
+    _wd_arr = np.array(pub_weekdays, dtype=float) / (sum(pub_weekdays) or 1)
+    _wd_max = float(_wd_arr.max())
+    _wd_mt = float(_wd_arr[0] + _wd_arr[1])
+    rep.add(site, "time.publish_rhythm",
+            _hr_cv >= 0.45 and _hr_pt >= 8.0 and _wd_max <= 0.21 and _wd_mt <= 0.36,
+            f"小时 CV={_hr_cv:.3f}（语料 0.913，旧 0.186）、峰谷比={_hr_pt:.0f}×（语料 68.5，旧 1.8）、"
+            f"星期 max={_wd_max:.3f}（语料 ≤0.159，旧 0.298）、Mon+Tue={_wd_mt:.3f}（旧 0.587）")
+    metrics["publish_hour_cv"] = _hr_cv
+    metrics["publish_weekday_max"] = _wd_max
+
+    # (g) R6A-P3-2：计数长尾上尾（dy like p90 语料 218k/旧 24.7k；comment p90 语料 6514/旧 1820）
+    if site == "douyin":
+        _like_p90 = float(np.percentile(like_arr, 90))
+        _like_p99 = float(np.percentile(like_arr, 99))
+        _cm_p90 = float(np.percentile(c_arr, 90))
+        rep.add(site, "dy.count_tail",
+                _like_p90 >= 5e4 and _cm_p90 >= 2200 and _like_p99 >= 5e5,
+                f"like p90={_like_p90:.3g}（语料 2.18e5，旧 2.47e4）、p99={_like_p99:.3g}"
+                f"（语料 1.56e6，旧 1.55e5）、comment p90={_cm_p90:.3g}（语料 6514，旧 1820）")
+        metrics["dy_like_p90"] = _like_p90
+    # (h) R6A-P3-2 + R6C-P3-4：ks viewCount 量级 + duration/深层元数据方差
+    if site == "kuaishou":
+        v_arr = np.array(view, dtype=float)
+        _v_p50 = float(np.median(v_arr))
+        _v_p90 = float(np.percentile(v_arr, 90))
+        _l_p50 = float(np.median(like_arr))
+        rep.add(site, "ks.view_magnitude",
+                4e5 <= _v_p50 <= 1.1e6 and _v_p90 >= 2.5e6 and 5e3 <= _l_p50 <= 1.5e4,
+                f"view p50={_v_p50:.3g}（语料 6.97e5，旧 1.99e4）、p90={_v_p90:.3g}（语料 4.5e6，"
+                f"旧 1.17e5）、like p50={_l_p50:.3g}（语料 9788，旧 1591）")
+        metrics["ks_view_p50"] = _v_p50
+        _dur_u = len(set(ks_durations))
+        _dur_p50 = float(np.median(ks_durations)) if ks_durations else 0
+        # oracle-lite：distinct 下限按规模缩放（完整台架 ≥900 等价；300 条 → ≥270）
+        _dur_min = min(900, int(n * 0.9))
+        rep.add(site, "ks.duration_variance",
+                _dur_u >= _dur_min and 20000 <= _dur_p50 <= 130000,
+                f"duration distinct={_dur_u}/{len(ks_durations)}（旧 unique=1 恒 5000）、"
+                f"p50={_dur_p50:.0f}ms（语料中位 65000、范围 [3233, 2629599]）")
+        _ue = [x[0] for x in ks_manifest_meta if isinstance(x[0], (int, float))]
+        _ol = [x[1] for x in ks_manifest_meta if isinstance(x[1], (int, float))]
+        _ue_span = (max(_ue) / min(_ue)) if _ue and min(_ue) > 0 else 1.0
+        _ol_span = (max(_ol) - min(_ol)) if _ol else 0.0
+        rep.add(site, "ks.manifest_metadata_variance",
+                _ue_span >= 1e3 and _ol_span >= 4.0,
+                f"underExposed distinct={len(set(_ue))}/{len(_ue)}、跨 {_ue_span:.1e}×"
+                f"（语料 2.98e-9~3.25e-5 跨 5 个数量级，旧恒 5.96e-9）、"
+                f"oriLoudness 极差 {_ol_span:.1f} dB（语料 [-20.164, -11.954]，旧恒 0.0）")
+        metrics["ks_underexposed_span"] = float(_ue_span)
+        metrics["ks_duration_p50"] = _dur_p50
+        # (i) R6A-P3-3：profile/get userId 与请求同空间（旧：响应自报数字空间 id）
+        _uid_probe = str((rdr2.read(0).get("author") or {}).get("id") or "3xtest")
+        _pg = _render_all.render_ks_profile_get(rdr2, [0], _uid_probe)
+        rep.add(site, "ks.profile_userid_unified",
+                _pg.get("userId") == _uid_probe,
+                f"请求 userId={_uid_probe[:6]}… → 响应 userId={str(_pg.get('userId'))[:6]}…"
+                f"（旧：响应 6347098269 型数字空间，与搜索流/评论/页面 URL 的 3x 空间不一致）")
+
+    # (j) R6A-P3-4：dy 深列表 600 条零重复（旧 >71 条起逐字重复）+ ks 跨内容重叠（旧 24-75%）
+    if site == "douyin":
+        _deep_ln, _deep_cc = None, -1
+        # oracle-lite：扫描上限按数据集规模自适应（完整台架 ≥2000；迷你集 300）
+        for _ln in range(0, min(2000, len(rdr2))):
+            _cc = int((rdr2.read(_ln).get("statistics") or {}).get("comment_count") or 0)
+            if _cc > _deep_cc:
+                _deep_ln, _deep_cc = _ln, _cc
+        _deep = _render_all.render_douyin_comment_list(rdr2, _deep_ln, 0, 600)["comments"]
+        _deep_txt = [c.get("text") for c in _deep]
+        _deep_dup = len(_deep_txt) - len(set(_deep_txt))
+        rep.add(site, "comment.deep_list_unique",
+                _deep_dup <= 2,
+                f"claim={_deep_cc} 的内容前 600 条：逐字重复 {_deep_dup}（旧：第 71 条起重复、"
+                f"500 条内 22 次；组合空间 {_commentext_mod.space_size('douyin')}）")
+        metrics["dy_deep_dup_600"] = int(_deep_dup)
+    if site == "kuaishou":
+        _s1 = set()
+        _s2 = set()
+        for _i, _ln in enumerate(sample_lines[:2]):
+            _resp_k = _render_all.render_ks_comment_list(rdr2, int(_ln), "", 300)
+            _set = _s1 if _i == 0 else _s2
+            _set.update(c.get("content") for c in _resp_k.get("rootCommentsV2") or [])
+        _ovl = len(_s1 & _s2) / max(1, min(len(_s1), len(_s2)))
+        rep.add(site, "comment.cross_content_overlap",
+                _ovl <= 0.05,
+                f"两内容各 300 条评论重叠率 {_ovl:.3f}（语料同题材 0.24-0.745，红队建议 <0.1；"
+                f"组合空间 {_commentext_mod.space_size('kuaishou')}，旧 1910）")
+        metrics["ks_comment_overlap"] = float(_ovl)
+
+    # ---- 4f. 红队 round7A 新断言（R7A-P2-1/P2-2/P3-1..P3-7）----
+    _OVERSEAS_IP = ("美国", "日本", "韩国", "新加坡", "马来西亚", "英国", "加拿大",
+                    "澳大利亚", "中国香港", "中国澳门", "中国台湾")
+    _PARTICLES = set("了啊呀吧呢嘛哦哈咯哒诶哎哟嘞哩咯啵")
+    _EMO_RE = _re.compile(r"\[[^\]\[]{1,8}\]")
+    _SLANG = ["哈哈", "233", "666", "yyds", "u1s1", "xswl", "awsl", "绝了", "离谱",
+              "破防", "拿捏", "天花板", "谁懂", "家人们", "集美", "宝子", "拴q",
+              "尊嘟", "蚌埠", "好家伙", "上头", "种草", "拔草", "安利", "踩雷",
+              "避雷", "真香", "无语", "服了", "笑死", "泪目", "慕了", "酸了",
+              "冲鸭", "震撼", "太可了", "爱了", "嗑", "整活", "社死", "内卷",
+              "躺平", "打工人", "干饭", "搞钱", "码住", "蹲", "同款", "白嫖",
+              "已老实", "求个"]
+    _CORPUS_TXT = {"douyin": {"part": 0.157, "slang": 0.025, "at": 0.095},
+                   "xhs": {"part": 0.235, "slang": 0.035, "at": 0.032},
+                   "kuaishou": {"part": 0.089, "slang": 0.060, "at": 0.156}}
+
+    def _band(v, ref, tol=0.30):
+        return ref * (1 - tol) <= v <= ref * (1 + tol)
+
+    # (a) R7A-P2-1：ks collectCount 渲染恒 0（语料 search/feed 706/706=0）
+    if site == "kuaishou":
+        _feed = _render_all.render_ks_search_feed(rdr2, 1, 20, keyword="美食探店")[1]
+        _ccs = [(f.get("photo") or {}).get("collectCount") for f in _feed["feeds"]]
+        _pf = _render_all.render_ks_profile_feed(rdr2, [0, 1, 2], "3xtest")
+        _cc2 = [(f.get("photo") or {}).get("collectCount") for f in _pf["feeds"]]
+        _cc0 = all(x == 0 for x in _ccs + _cc2)
+        rep.add(site, "ks.collect_count_hidden",
+                _cc0,
+                f"search/feed 60 卡 + profile/feed collectCount 全 0 = {_cc0}"
+                f"（语料 706/706=0，旧 60/60 非零、p50 比值 0.161——R6C-P2-1 dy play_count 同族）")
+        metrics["ks_collect_zero"] = bool(_cc0)
+
+    # (b) R7A-P2-2：xhs 嵌入 sub / sub 页 sub 的 target_comment 同源有效
+    #     （指向父评论或兄弟 sub；旧 48/72 指向非 hex 占位常量、sub/page 键缺失）
+    if site == "xhs":
+        _sub_ok = _sub_bad = _sub_hex_bad = _sub_nokey = 0
+        _hex24 = _re.compile(r"^[0-9a-f]{24}$")
+        for _ln in sample_lines[:20]:
+            _ln = int(_ln)
+            _, _r1 = _render_all.render_xhs_comment_page(rdr2, _ln, "")
+            for _c in _r1["data"]["comments"]:
+                _sids = {str(_s.get("id") or "") for _s in (_c.get("sub_comments") or [])}
+                for _s in _c.get("sub_comments") or []:
+                    _tc = _s.get("target_comment") or {}
+                    _tid = str(_tc.get("id") or "")
+                    if not _hex24.match(str(_s.get("id") or "")):
+                        _sub_hex_bad += 1
+                    if _tid == str(_c.get("id") or "") or _tid in _sids:
+                        _sub_ok += 1
+                    else:
+                        _sub_bad += 1
+                if (_c.get("sub_comment_count") or "0") != "0" and \
+                        not (_c.get("sub_comments") or []):
+                    pass   # count>0 但未内嵌（首页形态：游标续读）不计
+            if _r1["data"]["comments"]:
+                _, _r2 = _render_all.render_xhs_comment_sub_page(
+                    rdr2, _ln, str(_r1["data"]["comments"][0].get("id") or ""))
+                for _s in _r2["data"]["comments"] or []:
+                    _tc = _s.get("target_comment") or {}
+                    _tid = str(_tc.get("id") or "")
+                    if not _tc:
+                        _sub_nokey += 1
+                    elif not _hex24.match(_tid):
+                        _sub_bad += 1
+                    else:
+                        _sub_ok += 1
+        rep.add(site, "xhs.sub_target_valid",
+                _sub_bad == 0 and _sub_nokey == 0 and _sub_hex_bad == 0 and _sub_ok >= 20,
+                f"嵌入+sub/page 抽样 {_sub_ok + _sub_bad} 条 sub：同源指向（父/兄弟）"
+                f"{_sub_ok}、断裂 {_sub_bad}、sub/page 缺键 {_sub_nokey}、非 hex id "
+                f"{_sub_hex_bad}（旧：48/72 占位常量 + sub/page 整键缺失）")
+        metrics["xhs_sub_target_ok"] = int(_sub_ok)
+        metrics["xhs_sub_target_bad"] = int(_sub_bad + _sub_nokey + _sub_hex_bad)
+
+    # (c) R7A-P3-1：ladder 14 词全映射 + 主词三站严格命中进带 + 乱码词退化保持
+    _LADDER = ["美食教程", "美食探店", "旅行攻略", "健身打卡", "穿搭分享", "家居好物",
+               "数码测评", "沙雕日常", "变美", "手机摄影", "蓝牙耳机测评",
+               "咖啡拉花", "夜景人像", "露营装备"]
+    _unmapped = [k for k in _LADDER if _render_all._kw_view(rdr2, site, k) is None]
+    _l_hits = _l_n = 0
+    for _kw in ("美食教程", "露营装备"):
+        _v = _render_all._kw_view(rdr2, site, _kw)
+        if _v is None:
+            continue
+        for _pg in (0, 1):
+            for _ln in (_render_all.search_window_lines(rdr2, site, _kw, _pg * 20, 20) or []):
+                _l_n += 1
+                _l_hits += 1 if _kw in _render_all._search_text(site, rdr2.read(_ln)) else 0
+    _l_rate = _l_hits / max(1, _l_n)
+    _gk = _render_all.search_window_lines(rdr2, site, "qzwkjxvbpq", 0, 20)
+    # oracle-lite：主词严格命中下带按规模缩放（供给不足时下带退化为 0，上带不变）
+    _lad_lb = 0.08 if n >= 20000 else 0.0
+    rep.add(site, "search.ladder_words_mapped",
+            not _unmapped and _l_n >= 40 and _lad_lb <= _l_rate <= 0.60 and _gk is None,
+            f"ladder 14 词未映射 {_unmapped or '无'}（旧 7 词未映射：主词严格命中 0.0）；"
+            f"主词严格命中 {_l_rate:.3f}（设计 0.20-0.30，真站 0.17-0.47）；"
+            f"乱码词退化背景保持 = {_gk is None}")
+    metrics["ladder_strict_rate"] = float(_l_rate)
+
+    # (d) R7A-P3-2/P3-3：语气词/网络用语/@提及率进语料带（±30%）
+    _part_n = sum(1 for t in _cmt_texts
+                  if (lambda c: c and c[-1] in _PARTICLES)
+                  (_EMO_RE.sub("", t or "").strip().rstrip("！？!?。.,，、~～… ")))
+    _part_rate = _part_n / max(1, len(_cmt_texts))
+    _slang_rate = sum(1 for t in _cmt_texts
+                      if any(s in (t or "").lower() for s in _SLANG)) / max(1, len(_cmt_texts))
+    _at_rate = sum(1 for t in _cmt_texts if "@" in (t or "")) / max(1, len(_cmt_texts))
+    _ct = _CORPUS_TXT[site]
+    rep.add(site, "comment.text_style_band",
+            len(_cmt_texts) >= 200 and _band(_part_rate, _ct["part"])
+            and _band(_slang_rate, _ct["slang"]) and _band(_at_rate, _ct["at"]),
+            f"语气词 {_part_rate:.3f}（语料 {_ct['part']}，旧 0.40-0.59）、网络用语 "
+            f"{_slang_rate:.3f}（语料 {_ct['slang']}，旧 0.26-0.45）、@提及 "
+            f"{_at_rate:.3f}（语料 {_ct['at']}，旧 0）（±30% 带）")
+    metrics["comment_particle_rate"] = float(_part_rate)
+    metrics["comment_slang_rate"] = float(_slang_rate)
+    metrics["comment_at_rate"] = float(_at_rate)
+
+    # (e) R7A-P3-4/P3-6：dy ip 属地海外率 ~1% + custom_verify 渲染恒空
+    if site == "douyin":
+        _ips = [c.get("ip_label") for _resp_c in [_render_all.render_douyin_comment_list(
+            rdr2, int(ln), 0, 20)["comments"] for ln in sample_lines[:40]]
+            for c in _resp_c if c.get("ip_label")]
+        _ovs = sum(1 for x in _ips if x in _OVERSEAS_IP) / max(1, len(_ips))
+        _uniq = len(set(_ips))
+        _cvs = [((a or {}).get("custom_verify") or "")
+                for a in [_render_all._dy_search_item_wrap(
+                    rdr2.read(int(ln)), np.random.default_rng([int(ln), 5]))["aweme_info"]["author"]
+                    for ln in sample_lines[:12]]]
+        _cv_empty = all(v == "" for v in _cvs)
+        rep.add(site, "dy.ip_and_verify",
+                _ovs <= 0.03 and _uniq >= 35 and _cv_empty,
+                f"评论 ip 属地 {_uniq} 种（{len(_ips)} 条抽样）、海外+港澳台 {_ovs:.3f}"
+                f"（语料 42 种/1.0%，旧 20 种/24.2%）；搜索卡 custom_verify 非空 "
+                f"{sum(1 for v in _cvs if v)}/{len(_cvs)}（语料 0/2059，旧 72.5%）")
+        metrics["dy_ip_overseas_rate"] = float(_ovs)
+        metrics["dy_ip_unique"] = int(_uniq)
+        metrics["dy_custom_verify_nonempty"] = int(sum(1 for v in _cvs if v))
+
+    # (f) R7A-P3-5：dy 楼中楼二层嵌套（reply_to_reply_id≠0 占比 ~1/3）
+    if site == "douyin":
+        _r2r_n = _r2r_hit = 0
+        for _ln in sample_lines[:10]:
+            _ln = int(_ln)
+            _rec_c = rdr2.read(_ln)
+            _resp_c = _render_all.render_douyin_comment_list(rdr2, _ln, 0, 20)
+            for _c in _resp_c.get("comments") or []:
+                if int(_c.get("reply_comment_total") or 0) <= 0:
+                    continue
+                _rr = _render_all.render_douyin_comment_list_reply(
+                    rdr2, _ln, str(_c.get("cid") or ""), 0, 20)
+                for _s in _rr.get("comments") or []:
+                    _r2r_n += 1
+                    _r2r_hit += 1 if str(_s.get("reply_to_reply_id") or "0") != "0" else 0
+        _r2r_rate = _r2r_hit / max(1, _r2r_n)
+        rep.add(site, "dy.reply_nested_level2",
+                _r2r_n >= 20 and 0.20 <= _r2r_rate <= 0.50,
+                f"子评论 {_r2r_n} 条：reply_to_reply_id≠0 占 {_r2r_rate:.3f}"
+                f"（语料 11/30=0.367，旧 0/43 全扁平）")
+        metrics["dy_reply_r2r_rate"] = float(_r2r_rate)
+
+    # (g) R7A-P3-7：比值上尾 + 作者粉丝量级（dy/xhs）
+    if site == "douyin":
+        _cl = np.array([int((rdr2.read(int(ln)).get("statistics") or {}).get("collect_count") or 0)
+                        for ln in sample_lines]) / np.maximum(1, np.array(
+            [int((rdr2.read(int(ln)).get("statistics") or {}).get("digg_count") or 0)
+             for ln in sample_lines]))
+        _cl_p90 = float(np.percentile(_cl, 90))
+        _fols = np.array([int((rdr2.read(int(ln)).get("author") or {}).get("follower_count") or 0)
+                          for ln in sample_lines])
+        rep.add(site, "dy.ratio_tail_and_followers",
+                _cl_p90 >= 0.55 and float(np.median(_fols)) >= 1.5e4
+                and float(np.percentile(_fols, 90)) >= 4e5,
+                f"collect/like p90={_cl_p90:.2f}（语料 0.938，旧 0.30）、"
+                f"follower p50={np.median(_fols):.3g}/p90={np.percentile(_fols, 90):.3g}"
+                f"（语料 2.7e4/1.2e6，旧 3.7e3/3.1e4）")
+        metrics["dy_collect_like_p90"] = _cl_p90
+        metrics["dy_follower_p50"] = float(np.median(_fols))
+        metrics["dy_follower_p90"] = float(np.percentile(_fols, 90))
+    if site == "xhs":
+        _xcl = np.array([int(((rdr2.read(int(ln)).get("note_card") or {}).get("interact_info") or {})
+                              .get("collected_count") or 0) for ln in sample_lines]) / np.maximum(1, np.array(
+            [int(((rdr2.read(int(ln)).get("note_card") or {}).get("interact_info") or {})
+                 .get("liked_count") or 0) for ln in sample_lines]))
+        _xcl_p50 = float(np.median(_xcl))
+        rep.add(site, "xhs.collect_ratio_median",
+                0.39 <= _xcl_p50 <= 0.72,
+                f"collect/like 中位 {_xcl_p50:.3f}（语料 0.556——收藏≈点赞一半的社区形态，"
+                f"旧 0.268）")
+        metrics["xhs_collect_like_p50"] = _xcl_p50
 
     # ---- 5. 异常类占比 ----
     tgt = manifest["target_fractions"]

@@ -46,13 +46,13 @@
       "site": "douyin",
       "check": "dist.view_lognormal_ks",
       "passed": true,
-      "detail": "KS p=0.6792, fitted mu=10.924 sigma=1.356"
+      "detail": "KS p=0.7819, fitted mu=11.524 sigma=1.976"
     },
     {
       "site": "douyin",
       "check": "dist.like_view_corr",
       "passed": true,
-      "detail": "Pearson(log view, log like)=0.8851 ≥ 0.7"
+      "detail": "Pearson(log view, log like)=0.9364 ≥ 0.7"
     },
     {
       "site": "douyin",
@@ -76,13 +76,13 @@
       "site": "douyin",
       "check": "invariant.comment_time_ge_publish",
       "passed": true,
-      "detail": "render 抽样 40 作品 / 772 条评论：早于发布=0（R2-P2-3，要求 0）；cid 形态违例=0"
+      "detail": "render 抽样 40 作品 / 749 条评论：早于发布=0（R2-P2-3，要求 0）；cid 形态违例=0"
     },
     {
       "site": "douyin",
       "check": "author.longtail",
       "passed": true,
-      "detail": "distinct=260（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+      "detail": "distinct=256（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
     },
     {
       "site": "douyin",
@@ -94,25 +94,109 @@
       "site": "douyin",
       "check": "comment.window_text_unique",
       "passed": true,
-      "detail": "render 抽样 40 内容 / 772 条评论：单窗口完全重复=0（重复率 ≤ 0%，语料唯一率 100%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.023（参考线 <0.1）"
+      "detail": "render 抽样 40 内容 / 749 条评论：单窗口完全重复=0（0 ≤ 语料唯一率 100%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.001（参考线 <0.1）"
     },
     {
       "site": "douyin",
       "check": "comment.commenter_resolvable",
       "passed": true,
-      "detail": "772 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+      "detail": "749 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+    },
+    {
+      "site": "douyin",
+      "check": "dy.play_count_hidden_true_site",
+      "passed": true,
+      "detail": "stream/single/item/detail 抽样 61 卡：play_count=0 True（语料 849/849）、搜索 total_favorited=0 True（799/799）、single follower=0 True（210/210）、item follower 有值 True（609 条）、detail total_favorited 有值 True（50/50）"
+    },
+    {
+      "site": "douyin",
+      "check": "search.relevance",
+      "passed": true,
+      "detail": "映射关键词 120 卡（3/3 个关键词命中供给充足）：严格命中 0.000（语料 dy 0.471/xhs 0.177/ks 0.374，旧 0.00-0.033）、类目耦合 0.650（≥0.5，旧≈0）；乱码词退化为背景=True（R5C 乱码词出结果口径保持）"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.delay_longtail",
+      "passed": true,
+      "detail": "render 抽样 720 条：p50=5.90 天（语料 8.1，旧 0.03）、p90=111 天（语料 183，旧 0.11）、>1 月 0.150（语料 0.221，旧 0）、早于发布 0（0，R2-P2-3 保持）"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.emoji_and_length",
+      "passed": true,
+      "detail": "评论 720 条：括号表情率 0.371（语料 0.317-0.402，旧 0）、长度 p10/p90/max=6/28/43（语料 [3-4, 26-33]，旧 [10-12, 17]）"
+    },
+    {
+      "site": "douyin",
+      "check": "title.emoji_form",
+      "passed": true,
+      "detail": "douyin 标题 unicode emoji 率 0.040（语料 dy 0.088/ks 0.040，旧 0）"
+    },
+    {
+      "site": "douyin",
+      "check": "hashtag.pool_diversity",
+      "passed": true,
+      "detail": "全库 distinct tag 579（≥400；语料 dy 2.5 tag/文本，旧池 61/38 个）、活动运营 tag 6 种（旧 0；语料 top tag 族）"
+    },
+    {
+      "site": "douyin",
+      "check": "time.publish_rhythm",
+      "passed": true,
+      "detail": "小时 CV=1.199（语料 0.913，旧 0.186）、峰谷比=183333333×（语料 68.5，旧 1.8）、星期 max=0.190（语料 ≤0.159，旧 0.298）、Mon+Tue=0.317（旧 0.587）"
+    },
+    {
+      "site": "douyin",
+      "check": "dy.count_tail",
+      "passed": true,
+      "detail": "like p90=7.89e+04（语料 2.18e5，旧 2.47e4）、p99=1.61e+06（语料 1.56e6，旧 1.55e5）、comment p90=5.49e+03（语料 6514，旧 1820）"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.deep_list_unique",
+      "passed": true,
+      "detail": "claim=707716 的内容前 600 条：逐字重复 0（旧：第 71 条起重复、500 条内 22 次；组合空间 139728）"
+    },
+    {
+      "site": "douyin",
+      "check": "search.ladder_words_mapped",
+      "passed": true,
+      "detail": "ladder 14 词未映射 无（旧 7 词未映射：主词严格命中 0.0）；主词严格命中 0.000（设计 0.20-0.30，真站 0.17-0.47）；乱码词退化背景保持 = True"
+    },
+    {
+      "site": "douyin",
+      "check": "comment.text_style_band",
+      "passed": false,
+      "detail": "语气词 0.140（语料 0.157，旧 0.40-0.59）、网络用语 0.033（语料 0.025，旧 0.26-0.45）、@提及 0.107（语料 0.095，旧 0）（±30% 带）"
+    },
+    {
+      "site": "douyin",
+      "check": "dy.ip_and_verify",
+      "passed": true,
+      "detail": "评论 ip 属地 42 种（749 条抽样）、海外+港澳台 0.023（语料 42 种/1.0%，旧 20 种/24.2%）；搜索卡 custom_verify 非空 0/12（语料 0/2059，旧 72.5%）"
+    },
+    {
+      "site": "douyin",
+      "check": "dy.reply_nested_level2",
+      "passed": true,
+      "detail": "子评论 698 条：reply_to_reply_id≠0 占 0.341（语料 11/30=0.367，旧 0/43 全扁平）"
+    },
+    {
+      "site": "douyin",
+      "check": "dy.ratio_tail_and_followers",
+      "passed": true,
+      "detail": "collect/like p90=0.92（语料 0.938，旧 0.30）、follower p50=3.12e+04/p90=2.29e+06（语料 2.7e4/1.2e6，旧 3.7e3/3.1e4）"
     },
     {
       "site": "douyin",
       "check": "anomaly.proportion",
       "passed": true,
-      "detail": "{'high_collect_low_like': 1, 'high_like_low_view': 7, 'low_like_high_view': 2, 'new_hot': 2, 'normal': 286, 'old_hot': 2}"
+      "detail": "{'high_collect_low_like': 1, 'high_like_low_view': 7, 'low_like_high_view': 2, 'new_hot': 4, 'normal': 283, 'old_hot': 3}"
     },
     {
       "site": "douyin",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=260, conflicts=0"
+      "detail": "authors=256, conflicts=0"
     },
     {
       "site": "douyin",
@@ -130,7 +214,7 @@
       "site": "douyin",
       "check": "second_impl.pandas",
       "passed": true,
-      "detail": "like median: numpy=4056.0 pandas=4056.0; view median: numpy=59135.5 pandas=59135.5; corr: numpy=0.885139 pandas=0.885139"
+      "detail": "like median: numpy=7268.0 pandas=7268.0; view median: numpy=114385.0 pandas=114385.0; corr: numpy=0.936365 pandas=0.936365"
     },
     {
       "site": "xhs",
@@ -166,7 +250,7 @@
       "site": "xhs",
       "check": "mustvary.id_unique",
       "passed": true,
-      "detail": "{'id': '300/300', 'comments[].id': '5616/5616'}"
+      "detail": "{'id': '300/300', 'comments[].id': '5818/5818'}"
     },
     {
       "site": "xhs",
@@ -177,14 +261,14 @@
     {
       "site": "xhs",
       "check": "dist.like_lognormal_quantiles",
-      "passed": true,
-      "detail": "分位数偏差%={'q05': 1.0, 'q25': 0.6, 'q50': -1.4, 'q75': 0.8, 'q95': -1.8}（全量 KS D=0.0311 仅作参考）"
+      "passed": false,
+      "detail": "分位数偏差%={'q05': 6.4, 'q25': -0.3, 'q50': -0.6, 'q75': -1.5, 'q95': -1.5}（全量 KS D=0.0334 仅作参考）"
     },
     {
       "site": "xhs",
       "check": "dist.like_comment_corr",
       "passed": true,
-      "detail": "Pearson(log like, log comment)=0.7584 ≥ 0.7"
+      "detail": "Pearson(log like, log comment)=0.7363 ≥ 0.7"
     },
     {
       "site": "xhs",
@@ -208,7 +292,7 @@
       "site": "xhs",
       "check": "invariant.comment_time_ge_publish",
       "passed": true,
-      "detail": "评论 id/时间早于笔记发布=0（5616 条评论，要求 0，R2-P2-3）"
+      "detail": "评论 id/时间早于笔记发布=0（5818 条评论，要求 0，R2-P2-3）"
     },
     {
       "site": "xhs",
@@ -220,7 +304,7 @@
       "site": "xhs",
       "check": "author.longtail",
       "passed": true,
-      "detail": "distinct=254（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+      "detail": "distinct=258（≥240，旧实现 ~90-183），top1=0.0133（≤0.0267，旧 ~0.54；语料 ≈0.01）"
     },
     {
       "site": "xhs",
@@ -232,25 +316,79 @@
       "site": "xhs",
       "check": "comment.window_text_unique",
       "passed": true,
-      "detail": "render 抽样 40 内容 / 513 条评论：单窗口完全重复=2（重复率 ≤ 2%，语料唯一率 98%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.045（参考线 <0.1）"
+      "detail": "render 抽样 40 内容 / 517 条评论：单窗口完全重复=0（0 ≤ 语料唯一率 98%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.002（参考线 <0.1）"
     },
     {
       "site": "xhs",
       "check": "comment.commenter_resolvable",
       "passed": true,
-      "detail": "513 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+      "detail": "517 条评论的评论者：不可回查/昵称不一致=0（0；旧 5/5 断链，R5A-P2-5）"
+    },
+    {
+      "site": "xhs",
+      "check": "search.relevance",
+      "passed": true,
+      "detail": "映射关键词 120 卡（3/3 个关键词命中供给充足）：严格命中 0.000（语料 dy 0.471/xhs 0.177/ks 0.374，旧 0.00-0.033）、类目耦合 0.600（≥0.5，旧≈0）；乱码词退化为背景=True（R5C 乱码词出结果口径保持）"
+    },
+    {
+      "site": "xhs",
+      "check": "comment.delay_longtail",
+      "passed": true,
+      "detail": "render 抽样 359 条：p50=2.03 天（语料 8.1，旧 0.03）、p90=39 天（语料 183，旧 0.11）、>1 月 0.111（语料 0.221，旧 0）、早于发布 0（0，R2-P2-3 保持）"
+    },
+    {
+      "site": "xhs",
+      "check": "comment.emoji_and_length",
+      "passed": true,
+      "detail": "评论 359 条：括号表情率 0.359（语料 0.317-0.402，旧 0）、长度 p10/p90/max=7/26/38（语料 [3-4, 26-33]，旧 [10-12, 17]）"
+    },
+    {
+      "site": "xhs",
+      "check": "title.emoji_form",
+      "passed": true,
+      "detail": "xhs 标题 [xxR] 站内表情率 0.267（旧 0；xhs 语料表情形态 [xxR]）"
+    },
+    {
+      "site": "xhs",
+      "check": "time.publish_rhythm",
+      "passed": false,
+      "detail": "小时 CV=1.141（语料 0.913，旧 0.186）、峰谷比=51×（语料 68.5，旧 1.8）、星期 max=0.220（语料 ≤0.159，旧 0.298）、Mon+Tue=0.367（旧 0.587）"
+    },
+    {
+      "site": "xhs",
+      "check": "xhs.sub_target_valid",
+      "passed": true,
+      "detail": "嵌入+sub/page 抽样 43 条 sub：同源指向（父/兄弟）43、断裂 0、sub/page 缺键 0、非 hex id 0（旧：48/72 占位常量 + sub/page 整键缺失）"
+    },
+    {
+      "site": "xhs",
+      "check": "search.ladder_words_mapped",
+      "passed": true,
+      "detail": "ladder 14 词未映射 无（旧 7 词未映射：主词严格命中 0.0）；主词严格命中 0.000（设计 0.20-0.30，真站 0.17-0.47）；乱码词退化背景保持 = True"
+    },
+    {
+      "site": "xhs",
+      "check": "comment.text_style_band",
+      "passed": false,
+      "detail": "语气词 0.251（语料 0.235，旧 0.40-0.59）、网络用语 0.028（语料 0.035，旧 0.26-0.45）、@提及 0.058（语料 0.032，旧 0）（±30% 带）"
+    },
+    {
+      "site": "xhs",
+      "check": "xhs.collect_ratio_median",
+      "passed": true,
+      "detail": "collect/like 中位 0.600（语料 0.556——收藏≈点赞一半的社区形态，旧 0.268）"
     },
     {
       "site": "xhs",
       "check": "anomaly.proportion",
       "passed": true,
-      "detail": "{'high_collect_low_like': 7, 'high_like_low_view': 5, 'low_like_high_view': 2, 'new_hot': 3, 'normal': 280, 'old_hot': 3}"
+      "detail": "{'high_collect_low_like': 7, 'high_like_low_view': 5, 'low_like_high_view': 2, 'new_hot': 6, 'normal': 274, 'old_hot': 6}"
     },
     {
       "site": "xhs",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=254, conflicts=0"
+      "detail": "authors=258, conflicts=0"
     },
     {
       "site": "xhs",
@@ -268,7 +406,7 @@
       "site": "xhs",
       "check": "second_impl.pandas",
       "passed": true,
-      "detail": "like median: numpy=340.5 pandas=340.5"
+      "detail": "like median: numpy=382.0 pandas=382.0"
     },
     {
       "site": "kuaishou",
@@ -316,13 +454,13 @@
       "site": "kuaishou",
       "check": "dist.view_lognormal_ks",
       "passed": true,
-      "detail": "KS p=0.8497, fitted mu=9.870 sigma=1.367"
+      "detail": "KS p=0.8151, fitted mu=13.433 sigma=1.449"
     },
     {
       "site": "kuaishou",
       "check": "dist.like_view_corr",
       "passed": true,
-      "detail": "Pearson(log view, log like)=0.8792 ≥ 0.7"
+      "detail": "Pearson(log view, log like)=0.8062 ≥ 0.7"
     },
     {
       "site": "kuaishou",
@@ -346,7 +484,7 @@
       "site": "kuaishou",
       "check": "author.longtail",
       "passed": true,
-      "detail": "distinct=260（≥240，旧实现 ~90-183），top1=0.0233（≤0.0267，旧 ~0.54；语料 ≈0.01）"
+      "detail": "distinct=250（≥240，旧实现 ~90-183），top1=0.0167（≤0.0267，旧 ~0.54；语料 ≈0.01）"
     },
     {
       "site": "kuaishou",
@@ -358,7 +496,7 @@
       "site": "kuaishou",
       "check": "comment.window_text_unique",
       "passed": true,
-      "detail": "render 抽样 40 内容 / 800 条评论：单窗口完全重复=0（重复率 ≤ 6%，语料唯一率 94%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.174（参考线 <0.1）"
+      "detail": "render 抽样 40 内容 / 800 条评论：单窗口完全重复=0（0 ≤ 语料唯一率 94%；旧 dy 20 条仅 12 种/8 组重复）；跨内容重叠率=0.000（参考线 <0.1）"
     },
     {
       "site": "kuaishou",
@@ -370,7 +508,7 @@
       "site": "kuaishou",
       "check": "ks.comment_count_dist",
       "passed": true,
-      "detail": "commentCountV2 抽样 300：中位=1499（语料 1544，旧为 0-21）、min=69/max=28863（语料 [51,28863]）、零值=0/语料 0/70"
+      "detail": "commentCountV2 抽样 300：中位=1672（语料 1544，旧为 0-21）、min=51/max=28863（语料 [51,28863]）、零值=0/语料 0/70"
     },
     {
       "site": "kuaishou",
@@ -380,15 +518,99 @@
     },
     {
       "site": "kuaishou",
+      "check": "search.relevance",
+      "passed": true,
+      "detail": "映射关键词 120 卡（3/3 个关键词命中供给充足）：严格命中 0.092（语料 dy 0.471/xhs 0.177/ks 0.374，旧 0.00-0.033）、类目耦合 0.658（≥0.5，旧≈0）；乱码词退化为背景=True（R5C 乱码词出结果口径保持）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.delay_longtail",
+      "passed": true,
+      "detail": "render 抽样 800 条：p50=6.50 天（语料 8.1，旧 0.03）、p90=180 天（语料 183，旧 0.11）、>1 月 0.230（语料 0.221，旧 0）、早于发布 0（0，R2-P2-3 保持）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.emoji_and_length",
+      "passed": true,
+      "detail": "评论 800 条：括号表情率 0.389（语料 0.317-0.402，旧 0）、长度 p10/p90/max=7/34/55（语料 [3-4, 26-33]，旧 [10-12, 17]）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "title.emoji_form",
+      "passed": true,
+      "detail": "kuaishou 标题 unicode emoji 率 0.037（语料 dy 0.088/ks 0.040，旧 0）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "hashtag.pool_diversity",
+      "passed": true,
+      "detail": "全库 distinct tag 447（≥300；语料 dy 2.5 tag/文本，旧池 61/38 个）、活动运营 tag 11 种（旧 0；语料 top tag 族）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "time.publish_rhythm",
+      "passed": true,
+      "detail": "小时 CV=1.205（语料 0.913，旧 0.186）、峰谷比=183333333×（语料 68.5，旧 1.8）、星期 max=0.207（语料 ≤0.159，旧 0.298）、Mon+Tue=0.350（旧 0.587）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.view_magnitude",
+      "passed": true,
+      "detail": "view p50=6.7e+05（语料 6.97e5，旧 1.99e4）、p90=4.05e+06（语料 4.5e6，旧 1.17e5）、like p50=9.61e+03（语料 9788，旧 1591）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.duration_variance",
+      "passed": true,
+      "detail": "duration distinct=300/300（旧 unique=1 恒 5000）、p50=66576ms（语料中位 65000、范围 [3233, 2629599]）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.manifest_metadata_variance",
+      "passed": true,
+      "detail": "underExposed distinct=300/300、跨 1.0e+04×（语料 2.98e-9~3.25e-5 跨 5 个数量级，旧恒 5.96e-9）、oriLoudness 极差 8.1 dB（语料 [-20.164, -11.954]，旧恒 0.0）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.profile_userid_unified",
+      "passed": true,
+      "detail": "请求 userId=3x9t2q… → 响应 userId=3x9t2q…（旧：响应 6347098269 型数字空间，与搜索流/评论/页面 URL 的 3x 空间不一致）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.cross_content_overlap",
+      "passed": true,
+      "detail": "两内容各 300 条评论重叠率 0.000（语料同题材 0.24-0.745，红队建议 <0.1；组合空间 94104，旧 1910）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "ks.collect_count_hidden",
+      "passed": true,
+      "detail": "search/feed 60 卡 + profile/feed collectCount 全 0 = True（语料 706/706=0，旧 60/60 非零、p50 比值 0.161——R6C-P2-1 dy play_count 同族）"
+    },
+    {
+      "site": "kuaishou",
+      "check": "search.ladder_words_mapped",
+      "passed": true,
+      "detail": "ladder 14 词未映射 无（旧 7 词未映射：主词严格命中 0.0）；主词严格命中 0.000（设计 0.20-0.30，真站 0.17-0.47）；乱码词退化背景保持 = True"
+    },
+    {
+      "site": "kuaishou",
+      "check": "comment.text_style_band",
+      "passed": true,
+      "detail": "语气词 0.077（语料 0.089，旧 0.40-0.59）、网络用语 0.060（语料 0.06，旧 0.26-0.45）、@提及 0.149（语料 0.156，旧 0）（±30% 带）"
+    },
+    {
+      "site": "kuaishou",
       "check": "anomaly.proportion",
       "passed": true,
-      "detail": "{'high_collect_low_like': 2, 'high_like_low_view': 8, 'low_like_high_view': 3, 'new_hot': 3, 'normal': 282, 'old_hot': 2}"
+      "detail": "{'high_collect_low_like': 2, 'high_like_low_view': 8, 'low_like_high_view': 3, 'new_hot': 5, 'normal': 281, 'old_hot': 1}"
     },
     {
       "site": "kuaishou",
       "check": "consistency.author",
       "passed": true,
-      "detail": "authors=260, conflicts=0"
+      "detail": "authors=250, conflicts=0"
     },
     {
       "site": "kuaishou",
@@ -406,70 +628,134 @@
       "site": "kuaishou",
       "check": "second_impl.pandas",
       "passed": true,
-      "detail": "like median: numpy=1593.0 pandas=1593.0; view median: numpy=19540.0 pandas=19540.0; corr: numpy=0.879216 pandas=0.879216"
+      "detail": "like median: numpy=9608.5 pandas=9608.5; view median: numpy=669908.5 pandas=669908.5; corr: numpy=0.806195 pandas=0.806195"
     }
   ],
   "metrics": {
     "douyin": {
       "n": 300,
-      "like_median": 4056.0,
-      "view_median": 59135.5,
-      "view_p99": 1259224.939999991,
-      "view_mu": 10.923622954547136,
-      "view_sigma": 1.3556000253367548,
-      "like_view_corr": 0.8851390992952171,
+      "like_median": 7268.0,
+      "view_median": 114385.0,
+      "view_p99": 9873475.879999893,
+      "view_mu": 11.523849190775788,
+      "view_sigma": 1.9757866531909138,
+      "like_view_corr": 0.9363648709904873,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
-      "author_distinct": 260,
+      "author_distinct": 256,
       "author_top1_share": 0.013333333333333334,
       "author_window_max_repeat": 2,
       "author_window_pair_frac": 0.48398576512455516,
       "comment_dup_texts": 0,
-      "comment_cross_overlap_rate": 0.023316062176165803,
-      "commenter_checked": 772,
+      "comment_cross_overlap_rate": 0.0013351134846461949,
+      "commenter_checked": 749,
       "commenter_bad": 0,
+      "dy_play_count_zeroed": true,
+      "search_strict_hit_rate": 0.0,
+      "search_category_coupling": 0.65,
+      "comment_delay_p50_days": 5.902679398148148,
+      "comment_delay_gt1mo": 0.15,
+      "comment_emoji_rate": 0.37083333333333335,
+      "comment_len_p10": 6,
+      "comment_len_p90": 28,
+      "title_unicode_emoji_rate": 0.04,
+      "hashtag_distinct": 579,
+      "activity_tag_kinds": 6,
+      "publish_hour_cv": 1.199333148045196,
+      "publish_weekday_max": 0.19,
+      "dy_like_p90": 78881.40000000005,
+      "dy_deep_dup_600": 0,
+      "ladder_strict_rate": 0.0,
+      "comment_particle_rate": 0.14027777777777778,
+      "comment_slang_rate": 0.03333333333333333,
+      "comment_at_rate": 0.10694444444444444,
+      "dy_ip_overseas_rate": 0.022696929238985315,
+      "dy_ip_unique": 42,
+      "dy_custom_verify_nonempty": 0,
+      "dy_reply_r2r_rate": 0.34097421203438394,
+      "dy_collect_like_p90": 0.9207846255872388,
+      "dy_follower_p50": 31238.0,
+      "dy_follower_p90": 2294980.4000000004,
       "repro_count": 300
     },
     "xhs": {
       "n": 300,
-      "like_median": 340.5,
-      "like_lognorm_mu": 5.915480353230399,
-      "like_lognorm_sigma": 1.3338494998088175,
-      "like_comment_corr": 0.7584476141721447,
+      "like_median": 382.0,
+      "like_lognorm_mu": 5.983181187875944,
+      "like_lognorm_sigma": 1.390550552394385,
+      "like_comment_corr": 0.7362696709554348,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
-      "author_distinct": 254,
+      "author_distinct": 258,
       "author_top1_share": 0.013333333333333334,
       "author_window_max_repeat": 2,
       "author_window_pair_frac": 0.45195729537366547,
-      "comment_dup_texts": 2,
-      "comment_cross_overlap_rate": 0.04483430799220273,
-      "commenter_checked": 513,
+      "comment_dup_texts": 0,
+      "comment_cross_overlap_rate": 0.0019342359767891683,
+      "commenter_checked": 517,
       "commenter_bad": 0,
+      "search_strict_hit_rate": 0.0,
+      "search_category_coupling": 0.6,
+      "comment_delay_p50_days": 2.029675925925926,
+      "comment_delay_gt1mo": 0.11142061281337047,
+      "comment_emoji_rate": 0.3593314763231198,
+      "comment_len_p10": 7,
+      "comment_len_p90": 26,
+      "xhs_title_bracket_rate": 0.26666666666666666,
+      "publish_hour_cv": 1.1405261943506604,
+      "publish_weekday_max": 0.22,
+      "xhs_sub_target_ok": 43,
+      "xhs_sub_target_bad": 0,
+      "ladder_strict_rate": 0.0,
+      "comment_particle_rate": 0.25069637883008355,
+      "comment_slang_rate": 0.027855153203342618,
+      "comment_at_rate": 0.0584958217270195,
+      "xhs_collect_like_p50": 0.6000585565802957,
       "repro_count": 300
     },
     "kuaishou": {
       "n": 300,
-      "like_median": 1593.0,
-      "view_median": 19540.0,
-      "view_p99": 382478.44999999914,
-      "view_mu": 9.869671473032987,
-      "view_sigma": 1.3672002977930722,
-      "like_view_corr": 0.8792162598202381,
+      "like_median": 9608.5,
+      "view_median": 669908.5,
+      "view_p99": 16849422.13999996,
+      "view_mu": 13.433041241512782,
+      "view_sigma": 1.4488089718332313,
+      "like_view_corr": 0.806194810351988,
       "invariant_comment_violations": 0,
       "invariant_like_gt_view": 0,
-      "author_distinct": 260,
-      "author_top1_share": 0.023333333333333334,
+      "author_distinct": 250,
+      "author_top1_share": 0.016666666666666666,
       "author_window_max_repeat": 2,
       "author_window_pair_frac": 0.43416370106761565,
       "comment_dup_texts": 0,
-      "comment_cross_overlap_rate": 0.17375,
+      "comment_cross_overlap_rate": 0.0,
       "commenter_checked": 800,
       "commenter_bad": 0,
-      "ks_comment_total_median": 1499.0,
+      "ks_comment_total_median": 1672.5,
       "ks_us_c_nonzero": 0,
+      "search_strict_hit_rate": 0.09166666666666666,
+      "search_category_coupling": 0.6583333333333333,
+      "comment_delay_p50_days": 6.501255787037037,
+      "comment_delay_gt1mo": 0.23,
+      "comment_emoji_rate": 0.38875,
+      "comment_len_p10": 7,
+      "comment_len_p90": 34,
+      "title_unicode_emoji_rate": 0.03666666666666667,
+      "hashtag_distinct": 447,
+      "activity_tag_kinds": 11,
+      "publish_hour_cv": 1.2053215338655492,
+      "publish_weekday_max": 0.20666666666666667,
+      "ks_view_p50": 669908.5,
+      "ks_underexposed_span": 9958.358820954283,
+      "ks_duration_p50": 66575.5,
+      "ks_comment_overlap": 0.0,
+      "ks_collect_zero": true,
+      "ladder_strict_rate": 0.0,
+      "comment_particle_rate": 0.0775,
+      "comment_slang_rate": 0.06,
+      "comment_at_rate": 0.14875,
       "repro_count": 300
     }
   },
-  "all_passed": true
+  "all_passed": false
 }

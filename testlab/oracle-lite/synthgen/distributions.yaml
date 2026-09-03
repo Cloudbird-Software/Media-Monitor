@@ -1,27 +1,48 @@
 # 三站合成数据分布引擎配置（阶段 4）
 # 所有数值分布集中在此，调参无需改代码；--dist-config 可整体替换。
 # 语义：
-#   view  = 潜在曝光/播放量（对数正态，长尾）；仅在契约含播放字段的站点外显（抖音 statistics.play_count、快手 photo.viewCount）
+#   view  = 潜在曝光/播放量（对数正态，长尾）；仅在契约含播放字段的站点外显（快手 photo.viewCount；
+#           抖音 statistics.play_count 数据集保留、渲染层恒置 0——真站 dy web 从不暴露播放量，R6C-P2-1）
 #   like  = view × like_rate，like_rate ~ Beta(a,b) × 类目互动率 × 作者质量
 #   comment/collect/share = like × 比率(Beta)，并施加一致性上界（如 comment ≤ like × ratios.comment.cap_like_frac）
-#   publish_time = anchor_time - age，age 服从幂律（近期加权），单位天
+#   publish_time = anchor_time - age；age 为「新鲜切片 + 存量长尾」双组分混合（R6A-P2-2/P3-1），
+#           放置时加日内节律（语料直方图形状）与星期均衡
 # anchor_time 固定值（保证数据集字节级可复现；渲染/生成时不读系统时钟）
 
 meta:
   anchor_time: "2026-09-01T12:00:00+08:00"   # ISO8601，东八区
-  version: 1
+  version: 2
 
 time:
+  # R6A-P2-2/P3-1（红队 round6A）：
+  # 旧 powerlaw(scale=2d) 全库中位年龄 1.7 天 → 评论延迟形态被压缩为「发布即爆发、
+  # 3 天内结束」（真站 p50=8.1 天、22%>1 月），且叠加锚点为周二使 Mon+Tue 占 58.7%
+  # （真站周一至周日 11.7-15.9% 平坦）。改为双组分混合：
+  #   fresh_frac × Pareto(scale_days, shape, 截断 fresh_cap_days)   —— 搜索新鲜度偏置
+  #   其余     × Uniform(old_lo_days, max_age_days)                 —— 存量长尾
+  # （语料详情页评论链延迟 p90=183 天、p99=339 天 ⇒ 相当比例内容为数月存量）
   powerlaw:
-    scale_days: 2.0        # 幂律尺度：中位发布年龄约 1.7 天
-    shape: 1.35            # 形状参数，越大越集中近期
-    max_age_days: 730      # 截断：最老内容约 2 年
+    scale_days: 12.0       # 新鲜切片幂律尺度（切片内 day0 ≈11%，锚点日占比
+                           # 压在语料星期上界 15.9% 之内）
+    shape: 1.35
+    max_age_days: 730
+  mixture:
+    fresh_frac: 0.30       # 新鲜切片占比（<1d 内容约占全库 4-5%，阈值类任务供给）
+    fresh_cap_days: 30     # 新鲜切片年龄上限
+    old_lo_days: 45        # 存量长尾下限（天）
+  rhythm:
+    enabled: true          # 日内节律（语料形状：9-11 时峰、19-20 时谷）+ 星期均衡
+    weekday_flatten_min_day: 1   # day≥1 的内容按目标星期 ±3 天重放置（day0 保持原位）
 
 defaults:
   ratios:
     comment: {beta_a: 2.0, beta_b: 26.0, cap_like_frac: 0.30}   # comment/like 均值≈0.07，上界 0.30（契约一致性约束）
     collect: {beta_a: 3.0, beta_b: 15.0, cap_like_frac: 1.50}   # 收藏可超过赞（干货类内容）
     share:   {beta_a: 2.0, beta_b: 24.0, cap_like_frac: 0.30}
+  # R7A-P3-7 比值上尾（可选 tail 子配置）：frac 比例的记录比值改从
+  # U(lo, hi) × cap_like_frac 采样（教程型/讨论型重尾分量，语料
+  # dy collect/like p90 0.938、comment/like p90 0.203——β 主体的 p90 仅 0.30/0.10）
+  # tail: {frac: 0.15, lo: 0.37, hi: 1.00}
 
 # 异常类注入：frac 为默认占比（CLI --anomaly-classes 可覆盖）
 # view_quantile: 在 view 分布的分位区间内采样（与类目乘子叠加）
@@ -37,7 +58,7 @@ anomalies:
     view_quantile: [0.60, 0.995]
     like_div: [20.0, 80.0]
   new_hot:                 # 新发布高互动：48h 内发布且互动量放大
-    frac: 0.01
+    frac: 0.02             # （24h 内供给的主力：新鲜切片星期均衡后 day0 仅 ~3%）
     max_age_hours: 48
     view_mult: [1.5, 4.0]
     engage_mult: [3.0, 10.0]
@@ -53,21 +74,41 @@ anomalies:
 
 sites:
   douyin:
-    # 中位播放 ≈ e^10.82 ≈ 5.0w，P99 ≈ e^(10.82+2.33*1.4) ≈ 130w
-    view: {mu: 10.82, sigma: 1.40, min: 200}
+    # R6A-P3-2：dy 播放不外显（渲染层置 0），view 仅驱动 like/comment/collect/share。
+    # 目标（公平口径=agent 所见搜索卡，语料）：like p50 5668 / p90 218k / p99 1.56M；
+    # 旧 (mu 10.82, σ 1.40) 下 like p90 24.7k（上尾薄 ~9×）→ σ 加厚到 1.9：
+    # like p50 ≈ 5.8k、p90 ≈ 1.4e5（较旧值加厚 ~5.5×）、p99 ≈ 1.4e6
+    view: {mu: 11.40, sigma: 2.05, min: 200}
     like:  {beta_a: 5.0, beta_b: 70.0}     # 基准点赞率均值 ≈ 0.067
+    # R6A-P3-2：dy comment p90 语料 6514（旧 1820；like 量级抬升后若沿用默认
+    # β(2,26) 会到 ~2.5e4，超语料 4×）→ 站点级比率压尾
+    # R7A-P3-7：comment/collect 比值上尾加厚（语料 p90 comment/like 0.203、
+    # collect/like 0.938——β 主体的 p90 仅 0.10/0.30，教程型/干货型重尾分量缺失）：
+    # 12% 评论型分量 U[0.18, 0.30]、15% 收藏型分量 U[0.55, 1.50]（中位数基本不动）
+    ratios:
+      comment: {beta_a: 2.0, beta_b: 40.0, cap_like_frac: 0.30,
+                tail: {frac: 0.12, lo: 0.60, hi: 1.00}}
+      collect: {beta_a: 3.0, beta_b: 15.0, cap_like_frac: 1.50,
+                tail: {frac: 0.15, lo: 0.37, hi: 1.00}}
     author_pool: 30000
     # R5A-P1-1：作者作品数长尾（对数正态，均值 mean_works 条/人）+ 头部份额上限注水
     # （top1 作者占全库 ≤ share_cap；旧 Zipf(1.8) 引用幂律 top1 占 ~54%，语料实际 ≈1%）
     author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}
-    follower: {mu: 8.5, sigma: 1.8, min: 0}  # 粉丝对数正态（粉丝中位 ≈ 5k）
-    durations_ms: {mu: 4.8, sigma: 0.45, min: 5000, max: 600000}
+    # R7A-P3-7：作者粉丝量级加厚（search:item 上下文语料 follower p50 27k / p90 1.2M，
+    # 旧 mu 8.5 下 p50 4.7k / p90 5.3e4——中位 7×、上尾 39× 低）→ 对齐语料带
+    follower: {mu: 10.20, sigma: 2.90, min: 0}  # 粉丝对数正态（中位 ≈ 27k、p90 ≈ 1.1e6）
+    # R6C-P3-4：duration 单位修复（旧 mu=4.8 → e^4.8≈121ms 被 min 钳成恒 5000，
+    # 全库 unique=1）→ 对数正态毫秒：中位 ≈ 28s、范围 [3s, 10min]
+    durations_ms: {mu: 10.24, sigma: 0.60, min: 3000, max: 600000}
   xhs:
     # 笔记无外显播放（契约实证），view 为潜在曝光，仅驱动 liked_count 生成
+    # （xhs liked 两侧同量级：语料 p50 400 vs 合成 173，红队判非差异，保持）
     view: {mu: 8.00, sigma: 1.20, min: 50}
     like:  {beta_a: 7.0, beta_b: 55.0}     # 点赞率均值 ≈ 0.113（小红书互动高于短视频）
     ratios:                                # 站点级比率覆盖：收藏文化更强
-      collect: {beta_a: 4.0, beta_b: 10.0, cap_like_frac: 2.50}
+      # R7A-P3-7：xhs collect/like 中位语料 0.556（真站收藏≈点赞一半的社区形态，
+      # 旧 β(4,10) 中位 0.30 偏低 2×）→ β(5,4) 中位 ≈ 0.56，cap 2.5 不变
+      collect: {beta_a: 5.0, beta_b: 4.0, cap_like_frac: 2.50}
     author_pool: 30000
     author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}   # R5A-P1-1 长尾作品数+份额上限
     follower: {mu: 7.6, sigma: 1.8, min: 0}
@@ -76,10 +117,16 @@ sites:
     # （comment_count = 内嵌条数 + 右偏噪声，量级一致；上限即大计数笔记的可得封顶）
     comments_per_note: {min: 0, max: 40}
   kuaishou:
-    # 中位播放 ≈ e^9.90 ≈ 2.0w
-    view: {mu: 9.90, sigma: 1.35, min: 100}
-    like:  {beta_a: 6.0, beta_b: 65.0}     # 均值 ≈ 0.085
+    # R6A-P3-2 + R6C-P3-4：ks viewCount 全线低 ~1.5 个数量级（旧 mu 9.90：合成
+    # p50 1.99e4 / p90 1.17e5 vs 语料 p50 6.97e5 / p90 4.5e6）→ 中位对齐 + 上尾加厚：
+    # mu=13.45（p50 ≈ 6.9e5）、σ=1.45（p90 ≈ 4.4e6、p99 ≈ 2e7，语料带内）
+    view: {mu: 13.45, sigma: 1.45, min: 20000}
+    # like p50 目标 9788（旧 1591，6× 低）：view×rate 下调互动率
+    # β(2.2,150) 均值 ≈ 0.0144、中位 ≈ 0.0123 → like p50 ≈ 8.5k、p90 ≈ 1.25e5（语料 96k）
+    like:  {beta_a: 2.2, beta_b: 150.0}
     author_pool: 30000
     author_works: {mean_works: 3.4, sigma: 2.2, share_cap: 0.016}   # R5A-P1-1 长尾作品数+份额上限
     follower: {mu: 8.2, sigma: 1.9, min: 0}
-    durations_ms: {mu: 5.0, sigma: 0.5, min: 5000, max: 900000}
+    # R6C-P3-4：duration 单位修复（旧 mu=5.0 → e^5≈148ms 被 min 钳成恒 5000）→
+    # 语料口径 [3233, 2629599] 中位 65000：对数正态毫秒，中位 ≈ 65s
+    durations_ms: {mu: 11.08, sigma: 0.90, min: 3000, max: 2700000}

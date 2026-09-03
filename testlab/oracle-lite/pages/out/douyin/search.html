@@ -12,7 +12,10 @@ body{font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;backgro
 header.site-header{display:flex;align-items:center;gap:16px;padding:14px 28px;background:#fff;border-bottom:1px solid #e8e8e8;position:sticky;top:0;z-index:9}
 .brand{font-size:20px;font-weight:700;color:var(--brand)}
 .nav a{margin-right:14px;color:#555;text-decoration:none}
-.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px}
+.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px;position:relative}
+.search-suggest{position:absolute;top:44px;left:0;width:100%;background:#fff;border:1px solid #eee;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:30;overflow:hidden}
+.search-suggest .sug-item{padding:8px 16px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-suggest .sug-item:hover{background:#f7f7f7;color:var(--brand)}
 .searchbar .input-box{flex:1;border:1px solid #ddd;border-radius:18px;padding:8px 16px;background:#fafafa;display:flex;align-items:center;gap:8px}
 .searchbar input{border:0;outline:0;background:transparent;width:100%;font-size:14px}
 .searchbar .search-button{border:0;background:var(--brand);color:#fff;border-radius:18px;padding:8px 22px;cursor:pointer}
@@ -22,6 +25,7 @@ main{max-width:1180px;margin:18px auto;padding:0 20px}
 .cards .search-result-card,.cards .note-item,.cards .card-container{width:216px;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:transform .15s}
 .cards>*:hover{transform:translateY(-3px)}
 .card-link{display:block;text-decoration:none;color:inherit}
+.card-permalink{display:none}  /* R6B-P3-1：卡首隐藏锚 /explore/<id>（语料形态） */
 .cover{position:relative;background:#eee}
 .cover img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
 .cover .duration{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
@@ -81,6 +85,13 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
 .note-modal .m-author{color:#666;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px}
 .note-modal .m-metrics{display:flex;gap:18px;color:var(--sub);font-size:13px;margin-bottom:10px}
 .note-modal .m-metrics .like-count{color:#e02040}
+.note-modal .bottom-container{color:var(--sub);font-size:12px;margin:2px 0 10px}
+.note-modal .bottom-container .date{margin-right:10px}
+.comment-item .c-meta{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .comment-item-time{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .date{color:var(--sub);font-size:12px;margin-top:2px}
+.comment-item .date .location{margin-left:10px}
+.cards .metrics .ic{display:inline-block;width:14px;height:14px;margin-right:4px;vertical-align:-2px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e02040' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E")}
 .profile-tabs{display:flex;gap:34px;border-bottom:1px solid #eee;margin:6px 0 16px}
 .profile-tabs .p-tab{padding:10px 2px;color:#555;cursor:pointer;font-size:15px;position:relative}
 .profile-tabs .p-tab.active{color:var(--brand);font-weight:600}
@@ -95,7 +106,7 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
   <span class="brand">抖音</span>
   <nav class="nav"><a href="/">首页</a><a href="/search">搜索</a></nav>
   <form class="searchbar" id="searchForm" action="/search" method="get">
-    <div class="input-box"><input id="searchInput" data-e2e="searchbar-input" type="text" maxlength="100" placeholder="搜索你感兴趣的内容" value="美食教程" aria-label="搜索"></div>
+    <div class="input-box"><input id="searchInput" data-e2e="searchbar-input" type="text" maxlength="100" placeholder="搜索你感兴趣的内容" value="" aria-label="搜索"></div>
     <button class="search-button" data-e2e="searchbar-button" type="submit">搜索</button>
   </form>
 </header>
@@ -116,8 +127,53 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
 function enc(s){return encodeURIComponent(s||'')}
 function str(v){return String(v==null?0:v)}
 function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c=='x'?r:(r&0x3|0x8)).toString(16)})}
-function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000)return (n/10000).toFixed(1)+'万';return String(n)}
-function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;return m+':'+(s<10?'0':'')+s}
+function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000){var w=(n/10000).toFixed(1);
+  /* R11B-P3-5：整万形态按站分流——dy 保留 N.0万（语料 47-67 例/场景真值）；
+     xhs/ks 整数万去 .0（两站语料 N.0万 0 例、整数万 21+/30+ 例） */
+  if(typeof SITE_KEY!=='undefined'&&SITE_KEY!=='douyin'&&/\.0$/.test(w))w=w.slice(0,-2);
+  return w+'万'}return String(n)}
+/* R9B-P3-1/P3-2：显示层时间形态（语料：dy「5天前·四川」/xhs「03-27」/ks「2月前」；
+   dy 卡 footer「@作者 · 4天前」）。
+   R10B-P3-1（语法档位，page_dom 全量真值）：周前档补齐（dy 544 例 / ks 68 例），
+   月去「个」（dy 896 + ks 175 例「N月前」、评论 UI 层「个月前」0 例），天数封顶
+   个位（全语料「NN天前」0 例——该区间真站走周/月/年档）：≤6 天「N天前」、
+   7-29 天「N周前」、30 天+「N月前」、年档「N年前」。ts 为秒（xhs 评论为毫秒，
+   调用侧已除）。 */
+function relTime(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function relDay(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<7*86400)return Math.max(1,Math.floor(d/86400))+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function ksRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+/* R10B-P3-1③：ks 首页卡 footer 独立语法（语料 <a>@馆长严选</a><span
+   class="timestamp"> · 3 天前</span>、 · 2 个月前——@ 前缀 + 数字与单位间空格、
+   该 surface 月带「个」；真站两套语法并存，搜索卡保持无空格族）。
+   R11B-P3-2 勘误（语料逐元素精提 20/20）：该 surface 周档 0 例、天数不封顶
+   （「 · 22 天前」×3、「 · 25 天前」在档，两位数天 7/20 例）——去周档、
+   <30 天恒「N 天前」，≥30 天「N 个月前」，≥年「N 年前」 */
+function ksHomeRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<30*86400)return Math.max(1,Math.floor(d/86400))+' 天前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+' 个月前';
+  return Math.floor(d/(365*86400))+' 年前'}
+function mmdd(tsSec){try{var t=new Date((tsSec||0)*1000);var m=t.getMonth()+1,d=t.getDate();
+  return (m<10?'0':'')+m+'-'+(d<10?'0':'')+d}catch(e){return ''}}
+/* R11B-P3-3：时长 badge 分钟两位补零（语料四场景卡时长元素 10 分钟以下
+   补零 2915 : 不补零 0——05:18/00:31/01:28 全两位形态） */
+function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
 function coverUrl(seed,label,w,h){return '/obj/tos-cn-i-0813/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
 function contEl(){return document.querySelector('.cards');}
@@ -128,11 +184,13 @@ function setStatus(t,retry){var e=document.getElementById('loadStatus');if(!e)re
   if(retry){e.onclick=function(){loadMore&&loadMore();};}else{e.onclick=null;}}
 var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食教程",loading:false,done:false,seq:0,type:'general'};
 var SEARCH_TYPE='general';   /* dy 搜索页按 ?type= 覆写（R5B-P2-3 频道分流） */
+var SITE_KEY='douyin'; /* R11B-P3-5：显示层按站分流标记（fmt 整万 .0 形态） */
 
 var PS=20;
 function detailUrl(f){return '/video/'+enc(f.id);}
 var BRAND="抖音";
-function fields(a){return {id:a.aweme_id, title:a.desc||'(无描述)', like:a.statistics.digg_count, play:a.statistics.play_count, comment:a.statistics.comment_count, author:a.author&&a.author.nickname||'', sec:(a.author&&a.author.sec_uid)||'', sig:(a.author&&a.author.signature)||'', fans:(a.author&&a.author.follower_count)||0, verified:!!(a.author&&a.author.custom_verify), dur:a.video&&a.video.duration||0};}
+var PAGE_KIND="search";
+function fields(a){return {id:a.aweme_id, title:a.desc||'(无描述)', like:a.statistics.digg_count, play:a.statistics.play_count, comment:a.statistics.comment_count, ct:a.create_time||0, author:a.author&&a.author.nickname||'', sec:(a.author&&a.author.sec_uid)||'', sig:(a.author&&a.author.signature)||'', fans:(a.author&&a.author.follower_count)||0, verified:!!(a.author&&a.author.custom_verify), dur:a.video&&a.video.duration||0};}
 
 var SEARCH_TYPE=(function(){var q=new URLSearchParams(location.search).get('type');
   return ['general','video','user','live'].indexOf(q)>=0?q:'general';})();
@@ -194,28 +252,74 @@ function loadMore(){
     if(!more){setDone(true);setStatus('没有更多了');}
     else setStatus('');
   }).catch(function(e){if(myseq===state.seq)setStatus('加载失败，点击重试',true)})
-    .then(function(){if(myseq===state.seq)state.loading=false});
+    .then(function(){
+      if(myseq!==state.seq)return;
+      state.loading=false;
+      /* R7B-P3-2（兜底分支）：加载完成底部哨兵仍在视口且未翻尽 → 主动续拉
+         （短内容页哨兵恒可见场景；限 3 次防失控，scroll/哨兵交点事件复位）。 */
+      if(!state.done&&bottomSentinelVisible()&&_autoLoads<3){
+        _autoLoads++;
+        setTimeout(function(){
+          if(myseq===state.seq&&!state.loading&&!state.done)loadMore();
+        },60);
+      }
+    });
 }
 function doSearch(kw){
   state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:kw,loading:false,done:false,seq:(state.seq||0)+1,type:SEARCH_TYPE||'general'};
   document.title=TITLE_STATIC_JS;   /* R5B-P3-2 title 形态表：dy 静态、xhs/ks 关键词态 */
+  /* R11B-P3-4：xhs placeholder＝动态上次搜索词（语料 244/352 例）；R12A-P3-1：
+     SSR value 三站恒空——搜索页当前词由本运行时回填（DOM 层行为，与 wire 层口径分治） */
+  if(typeof SITE_KEY!=='undefined'&&SITE_KEY==='xhs'){
+    var _si=document.getElementById('searchInput');
+    if(_si){_si.setAttribute('placeholder',kw||'搜索小红书');
+      if(typeof PAGE_KIND!=='undefined'&&PAGE_KIND==='search'){_si.value=kw;}}
+  }
   setDone(false);
   var cont=contEl(); cont.innerHTML=''; cont.setAttribute('data-keyword',kw);
   loadMore();
 }
 /* 红队 R2-P2-6：滚动到底自动加载下一页（真站无限滚动；按钮保留兜底）。
    节流 1200ms + loading/done 守卫；仅视口接近底部时触发。 */
-var _scrollTick=0;
-window.addEventListener('scroll', function(){
+function nearBottom(){
   var doc=document.documentElement;
   var h=Math.max(doc.scrollHeight||0, document.body?document.body.scrollHeight||0:0);
-  if(!h) return;
-  if(window.scrollY + window.innerHeight <= h - 700) return;
+  return h>0 && (window.scrollY+window.innerHeight) > h-700;
+}
+function bottomSentinelVisible(){
+  var b=document.getElementById('loadMoreBtn2');
+  if(!b)return nearBottom();
+  var r=b.getBoundingClientRect();
+  return r.top < window.innerHeight + 400;   /* 底部工具条进入/接近视口 */
+}
+var _scrollTick=0;
+var _autoLoads=0;   /* R7B-P3-2：连续自动续拉计数（scroll/哨兵事件复位） */
+window.addEventListener('scroll', function(){
+  _autoLoads=0;
+  if(!nearBottom()) return;
   var now=Date.now();
   if(now-_scrollTick<1200) return;
   _scrollTick=now;
   loadMore();
 }, {passive:true});
+/* R7B-P3-2（主修复）：底部哨兵 IntersectionObserver——纯 scroll 监听+节流会吞掉
+   同位置重复跳底的恢复事件（本地响应 <50ms 使第二次跳底落在节流窗内；此后窗口
+   已在底部、scrollTo 同位置不再触发 scroll 事件），快滚/重复跳底翻页死锁。
+   哨兵交点事件不受 scroll 节流影响：每次程序化跳底（新内容使哨兵先离场、再入场）
+   都会触发一页续载。 */
+(function(){
+  if(!('IntersectionObserver' in window))return;
+  var sent=document.getElementById('loadMoreBtn2');
+  if(!sent)return;
+  var io=new IntersectionObserver(function(entries){
+    var vis=false;
+    entries.forEach(function(e){if(e.isIntersecting)vis=true;});
+    if(!vis)return;
+    _autoLoads=0;
+    loadMore();
+  },{rootMargin:'0px 0px 400px 0px'});
+  io.observe(sent);
+})();
 function initSearch(){
   var form=document.getElementById('searchForm');
   form.addEventListener('submit',function(ev){ev.preventDefault();
@@ -224,8 +328,53 @@ function initSearch(){
   document.querySelector('.search-button,button[data-e2e="searchbar-button"]').addEventListener('click',function(){
     var v=(document.getElementById('searchInput')||document.querySelector('input')).value.trim()||"美食教程";
     location.href='/search/'+enc(v)+'?type=general';});
-  var kw0=(function(){var q=new URLSearchParams(location.search);if(q.has('keyword'))return q.get('keyword');if(q.has('searchKey'))return q.get('searchKey');var m=location.pathname.match(/^\/(?:search|jingxuan\/search)\/(.+)$/);if(m){try{return decodeURIComponent(m[1])}catch(e){return m[1]}}return "美食教程";})();
+  var kw0=(function(){var q=new URLSearchParams(location.search);if(q.has('keyword'))return q.get('keyword');if(q.has('searchKey'))return q.get('searchKey');var m=location.pathname.match(/^\/(?:search|jingxuan\/search)\/(.+)$/);if(m){try{return decodeURIComponent(m[1])}catch(e){return m[1]}}var st=window.__INITIAL_STATE__;if(st&&st.keyword)return st.keyword;return "美食教程";})();
+  /* R7B-P3-3：SSR input value 恒空（R12A-P3-1）——运行时以实际词回填
+     （URL↔输入框↔列表一致）。R11B-P3-4：xhs 首页例外——语料首页输入框
+     value 恒空，不回填默认词。 */
+  var inp=document.getElementById('searchInput');
+  var _xhsHome=(typeof SITE_KEY!=='undefined'&&SITE_KEY==='xhs'
+    &&typeof PAGE_KIND!=='undefined'&&PAGE_KIND==='home');
+  if(inp&&inp.value!==kw0&&!_xhsHome)inp.value=kw0;
   doSearch(kw0);
+}
+
+/* R7B-P3-1：搜索框输入联想（语料 dy_search_suggest：逐字输入触发 suggest_words，
+   带 query 形态 data[0]=related_search 10 词） */
+function attachSuggest(){
+  var inp=document.getElementById('searchInput');
+  var bar=document.querySelector('.searchbar');
+  if(!inp||!bar)return;
+  var dd=el('div','search-suggest'); dd.id='searchSuggest'; dd.style.display='none';
+  bar.appendChild(dd);
+  var tm=null;
+  function hide(){dd.style.display='none';dd.innerHTML='';}
+  inp.addEventListener('input',function(){
+    var q=inp.value.trim();
+    if(tm)clearTimeout(tm);
+    if(!q){hide();return;}
+    tm=setTimeout(function(){
+      fetch('/aweme/v1/web/api/suggest_words/?query='+enc(q)
+        +'&count=9&business_id=30068&device_platform=webapp&aid=6383',
+        {headers:{'Accept':'application/json'}})
+        .then(function(r){return r.ok?r.json():null})
+        .then(function(j){
+          var ws=((j&&j.data&&j.data[0])||{}).words||[];
+          if(!ws.length||inp.value.trim()!==q)return;
+          dd.innerHTML='';
+          ws.forEach(function(w){
+            var t=el('div','sug-item',w.word||'');
+            t.addEventListener('mousedown',function(ev){ev.preventDefault();hide();
+              location.href='/search/'+enc(w.word)+'?type=general';});
+            dd.appendChild(t);
+          });
+          dd.style.display='block';
+        }).catch(function(){});
+    },300);
+  });
+  inp.addEventListener('keydown',function(ev){if(ev.key==='Escape')hide();});
+  document.addEventListener('click',function(ev){
+    if(ev.target!==inp&&!dd.contains(ev.target))hide();});
 }
 
 var TITLE_STATIC_JS="发现更多精彩视频 - 抖音搜索";
@@ -246,6 +395,13 @@ var TITLE_STATIC_JS="发现更多精彩视频 - 抖音搜索";
 function cardNode(f){
   var li=el('li','search-result-card'); li.setAttribute('data-id',f.id);
   var a=el('a','card-link'); a.href=detailUrl(f);
+  /* R10B-P3-2：综合搜索页/首页视频卡点击开新 tab（语料 dy_search_general
+     29/29 + dy_home_recommend 25/25 均为 target=_blank + rel=noopener）。
+     R11B-P3-1 勘误（语料 search-result-card 直接子锚逐元素精提 610/610）：
+     视频频道页（?type=video）卡同为 _blank（R10 缓释前提「频道卡无 target」
+     与语料相反）——三面统一 _blank */
+  if(typeof PAGE_KIND!=='undefined'&&(PAGE_KIND==='home'||PAGE_KIND==='search')){
+    a.target='_blank'; a.rel='noopener noreferrer';}
   var cov=el('div','cover');
   var img=new Image(); img.alt=f.title; img.loading='lazy';
   img.width=323; img.height=430;               /* R5B-P3-8：尺寸属性（CSS 仍控布局） */
@@ -254,11 +410,14 @@ function cardNode(f){
   if(f.dur>0){cov.appendChild(el('span','duration',fmtDur(f.dur)))}
   var info=el('div','card-info');
   info.appendChild(el('div','title',f.title));
-  var aw=el('div','author-wrapper'); aw.textContent=f.author; info.appendChild(aw);
+  /* R9B-P3-2：语料 dy 搜索卡 footer =「@作者 · N天前」（@ 前缀 + 相对发布时间） */
+  var aw=el('div','author-wrapper');
+  aw.textContent='@'+(f.author||'抖音用户')+((f.ct)?(' · '+relDay(f.ct)):'');
+  info.appendChild(aw);
   var m=el('div','metrics');
-  m.appendChild(el('span','like-count','赞 '+fmt(f.like)));
-  m.appendChild(el('span','play-count','播放 '+fmt(f.play)));
-  m.appendChild(el('span','comment-count','评 '+fmt(f.comment)));
+  var lk=el('span','like-count'); lk.appendChild(el('i','ic',''));
+  lk.appendChild(document.createTextNode(fmt(f.like)));
+  m.appendChild(lk);
   info.appendChild(m);
   a.appendChild(cov); a.appendChild(info); li.appendChild(a); return li;
 }
@@ -275,7 +434,7 @@ function userCardNode(f){
   box.appendChild(mt);
   a.appendChild(img); a.appendChild(box); li.appendChild(a); return li;
 }
-document.addEventListener('DOMContentLoaded', function(){ initSearch();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore; });
+document.addEventListener('DOMContentLoaded', function(){ initSearch();attachSuggest();document.getElementById('loadMoreBtn').onclick=loadMore;document.getElementById('loadMoreBtn2').onclick=loadMore; });
 </script>
 </body>
 </html>

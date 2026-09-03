@@ -46,12 +46,18 @@ def _cdn_code(rng) -> str:
 
 
 def _manifest(rng, duration_ms: int, w: int, h: int, h265: bool) -> dict:
-    """h265=True 生成精简镜像（真实接口 manifestH265 与 manifest 同构，此处按磁盘预算裁剪重复特征块）。
+    """h265=True 生成镜像（真实接口 manifestH265 与 manifest 同构：含 audioFeature/
+    videoFeature，此处按磁盘预算共用同一份特征生成器，仅裁剪 representation 重复块）。
 
     P2-4 修复：representation[] 补齐契约必填特征字段
     （comment / disableAdaptive / featureP2sp / kvqScore{FR,FRPost,NR,NRPost,nnvcScore[,blur,sharpness]}
     / makeupGain / normalizeGain / oriLoudness / p2spCode / realLoudness / realNormalizeGain），
     形态对齐契约实证与语料真值。
+
+    R6C-P3-4：深层元数据多样化（旧实现 oriLoudness/makeupGain/normalizeGain
+    恒 0.0、underExposed/overExposed/capSrc 缺失由模板静态值顶替 → 渲染输出
+    全库常量 unique=1；语料逐 photo 变化：underExposed 跨 5 个数量级
+    2.98e-9~3.25e-5、oriLoudness ∈ [-20.164, -11.954]）。
     """
     qt = ids.pick(rng, ["480p", "720p", "1080p"])
     ql = {"480p": "标清", "720p": "高清", "1080p": "超清"}[qt]
@@ -90,9 +96,10 @@ def _manifest(rng, duration_ms: int, w: int, h: int, h265: bool) -> dict:
         "disableAdaptive": False,
         "featureP2sp": False,
         "kvqScore": kvq,
-        "makeupGain": 0.0,
-        "normalizeGain": 0.0,
-        "oriLoudness": 0.0,
+        # R6C-P3-4：音量元数据按语料区间变化（旧恒 0.0 → unique=1）
+        "makeupGain": float(np.round(rng.uniform(0.0, 2.0), 3)),
+        "normalizeGain": float(np.round(rng.uniform(0.0, 3.0), 3)),
+        "oriLoudness": float(np.round(rng.uniform(-20.164, -11.954), 3)),
         "p2spCode": '{"fRsn":0,"fixOpt":-1,"schTask":"","schCode":-1,"schRes":"",'
                    '"pushTask":"v=0&p=0&s=0&d=0","pushCode":-1}',  # 契约实证常量形态（103 字符）
         "realLoudness": float(np.round(rng.uniform(-16.3, -9.0), 3)),
@@ -110,8 +117,6 @@ def _manifest(rng, duration_ms: int, w: int, h: int, h265: bool) -> dict:
         "version": "1.0.0",
         "videoId": ids.hex_id(rng, 16),
     }
-    if h265:
-        return out
     out["audioFeature"] = {
         "audioClip": round(float(rng.uniform(0.0, 0.01)), 4),
         "audioQuality": round(float(rng.uniform(60, 95)), 4),
@@ -122,15 +127,20 @@ def _manifest(rng, duration_ms: int, w: int, h: int, h265: bool) -> dict:
         "musicProbability": round(float(rng.uniform(0.1, 0.8)), 3),
         "stereophonicRichness": 100.0,
     }
+    # R6C-P3-4：曝光特征跨 5 个数量级（语料 2.98e-9 ~ 3.25e-5，log-uniform）
+    lo, hi = -8.53, -4.49   # log10(2.98e-9) ~ log10(3.25e-5)
     out["videoFeature"] = {
-        "avgEntropy": round(float(rng.uniform(4, 8)), 4),
+        "avgEntropy": round(float(rng.uniform(4, 14)), 4),
         "blockyProbability": float(rng.uniform(0, 0.001)),
         "blurProbability": float(rng.uniform(0, 0.001)),
         "contrast": round(float(rng.uniform(2, 5)), 4),
         "mosScore": round(float(rng.uniform(0.6, 0.95)), 6),
-        "yMean": round(float(rng.uniform(90, 140)), 3),
-        "yMeanMax": round(float(rng.uniform(120, 150)), 3),
-        "yMeanMin": round(float(rng.uniform(50, 110)), 3),
+        "yMean": round(float(rng.uniform(90, 180)), 3),
+        "yMeanMax": round(float(rng.uniform(120, 180)), 3),
+        "yMeanMin": round(float(rng.uniform(20, 110)), 3),
+        "underExposed": float(10 ** rng.uniform(lo, hi)),
+        "overExposed": float(10 ** rng.uniform(lo, hi)),
+        "capSrc": float(10 ** rng.uniform(lo, hi)),
     }
     return out
 
@@ -138,7 +148,11 @@ def _manifest(rng, duration_ms: int, w: int, h: int, h265: bool) -> dict:
 def build_record(rng: np.random.Generator, stats: dict, author: dict, ctx) -> dict:
     pools = ctx.pools
     title = ctx.make_title(rng, stats["category"])
+    title = (title + " " + ctx.title_emoji(rng, 0.04)).strip()   # R6A-P2-3：ks 语料 4.0% 标题 emoji
     tags = ctx.make_tags(rng, stats["category"], int(rng.integers(1, 5)))
+    act = ctx.pick_activity_tag(rng)   # R6A-P2-3③：平台活动 tag 尾缀簇
+    if act:
+        tags.append(act)
     caption = title + " " + "".join(f"#{t}" for t in tags)
     dcfg = ctx.sc["durations_ms"]
     duration = int(min(max(rng.lognormal(dcfg["mu"], dcfg["sigma"]), dcfg["min"]), dcfg["max"]))

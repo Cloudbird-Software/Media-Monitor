@@ -32,6 +32,77 @@ _LOOKBACK = 39      # 非对 slot 的新作者不得出现在最近 39 个 slot
 # 池内昵称唯一化的兜底后缀（组合空间足够大，仅极端撞车时启用）
 _NICK_FALLBACK = ["二号", "真身", "本尊", "Pro", "Plus", "日常版", "在线", "呀"]
 
+# ---------------------------------------------------------------------------
+# R6A-P2-3③：hashtag 池扩容（语料 dy 600 文本 1525 个不同 tag ≈2.5/文本、
+# ks 1080 个；旧池每类目仅 2-6 个 → 单位文本 tag 多样性低 ~8 倍）+
+# 平台活动/运营 tag（语料 top tag 为「抖音AI创作大赛/开放赛道/喜爱度激励计划/
+# 快成长计划」等活动运营族，旧池全缺，top 全是题材词）。
+# 扩容确定性：题材词 × 后缀 组合 + 类目词 × 后缀，按稳定顺序截断。
+# ---------------------------------------------------------------------------
+# R7A-P3-2：去掉「避雷/天花板」后缀（话题替换把 hashtag 注入评论文本，这两个
+# 网络用语后缀使 dy 评论网络用语密度 +1.1%，超出语料带 ±30%）
+_TAG_SUFFIXES = ["打卡", "日常", "合集", "攻略", "分享", "教程", "日记", "推荐",
+                 "记录", "测评", "清单", "上手", "vlog", "指南"]
+
+# 语料/任务线高频搜索词（关键词→类目命中供给：render 搜索相关性用）
+# R7A-P3-1：harness 关键词 ladder 14 词全部纳入映射（美食教程/沙雕日常/变美/手机摄影/
+# 蓝牙耳机测评/夜景人像/露营装备 原未映射——评测主词「美食教程」在 xhs 6 个、
+# ks 7 个任务的搜索面拿到的是全无关背景，严格命中 0.0 vs 真站 17-47%）；
+# 另并入红队探针词 赶海/汉服/汽车测评/母婴好物。
+_KEYWORD_TOPICS = {
+    "美食探店": ["美食探店", "美食教程", "咖啡拉花", "家常菜", "探店"],
+    "旅行": ["旅行攻略", "说走就走的旅行", "露营装备", "赶海"],
+    "穿搭": ["穿搭分享", "穿搭", "汉服"],
+    "美妆护肤": ["美妆教程", "护肤分享", "变美"],
+    "健身": ["健身打卡", "健身"],
+    "萌宠": ["萌宠日常"],
+    "数码科技": ["数码测评", "数码好物", "手机摄影", "夜景人像",
+                 "蓝牙耳机测评", "汽车测评"],
+    "家居装修": ["家居好物", "家居"],
+    "职场": ["职场干货"],
+    "学习干货": ["学习方法"],
+    "搞笑剧情": ["搞笑视频", "沙雕日常"],
+    "母婴育儿": ["育儿日常", "母婴好物"],
+}
+
+# 平台活动/运营 tag（按语料话题池形态造；标题 tag 尾缀簇）
+_ACTIVITY_TAGS = {
+    "douyin": ["抖音AI创作大赛", "开放赛道", "喜爱度激励计划", "快成长计划",
+               "全民任务", "春日灵感计划", "抖音小助手", "创作灵感", "上热门",
+               "每日打卡挑战", "新人报道", "Dou来上新菜"],
+    "kuaishou": ["光合计划", "快手创作者中心", "万能生活指南", "快手小剧场",
+                 "磁力万象", "快手百分百", "老铁共创计划", "村口大舞台",
+                 "每日一更", "快手美食季", "人间烟火气", "家乡好物"],
+    "xhs": [],   # xhs 无 hashtag 池（笔记标题形态，语料未捕获 tag 尾缀簇）
+}
+_ACTIVITY_TAG_FRAC = 0.30   # 每条记录附带 1 个活动 tag 的概率（语料 top tag ≈7%/tag）
+
+# 标题 unicode emoji（R6A-P2-3：dy desc 8.8% / ks caption 4.0% 含 emoji，
+# 语料样例「乡村厨房🏠…🍳」；xhs 标题 emoji 已由模板自带 42.5%）
+_TITLE_EMOJI = ["🏠", "🍳", "✨", "🔥", "😍", "😭", "🥹", "🐶", "🐱", "🌈",
+                "🍜", "⛰️", "📸", "💪", "🌞", "🍂", "🧋", "🎒", "🎣", "灶"]
+
+
+def _expand_tag_pool(base: list, topics: list, cat: str) -> list:
+    """类目 tag 池扩容：base ∪ 关键词供给 ∪ 题材×后缀 ∪ 类目词×后缀（确定性）。"""
+    out, seen = [], set()
+
+    def add(t: str):
+        if t and t not in seen:
+            seen.add(t)
+            out.append(t)
+
+    for t in base:
+        add(t)
+    for t in _KEYWORD_TOPICS.get(cat, []):
+        add(t)
+    for topic in topics:
+        for suf in _TAG_SUFFIXES:
+            add(topic + suf)
+    for suf in _TAG_SUFFIXES:
+        add(cat + suf)
+    return out[:52]   # 每类目 ~50（旧 2-6 → 8 倍以上）
+
 
 def _stable_hash(s: str) -> int:
     return int.from_bytes(hashlib.blake2b(s.encode("utf-8"), digest_size=8).digest(), "big")
@@ -53,6 +124,7 @@ class SiteContext:
         self.categories = categories
         self.engine = DistEngine(dist_cfg, site, site_code, seed, categories)
         self.sc = dist_cfg["sites"][site]
+        self._expand_pools_r6a()
         self._build_author_pool()
         self._build_title_cums()
         # 窗口调度状态（顺序生成时确定性演进 → 同种子逐字节可复现）
@@ -61,6 +133,38 @@ class SiteContext:
         self._slot = 0
         self._last_j = 0
         self._emitted: list = []   # 已落盘记录的作者池下标（评论者实体可回查用）
+
+    # ---------- R6A-P2-3：池扩容（hashtag ×8+ / 活动 tag / 关键词供给） ----------
+    def _expand_pools_r6a(self):
+        p = self.pools
+        # 话题池补关键词供给（搜索严格命中的标题供给，render 相关性采样用）
+        for cat, words in _KEYWORD_TOPICS.items():
+            lst = p["topics"].get(cat)
+            if lst is None:
+                continue
+            for w in words:
+                if w not in lst and w not in (p.get("hashtags") or p.get("tags_pool") or {}).get(cat, []):
+                    lst.append(w)
+        # hashtag/tags_pool 每类目扩到 ~50
+        key = "hashtags" if "hashtags" in p else ("tags_pool" if "tags_pool" in p else None)
+        if key is not None:
+            for cat in list(p[key]):
+                p[key][cat] = _expand_tag_pool(p[key][cat], p["topics"].get(cat, []), cat)
+        self.activity_tags = list(_ACTIVITY_TAGS.get(self.site, []))
+
+    def pick_activity_tag(self, rng: np.random.Generator) -> str | None:
+        """平台活动 tag（R6A-P2-3③）：每条记录 ~30% 附 1 个（语料 top tag 形态）。"""
+        pool = getattr(self, "activity_tags", None) or _ACTIVITY_TAGS.get(self.site) or []
+        if not pool or rng.random() >= _ACTIVITY_TAG_FRAC:
+            return None
+        return ids.pick(rng, pool)
+
+    def title_emoji(self, rng: np.random.Generator, rate: float) -> str:
+        """标题 unicode emoji 后缀（R6A-P2-3：dy 8.8% / ks 4.0% 语料率）。"""
+        if rate <= 0 or rng.random() >= rate:
+            return ""
+        e = ids.pick(rng, _TITLE_EMOJI)
+        return e + (ids.pick(rng, _TITLE_EMOJI) if rng.random() < 0.25 else "")
 
     # ---------- 作者池 ----------
     def _build_author_pool(self):

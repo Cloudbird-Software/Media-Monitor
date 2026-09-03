@@ -8,7 +8,7 @@
     "high_collect_low_like": 0.01,
     "high_like_low_view": 0.02,
     "low_like_high_view": 0.015,
-    "new_hot": 0.01,
+    "new_hot": 0.02,
     "old_hot": 0.01
   },
   "anomaly_class_names_zh": {
@@ -26,29 +26,38 @@
     "high_collect_low_like": 2,
     "high_like_low_view": 8,
     "low_like_high_view": 3,
-    "new_hot": 3,
-    "normal": 282,
-    "old_hot": 2
+    "new_hot": 5,
+    "normal": 281,
+    "old_hot": 1
   },
   "target_fractions": {
     "high_collect_low_like": 0.01,
     "high_like_low_view": 0.02,
     "low_like_high_view": 0.015,
-    "new_hot": 0.01,
-    "normal": 0.935,
+    "new_hot": 0.02,
+    "normal": 0.925,
     "old_hot": 0.01
   },
-  "generated_at_utc": "2026-09-02T20:10:10Z",
+  "generated_at_utc": "2026-09-03T20:45:01Z",
   "distribution_config": {
     "meta": {
       "anchor_time": "2026-09-01T12:00:00+08:00",
-      "version": 1
+      "version": 2
     },
     "time": {
       "powerlaw": {
-        "scale_days": 2.0,
+        "scale_days": 12.0,
         "shape": 1.35,
         "max_age_days": 730
+      },
+      "mixture": {
+        "fresh_frac": 0.3,
+        "fresh_cap_days": 30,
+        "old_lo_days": 45
+      },
+      "rhythm": {
+        "enabled": true,
+        "weekday_flatten_min_day": 1
       }
     },
     "defaults": {
@@ -95,7 +104,7 @@
         ]
       },
       "new_hot": {
-        "frac": 0.01,
+        "frac": 0.02,
         "max_age_hours": 48,
         "view_mult": [
           1.5,
@@ -133,13 +142,35 @@
     "sites": {
       "douyin": {
         "view": {
-          "mu": 10.82,
-          "sigma": 1.4,
+          "mu": 11.4,
+          "sigma": 2.05,
           "min": 200
         },
         "like": {
           "beta_a": 5.0,
           "beta_b": 70.0
+        },
+        "ratios": {
+          "comment": {
+            "beta_a": 2.0,
+            "beta_b": 40.0,
+            "cap_like_frac": 0.3,
+            "tail": {
+              "frac": 0.12,
+              "lo": 0.6,
+              "hi": 1.0
+            }
+          },
+          "collect": {
+            "beta_a": 3.0,
+            "beta_b": 15.0,
+            "cap_like_frac": 1.5,
+            "tail": {
+              "frac": 0.15,
+              "lo": 0.37,
+              "hi": 1.0
+            }
+          }
         },
         "author_pool": 30000,
         "author_works": {
@@ -148,14 +179,14 @@
           "share_cap": 0.016
         },
         "follower": {
-          "mu": 8.5,
-          "sigma": 1.8,
+          "mu": 10.2,
+          "sigma": 2.9,
           "min": 0
         },
         "durations_ms": {
-          "mu": 4.8,
-          "sigma": 0.45,
-          "min": 5000,
+          "mu": 10.24,
+          "sigma": 0.6,
+          "min": 3000,
           "max": 600000
         }
       },
@@ -171,8 +202,8 @@
         },
         "ratios": {
           "collect": {
-            "beta_a": 4.0,
-            "beta_b": 10.0,
+            "beta_a": 5.0,
+            "beta_b": 4.0,
             "cap_like_frac": 2.5
           }
         },
@@ -199,13 +230,13 @@
       },
       "kuaishou": {
         "view": {
-          "mu": 9.9,
-          "sigma": 1.35,
-          "min": 100
+          "mu": 13.45,
+          "sigma": 1.45,
+          "min": 20000
         },
         "like": {
-          "beta_a": 6.0,
-          "beta_b": 65.0
+          "beta_a": 2.2,
+          "beta_b": 150.0
         },
         "author_pool": 30000,
         "author_works": {
@@ -219,10 +250,10 @@
           "min": 0
         },
         "durations_ms": {
-          "mu": 5.0,
-          "sigma": 0.5,
-          "min": 5000,
-          "max": 900000
+          "mu": 11.08,
+          "sigma": 0.9,
+          "min": 3000,
+          "max": 2700000
         }
       }
     }
@@ -231,8 +262,8 @@
     "jsonl": {
       "name": "feed.jsonl",
       "lines": 300,
-      "bytes": 1253072,
-      "sha256": "97287c36c7cc008663a4cc6180f06fd1b0f62ddc8ce0a25c3a0b7aff2051628f"
+      "bytes": 1476858,
+      "sha256": "bf11dedd9e1c8fa06126c090b5d3f43166b3ec8c1709debb5fcd7e116635d45f"
     },
     "ground_truth_db": {
       "name": "ground_truth.db"

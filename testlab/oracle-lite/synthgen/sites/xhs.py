@@ -15,7 +15,7 @@ import numpy as np
 
 from synthgen import commentext
 from synthgen import ids
-from synthgen.distengine import clamp_comment
+from synthgen.distengine import clamp_comment, comment_delay_seconds
 
 ENTITY = "note"
 CONTRACT_ENDPOINTS = {
@@ -23,6 +23,32 @@ CONTRACT_ENDPOINTS = {
     "comment": "edith.xiaohongshu.com_api_sns_web_v2_comment_page",
 }
 CONTRACT_CORE_PATH = "$.data.items[].note_card"
+
+# R6A-P2-3①：xhs 站内表情为 [xxR] 文本形态（语料标题/评论高频），
+# 标题附率 ~30%
+_XHS_TITLE_EMOJI = ["[笑哭R]", "[捂脸R]", "[赞R]", "[哭惹R]", "[害羞R]",
+                    "[偷笑R]", "[飞吻R]", "[买爆R]", "[扶墙R]", "[派对R]",
+                    "[汗颜R]", "[萌萌哒R]", "[色色R]", "[哇哦R]", "[抱抱R]",
+                    "[斜眼R]", "[皱眉R]", "[失望R]"]
+
+# R7A-P3-3：xhs @提及出现率（语料顶层评论 @ 3.2%、at_users 非空 4.6%——提及列表
+# 与正文 @ 配套；子评论 ~2%）。形态「@昵称 正文」+ at_users[{user_id,nickname,
+# ai_agent,xsec_token}]（语料/模板实证）。
+_XHS_AT_PROB = 0.032
+_XHS_SUB_AT_PROB = 0.02
+
+
+def _at_inject(rng: np.random.Generator, content: str, target_user: dict,
+               prob: float = _XHS_AT_PROB):
+    """按概率注入 @提及：返回 (content, at_users)。target_user 需含 nickname。"""
+    if not target_user or not target_user.get("nickname") or rng.random() >= prob:
+        return content, []
+    return ("@%s %s" % (target_user["nickname"], content), [{
+        "user_id": target_user.get("user_id") or "",
+        "nickname": target_user.get("nickname") or "",
+        "ai_agent": False,
+        "xsec_token": ids.xhs_xsec_token(rng),
+    }])
 
 REQUIRED_FIELDS = [
     "id", "model_type", "xsec_token",
@@ -110,14 +136,16 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
         return [], label
     comments = []
     note_dt = stats["publish_ts"]
-    # 评论时间窗：发布后 [~2min, min(14d, 距 anchor)]（R2-P2-3：评论晚于发布）
-    span_s = max(120.0, min(14.0 * 86400, ctx.engine.anchor - note_dt - 60))
+    # R6A-P2-2：评论延迟改重尾混合（语料 p50≈8 天、22%>1 月；旧实现
+    # 「发布后 [~2min, min(14d, 年龄)] 均匀」→ p50≈1.5h、0%>1 周的即时爆发形态）
     for i in range(k):
         # R5A-P1-2：评论文本模板×槽位组合生成（同笔记 seq 双射 → 内嵌+渲染层合成
         # 共享同一 (salt=note_id, seq) 空间，单笔记窗口内 0 完全重复，语料唯一率 98%）
         content = commentext.comment_text("xhs", i, note_id, topic=stats.get("category"))
         c_user = _comment_user(rng, ctx)
-        created = int((note_dt + rng.uniform(0.02, 1.0) * span_s) * 1000)
+        # R7A-P3-3：@提及（指向同内容评论者，语料「@昵称 正文」+ at_users 配套）
+        content, at_users = _at_inject(rng, content, ctx.pick_commenter(rng))
+        created = int((note_dt + comment_delay_seconds(rng)) * 1000)
         created = min(created, ctx.engine.anchor * 1000)
         cid = ids.xhs_ts_hex_id(rng, created // 1000)
         # 评论点赞：首条热度显著高于其余（真站头部评论形态；保证 top 唯一可辨）
@@ -129,20 +157,22 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
         for _ in range(n_subs):
             s_user = _comment_user(rng, ctx)
             sub_created = min(int((created / 1000 + rng.uniform(0.01, 5) * 86400) * 1000), ctx.engine.anchor * 1000)
+            sub_content, sub_at_users = _at_inject(rng, commentext.comment_text(
+                "xhs", 0, "sub::%s::%s" % (note_id, cid), topic=stats.get("category")),
+                c_user, prob=_XHS_SUB_AT_PROB)
             sub_comments.append({
                 "id": ids.xhs_ts_hex_id(rng, sub_created // 1000),
                 "note_id": note_id,
                 # R5A-P1-2：子评论同引擎（salt=根评论命名空间，内嵌 seq=0 与渲染层
                 # sub/page 合成 seq≥1 同空间，根评论内 0 重复）
-                "content": commentext.comment_text(
-                    "xhs", 0, "sub::%s::%s" % (note_id, cid), topic=stats.get("category")),
+                "content": sub_content,
                 "create_time": sub_created,
                 "like_count": str(int(rng.integers(0, max(2, like_count)))),
                 "liked": False,
                 "invalid": False,
                 "ip_location": ids.pick(rng, pools["ip_locations"]),
                 "pictures": [],
-                "at_users": [],
+                "at_users": sub_at_users,
                 "show_tags": [],
                 "status": 0,
                 "user_info": s_user,
@@ -170,7 +200,7 @@ def build_comments(rng, stats, ctx, note_id: str) -> tuple[list[dict], int]:
             "invalid": False,
             "ip_location": ids.pick(rng, pools["ip_locations"]),
             "pictures": pictures,
-            "at_users": [],
+            "at_users": at_users,
             "show_tags": [],
             "status": 0,
             "sub_comment_count": str(len(sub_comments) + (int(rng.integers(1, 40)) if sub_comments else 0)),
@@ -188,6 +218,9 @@ def build_record(rng: np.random.Generator, stats: dict, author: dict, ctx) -> di
     title = ctx.make_title(rng, stats["category"])
     if rng.random() < 0.02:
         title = ""  # 契约实证：display_title 约 2% 为空串
+    elif rng.random() < 0.30:
+        # R6A-P2-3①：xhs 站内表情 [xxR] 文本形态（语料标题高频形态）
+        title = title + ids.pick(rng, _XHS_TITLE_EMOJI)
     imgcfg = ctx.sc.get("images_per_note", {"min": 1, "max": 6})
     n_images = int(np.clip(int(rng.poisson(1.9)) + 1, imgcfg["min"], imgcfg["max"]))
     # R2-P2-2：note_id 真站结构 hex(publish_ts)+00000000+hex8（语料 738/738 mid-8-zero）

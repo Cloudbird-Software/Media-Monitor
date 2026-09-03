@@ -51,6 +51,53 @@ build_pages.py 生成的三站合成站页面骨架。全部监听 127.0.0.1，�
     不再附 Vary:Origin/Cache-Control:no-store（dy 压缩响应按语料回
     Vary: Accept-Encoding）、xhs 同源 OPTIONS 200+ACAM 五方法、ks pcursor=
     "no_more" 回传不回绕。
+红队第 6 轮修复（R6A/R6B/R6C，服务线）：
+  - R5A-P2-3：ks GraphQL commentListQuery 的 visionCommentList 结构对齐契约/语料
+    （补 __typename/rootCommentsV2/pcursorV2 键；续页游标从 pcursor 移到 pcursorV2，
+    pcursor 恒 null——28/28 语料样本实证）；
+  - R6C-P3-1：空关键词/缺 keyword/BOM body 三站统一 H10 空态族（dy data=[]、
+    xhs 无 items 键、ks feeds=[]+no_more；xhs 语料 37/37 空关键词实证）；
+  - R6C-P3-2：ks llsid 每请求唯一（search/feed 与 graphql 信封，secrets 重掷）；
+  - R6C-P3-3：listen backlog 512（SynthHTTPServer.request_queue_size，50 并发 0 拒连）；
+  - R6B-P3-2：xhs /search_result SSR title 按关键词/笔记实体注入（模态态页面 JS 同口径）；
+  - R6A C-2：补 12 个契约差集端点（dy suggest_words/emoji/list/mix/series/multi/
+    profile/self + xhs search/recommend|filter|onebox、homefeed/category、feed、
+    v2/widgets——形态按 contracts + 语料实响应体，静态站常量在
+    fixtures/round6_static_payloads.json，数据面从数据集确定性派生）。
+红队第 7 轮修复（R7B/R7C，服务/页面收口轮）：
+  - R7C-P2-1：dy suggest_words 带 query 形态对齐语料（40/40）——source/type=
+    related_search、10 词、词面从关键词→类目映射派生（与 query 强相关）、
+    channel_id=94349538563、extra.time_cost 9 键非空；无 query 保持 inbox 9 词；
+  - R7C-P3-1：emoji uri / widgets icon 弃 %032x（64 位哈希恒 16 前导零）——emoji
+    改双段稠密 32-hex，widgets icon 静态化语料常量路径段（本机同源前缀）；
+  - R7C-P3-2：xhs search/recommend 后缀池按关键词类目分池、首词恒为扩展词
+    （去空后缀裸词）、highlight_flags 前 len(kw) 位 true；
+  - R7C-P3-3：dy 新 5 端点（suggest/mix/multi/series/profile_self）CT 去 charset；
+  - R7C-P3-4：ks 站响应补 Connection: keep-alive（语料 903/903；dy/xhs 走 h2 不补）；
+  - R7C-P3-5：send_error 站点化——未知方法/畸形请求行不再落 CPython 默认英文页
+    （API 前缀回站点 JSON 族、其余回站点 404 页形态；单词请求行强制 HTTP/1.1
+    状态行 400）；
+  - R7B-P3-3：/search_result/<id> 直开 SSR 注入按笔记派生的背景列表词
+    （state.keyword，页面 INIT_KW 以 URL 参数优先）。
+红队第 8 轮修复（R8A/R8C，服务/数据合并小修）：
+  - R8C-P3-1：JSON 序列化全面紧凑化——_json/_jsonld/SSR state 注入/send_error 体
+    统一 separators=(",",":")（语料主域 API 体 7,580/7,580 无空格分隔）；
+  - R8C-P3-6：头部级畸形前置 400（parse_request 校验：TE+CL 共存 / HTTP/1.1 缺
+    Host / 头行缺冒号——email 解析 defect 检测，过时折行不受影响）；
+  - R8C-P3-2：ks profile/feed 信封并入 search/feed 同款（host-name/llsid 重掷/
+    webPageArea + feeds 内 comment.us_c/danmakuSwitch/photo.profileUserTopPhoto）；
+  - R8C-P3-5：xhs v1/feed note_card 改详情流上下文模板（render_xhs_feed_note_card）；
+  - R8A-P2-1（render 侧）：ks 评论 id/游标掺 photo_id 种子（跨照片全局唯一）。
+红队第 10 轮修复（R10A/R10C，服务线序列化/读体收口）：
+  - R10A-P3-1：序列化出口转义表——dy 全 JSON 面 &<> / U+2028 → 反斜杠uXXXX（语料
+    204 体 raw&=0）、ks REST /rest/v/* emoji → UTF-16 代理对（\\ud83d\\udcXX 形态）；
+    xhs/ks-graphql 保持原生（wire_json_escape，解析后完全等价）；
+  - R10A-P3-4：媒体 URL 按次签发盐——dy 封面/头像签名 query 段掺 (端点,url)
+    派生（同端点恒同串、跨端点必异；media_url_pass(salt=)）；
+  - R10C-P3-1：单头逗号同值 CL（7,7）按单值受理；读体 ValueError 兜底进站点
+    400 族（不再零响应直断）；
+  - R10C-P3-2：GET/HEAD 携带 CL/chunked body 时排空再复用连接（_drain_
+    request_body，keep-alive 零污染，后续请求不再被残留字节打成 501）。
 用户增强端点（Media-Monitor adapt_synth 契约）：dy /aweme/v1/web/user/profile/other
   兼容 sec_uid 调用形 + user_list 绑定（语料原调用形不变）；ks /api/user/info
   （sec_uid → $.user_list）。xhs /comment/sub/page 主参数 root_comment_id（语料 64/64），
@@ -65,9 +112,13 @@ build_pages.py 生成的三站合成站页面骨架。全部监听 127.0.0.1，�
 keyword 轮转：render_page 的数据窗口按 (site, keyword) 稳定哈希整体平移
 （窗口页数自适应：min(400, 数据集页数)），保证「换关键词 → 结果集确实刷新」，
 同时保持确定性——e2e 用同一公式即可核对「页面数据 == synthgen 数据集」。
+完整 oracle 数据集 ≥8 万条/站，固定 400 页（8000 条）窗口永不出界；迷你
+数据集（300 条/站 → 15 页）用同公式缩模数，确定性不变（模数由数据集
+记录数唯一确定）。
 
-运行（任意含 numpy 的 Python 3.11+）：
-  python synth_api.py --site all
+运行（主 venv，synthgen 依赖 numpy）：
+  D:/Projects/temp2/oracle/env/Scripts/python.exe synth_api.py \
+      --site all --base-port 8661 [--also-bind 8551,8552,8553]
 """
 from __future__ import annotations
 
@@ -85,8 +136,8 @@ from pathlib import Path
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 _HERE = Path(__file__).resolve().parent
-# oracle-lite：自包含打包——synthgen 包与数据集都在本目录内（_HERE 即包根），
-# 不依赖 oracle 全库（原始版本 _ORACLE_ROOT 指向 oracle/ 顶层）。
+# oracle-lite：自包含打包——synthgen 包/数据集/页面/fixtures 都在本目录内
+# （_HERE 即包根），不依赖 oracle 全库（原始版本 _ORACLE_ROOT 指向 oracle/ 顶层）。
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
@@ -110,6 +161,278 @@ XHS_PAGE_SIZE_MAX = 20  # xhs search page_size 语料实证上限（37/37 请求
 
 def stable_hash(s: str) -> int:
     return int.from_bytes(hashlib.blake2b(s.encode("utf-8"), digest_size=8).digest(), "big")
+
+
+# ---------------------------------------------------------------------------
+# 红队 R9A-P3-1：媒体 URL 值形态规整（响应序列化前统一过一遍）
+#
+# 数据集侧（pools.py/sites/*.py，R2~R6 生成）的 URL 每表面用单一简化模板：
+# dy avatar 69 位 base62 无扩展名、cover 两段随机、play 无 query；xhs avatar
+# 24 位随机、webpic 10hex/5hex 前缀；ks uhead/upic 无 B<base64> 文件名、djvod
+# 域错拼 ndcimg.com（语料 ndcimgs.com）且主机名可含 "_"（DNS 非法字符，语料
+# 0/21,628）。语料真值（21,628 URL 实测）：dy avatar tos-cn-avt-%04d_<32hex>.jpeg
+# ?from=、cover image-cut-tos-priv/<32hex>~tplv-*.jpeg?lk3s=…、play 15c000-ce 段
+# + 全带 query；xhs avatar 1040g<39> 族、webpic <12位时间戳>/<32hex>/notes_pre_post/
+# <44字符>!nc_n_webp_mw_1；ks uhead/upic B<base64>_…(.jpg|.mp4)?tag=1-…&clientCacheKey=…。
+#
+# 修法取显示/传输层派生（不动数据集，避免重建级联）：_json/_serve_state_page
+# 序列化前对响应树做确定性改写——仅命中上述「合成简化形」的 URL 被改写为语料
+# 模板形态（按 URL 字符串稳定 hash 派生各段，同一 URL 两次渲染逐字节一致；
+# 语料/模板自带的正确形态 URL 不满足任何规则，原样通过）。与 R7C-P3-1 emoji
+# URI 模板池同法。
+# ---------------------------------------------------------------------------
+def _url_hex(url: str, n: int, salt: str = "") -> str:
+    return hashlib.md5(("%s\x00%s" % (salt, url)).encode("utf-8")).hexdigest()[:n]
+
+
+_URL_LOWER = "abcdefghijklmnopqrstuvwxyz0123456789"
+
+
+def _url_tok(url: str, n: int, salt: str = "", alpha: str = _URL_LOWER) -> str:
+    d = hashlib.sha256(("%s\x00%s" % (salt, url)).encode("utf-8")).digest()
+    return "".join(alpha[b % len(alpha)] for b in (d * 4)[:n])
+
+
+def _url_digits(url: str, n: int, salt: str = "", no_leading_zero: bool = False) -> str:
+    d = hashlib.sha256(("%s\x00%s" % (salt, url)).encode("utf-8")).digest()
+    out = [str(b % 10) for b in (d * 4)[:n]]
+    if no_leading_zero and out and out[0] == "0":
+        out[0] = "1"
+    return "".join(out)
+
+
+_MU_DY_AVATAR_RX = re.compile(
+    r"^(https://p\d+(?:-pc)?\.douyinpic\.com)/(aweme/\d+x\d+|img)/aweme-avatar/([^/?]+)$")
+# pc-sign 全量规整：数据集简化形（两段随机）与模板 scramble 形（字符类保持但
+# 模板词元被扰动，如 ~tplv-→~tpyg-）都不再命中任何语料封面模板——统一改写为
+# 语料 image-cut-tos-priv 模板（响应内不存在逐字节语料封面值：模板 URL 叶子
+# 恒经 _scramble_url，数据集值为简化形，见上注）。
+_MU_DY_COVER_RX = re.compile(r"^https://p\d+-pc-sign\.douyinpic\.com/.+$")
+# douyinvod：无 query 的数据集简化形 + 首段非 32hex 的 scramble 形都改写；
+# 语料模板形（32hex/8hex/video/tos/cn/…，含 media-audio-und-mp4a 音频族）原样。
+_MU_DY_PLAY_RX = re.compile(r"^(https://v\d+-weba?\.douyinvod\.com)/([^/?]+)(/.*)?$")
+_MU_XHS_AVATAR_RX = re.compile(
+    r"^https://sns-avatar-qc\.xhscdn\.com/avatar/[A-Za-z0-9\-_]{24}$")
+_MU_XHS_WEBPIC_RX = re.compile(
+    r"^(https?://sns-webpic-qc\.xhscdn\.com)/[0-9a-f]{10}/[0-9a-f]{5}/((?:[^/?]+/)*[^/?]+)$")
+_MU_KS_UHEAD_RX = re.compile(
+    r"^(https?://p[\da-z]+\.a\.(?:kwimgs|yximgs)\.com)/uhead/([0-9A-Fa-f]{2})/"
+    r"(\d{4})/(\d{2})/(\d{2})/(\d{2})/[A-Za-z0-9\-_]+$")
+_MU_KS_UPIC_RX = re.compile(
+    r"^(https?://p[\da-z]+\.a\.yximgs\.com)/upic/(\d{4})/(\d{2})/(\d{2})/(\d{2})/"
+    r"[A-Za-z0-9\-_]+$")
+_MU_KS_DJVOD_RX = re.compile(r"^(https?://)([A-Za-z0-9\-_]+)\.djvod\.ndcimg\.com(/.*)$")
+
+_DY_COVER_TPLVS = ("tsj2vxp0zn-gaosi:40", "dy-360p", "dy-resize-origshort-autoq-75:330")
+
+
+def _dy_pack_source(salt: str) -> str:
+    """dy s=PackSourceEnum_* 端点谱（红队 R11A-P3-4，按语料全量分面真值）。
+
+    旧版按「路径含 /search/」二值化 {SEARCH, AWEME_DETAIL}，外推到 related/post/
+    mix/series 与 search/item 五个未验证面时与语料相反/缺值。语料真值（B6 分面）：
+    search(general) SEARCH 12,847 dominant；detail AWEME_DETAIL 4,940；related
+    WEBPC_RELATED_AWEME 3,286（AWEME_DETAIL 0 例）；post PUBLISH 8,428；
+    mix MIX_AWEME 108；series SERIES_AWEME 2,048。SSR/未知面维持 AWEME_DETAIL。"""
+    p = salt.split("?", 1)[0]
+    if "/related" in p:
+        return "WEBPC_RELATED_AWEME"
+    if "/aweme/post" in p:
+        return "PUBLISH"
+    if "/mix/aweme" in p:
+        return "MIX_AWEME"
+    if "/series/aweme" in p:
+        return "SERIES_AWEME"
+    if "/search/" in p:
+        return "SEARCH"
+    return "AWEME_DETAIL"
+
+
+def _mu_rewrite(url: str, salt: str = "") -> str:
+    """单条 URL → 语料模板形态（不命中任何合成简化形则原样返回）。
+
+    salt（R10A-P3-4）：端点级「按次签发」盐。真站签名 CDN URL 按次签发、跨
+    端点永不复用同串（语料 search∩detail 同 aweme：封面 url_list 50/50 全不
+    相交——42/50 仅签名 query 不同、头像 avatar_thumb 50/50 全不同）。路径段
+    （对象身份 32hex 等）仍按 URL 稳定派生（语料 42/50 path 相同），仅签名
+    query 段掺 (salt,url) 派生——同端点重复请求恒同串（R9A A3c 确定性保持），
+    跨端点必异串。dy avatar 的 query 参数集按端点语义分化：card 形态仅
+    search(general) 面（语料 191 例），search/item 视频频道面 294/294 裸
+    from=（R11A-P3-4 勘误）；s= 族按 _dy_pack_source 端点谱（R11A-P3-4）。
+    """
+    m = _MU_DY_AVATAR_RX.match(url)
+    if m:
+        # 语料形态：…/aweme/100x100/aweme-avatar/tos-cn-avt-0015_<32hex>.jpeg?from=<digits>
+        # （搜索卡上下文额外带 card_type=153&column_n=0，语料 191 例实证；
+        # R11A-P3-4：仅 search(general)——search/item 视频频道面 294/294 裸 from）
+        h = stable_hash("mu-avt::%s\x00%s" % (salt, url))
+        frm = (("2064092626", "3782654143", "2956013662")[(h >> 4) % 3]
+               if h % 16 == 0 else "327834062")  # 语料 from 值池（327834062 占 96%）
+        _p = salt.split("?", 1)[0]
+        q = ("card_type=153&column_n=0&from=%s"
+             if "/search/" in _p and "/search/item" not in _p else "from=%s") % frm
+        return "%s/%s/aweme-avatar/tos-cn-avt-0015_%s.jpeg?%s" % (
+            m.group(1), m.group(2), _url_hex(url, 32, "dy-avt"), q)
+    if _MU_DY_COVER_RX.match(url):
+        # 语料形态：image-cut-tos-priv/<32hex>~tplv-<模板>.jpeg?lk3s=…&x-expires=…
+        # &x-signature=<b64>%3D&from=…&s=PackSourceEnum_…
+        tplv = _DY_COVER_TPLVS[stable_hash("mu-cov::%s" % url) % len(_DY_COVER_TPLVS)]
+        sig = "%s\x00%s" % (salt, url)
+        return ("https://p%d-pc-sign.douyinpic.com/image-cut-tos-priv/%s~tplv-%s.jpeg"
+                "?lk3s=138a59ce&x-expires=%s&x-signature=%s%%3D&from=327834062"
+                "&s=PackSourceEnum_%s&se=false&sc=cover&biz_tag=aweme_search"
+                % (3 + stable_hash("mu-covh::%s" % url) % 7, _url_hex(url, 32, "dy-cov"),
+                   tplv, 1788278463 + stable_hash("mu-covx::%s" % sig) % 10**7,
+                   _url_tok(sig, 27, "dy-covsig",
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+                   _dy_pack_source(salt)))
+    m = _MU_DY_PLAY_RX.match(url)
+    if m and ("?" not in url or not re.match(r"^[0-9a-f]{32}$", m.group(2))):
+        # 语料形态：/<32hex>/<8hex>/video/tos/cn/tos-cn-ve-15c000-ce/<16+alnum>/
+        # ?a=6383&ch=…&cr=3&…（语料 play URL 100% 带 query）
+        br = 700 + stable_hash("mu-br::%s" % url) % 3400
+        return ("%s/%s/%s/video/tos/cn/tos-cn-ve-15c000-ce/%s/?a=6383&ch=%d&cr=3&dr=0"
+                "&lr=all&cd=0%%7C0%%7C0%%7C3&cv=1&br=%d&bt=%d&cs=%d&ds=3"
+                "&ft=AJkekFlZ8XBQ2%%3D&bfs=%d&drs=1&tk=%s&e=video_ts"
+                % (m.group(1), _url_hex(url, 32, "dy-play"), _url_hex(url, 8, "dy-play2"),
+                   _url_tok(url, 20, "dy-play3",
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+                   (11, 26, 148, 224, 10010)[stable_hash("mu-ch::%s" % url) % 5],
+                   br, br, stable_hash("mu-cs::%s" % url) % 3,
+                   1 + stable_hash("mu-bfs::%s" % url) % 4,
+                   _url_tok(url, 12, "dy-tk",
+                            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")))
+    if _MU_XHS_AVATAR_RX.match(url):
+        # 语料形态：/avatar/1040g<39 小写字母数字>?imageView2/2/w/{80,120}/format/{jpg,webp}
+        h = stable_hash("mu-xa::%s" % url)
+        return "https://sns-avatar-qc.xhscdn.com/avatar/1040g%s?imageView2/2/w/%d/format/%s" % (
+            _url_tok(url, 39, "xhs-avt"), (120 if h % 2 else 80),
+            ("jpg" if h % 3 else "webp"))
+    m = _MU_XHS_WEBPIC_RX.match(url)
+    if m:
+        # 语料形态：/<12位时间戳>/<32hex>/<kind>/<44字符>!nc_n_webp_{mw,prv}_1
+        # 红队 R11A-P3-2：分钟级换签 + ts 段真时间语义——语料同笔记跨抓取
+        # 跨分钟 ts+hash 双换（202609012226/2c0360e4… → 202609012227/c3c59d6e…）、
+        # 同分钟同串，ts 段 29,039/29,039 合法日期（YYYYMMDDHHMM 真时间）；
+        # 旧版 "202609"+随机6位 仅 4/150 合法且恒同串。hash 段掺「分钟桶+端点」
+        # 盐：同端点同分钟确定（确定性保持）、跨分钟必换、跨端点必异；对象
+        # 身份段（44 字符）仍按 URL 稳定派生。
+        segs = m.group(2).split("/")
+        kind = segs[0] if segs[0] in ("notes_pre_post", "comment", "spectrum") \
+            else "notes_pre_post"
+        bucket = time.strftime("%Y%m%d%H%M")  # 服务当前时间（录制真时间同语义）
+        return "%s/%s/%s/%s/%s!nc_n_webp_%s_1" % (
+            m.group(1), bucket,
+            _url_hex("%s\x00%s\x00%s" % (bucket, salt, url), 32, "xhs-wp"),
+            kind, _url_tok(url, 44, "xhs-wp-id"),
+            ("mw" if stable_hash("mu-xw::%s" % url) % 2 else "prv"))
+    m = _MU_KS_UHEAD_RX.match(url)
+    if m:
+        # 语料形态：/uhead/<2字符>/<日期>/<时>/B<base64(时间串_数字_…)>_s.jpg
+        import base64 as _b64
+        h = stable_hash("mu-ku::%s" % url)
+        payload = "%s-%s-%s %s:%02d:%02d_%d_%d_hd%d_%d" % (
+            m.group(3), m.group(4), m.group(5), m.group(6),
+            h % 60, (h >> 6) % 60, h % 10**9, (h >> 8) % 10**9,
+            100 + (h >> 10) % 900, 1 + (h >> 12) % 999)
+        return "%s/uhead/%s/%s/%s/%s/%s/B%s_s.jpg" % (
+            m.group(1), m.group(2), m.group(3), m.group(4), m.group(5), m.group(6),
+            _b64.b64encode(payload.encode()).decode())
+    m = _MU_KS_UPIC_RX.match(url)
+    if m:
+        # 语料形态：/upic/<日期>/<时>/B<base64>_B<32hex>.jpg?tag=1-…&clientCacheKey=…
+        import base64 as _b64
+        h = stable_hash("mu-kp::%s" % url)
+        payload = "%s-%s-%s %s:%02d:%02d_%d_%d_%d" % (
+            m.group(2), m.group(3), m.group(4), m.group(5),
+            h % 60, (h >> 6) % 60, h % 10**10, (h >> 8) % 10**9, (h >> 10) % 10)
+        area = ("xpcwebsearch", "xpcwebprofile", "xpcwebdetail")[h % 3]
+        return ("%s/upic/%s/%s/%s/%s/B%s_B%s.jpg?tag=1-%d-%s-0-%s-%s"
+                "&clientCacheKey=3x%s_%s"
+                % (m.group(1), m.group(2), m.group(3), m.group(4), m.group(5),
+                   _b64.b64encode(payload.encode()).decode(), _url_hex(url, 32, "ks-upic"),
+                   1788275713 + h % 10**6, area, _url_tok(url, 10, "ks-upic-t"),
+                   _url_hex(url, 16, "ks-upic-s"), _url_tok(url, 13, "ks-upic-c"),
+                   _url_hex(url, 8, "ks-upic-k")))
+    m = _MU_KS_DJVOD_RX.match(url)
+    if m:
+        # 语料形态：<alnum 主机>.djvod.ndcimgs.com（语料正确域，多一个 s；主机
+        # 字符集 [0-9a-z]——旧版 base62 可含 "_" 为 DNS 非法字符）+
+        # /bs2/photo-video-mz/<19位>_<16hex>_<4位>_hd15.mp4?tag=1-…&provider=self…
+        h = stable_hash("mu-kd::%s" % url)
+        return ("https://%s.djvod.ndcimgs.com/bs2/photo-video-mz/%s_%s_%d_hd15.mp4"
+                "?tag=1-%d-unknown-0-%s-%s&provider=self&clientCacheKey=3x%s_%s"
+                % (_url_tok(url, 8 + h % 17, "ks-djvod"),
+                   _url_digits(url, 19, "ks-djvod-id", no_leading_zero=True),
+                   _url_hex(url, 16, "ks-djvod-h"), 1000 + h % 9000,
+                   1788275713 + h % 10**6, _url_tok(url, 10, "ks-djvod-t"),
+                   _url_hex(url, 16, "ks-djvod-s"), _url_tok(url, 13, "ks-djvod-c"),
+                   _url_hex(url, 8, "ks-djvod-k")))
+    return url
+
+
+def media_url_pass(obj, salt: str = ""):
+    """响应树确定性改写（不动缓存原对象）：仅字符串叶子命中合成简化形才改写。
+
+    salt（R10A-P3-4）＝端点级按次签发盐（"api:<路径>" / "ssr:<骨架名>"）：
+    同端点内同 URL 恒同串（确定性），跨端点签名 query 必异（真站按次签发语义）。
+    """
+    if isinstance(obj, str):
+        if "://" in obj:
+            return _mu_rewrite(obj, salt)
+        return obj
+    if isinstance(obj, dict):
+        return {k: media_url_pass(v, salt) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [media_url_pass(v, salt) for v in obj]
+    return obj
+
+
+# ---------------------------------------------------------------------------
+# 红队 R10A-P3-1：JSON 字符串转义表（站点序列器线格式指纹，序列化层派生）。
+#
+# 语料逐字节扫描（round10A B1 + 本轮收口复核全端点）：
+#   - dy 主域 JSON 体 raw `&`=0（204 体；`>`59,134、`<`3,802、`\u2028`=45 次全走
+#     `\uXXXX` 转义——fastjson/Jackson HTML-safe 序列器行为；aweme/post 的 raw&
+#     体全部为 spaced 脱敏占位重建体，非真站字节）；dy 页面内嵌 JSON 同表。
+#   - ks REST /rest/v/* 面 emoji 恒 `\ud83d\udcXX` 代理对转义（search/feed 119、
+#     photo/comment 213、profile/feed 90、search/user 311、feed/hot 52 处，raw
+#     非 BMP 全 0——Java 系序列器）；ks graphql（172 处原生）与 xhs（全原生）保持。
+# JSON 解析后完全等价（零功能破坏）；&<>、U+2028 与非 BMP 字符只可能出现在
+# 字符串字面量内（非 JSON 结构字符），对序列化后文本整串替换不触碰结构位，
+# 也不引入空格分隔（R8C-P3-1 紧凑化保持）。
+# ---------------------------------------------------------------------------
+_DY_JSON_ESC = (("&", "\\u0026"), ("<", "\\u003c"), (">", "\\u003e"), ("\u2028", "\\u2028"))
+_NONBMP_RX = re.compile("[\U00010000-\U0010FFFF]")
+
+
+def dy_json_escape(text: str) -> str:
+    """dy 出口：字符串值转义表（& / < / > / U+2028 → \\uXXXX）。"""
+    for a, b in _DY_JSON_ESC:
+        if a in text:
+            text = text.replace(a, b)
+    return text
+
+
+def ks_rest_json_escape(text: str) -> str:
+    """ks REST /rest/v/* 出口：非 BMP emoji → UTF-16 代理对转义（\\ud83d\\udcXX）。"""
+    if not _NONBMP_RX.search(text):
+        return text
+
+    def _pair(m):
+        cp = ord(m.group(0)) - 0x10000
+        return "\\u%04x\\u%04x" % (0xD800 + (cp >> 10), 0xDC00 + (cp & 0x3FF))
+
+    return _NONBMP_RX.sub(_pair, text)
+
+
+def wire_json_escape(site: str, path: str, text: str) -> str:
+    """序列化出口按站点/端点族套转义表（R10A-P3-1；不命中族保持原生）。"""
+    if site == "douyin":
+        return dy_json_escape(text)
+    if site == "kuaishou" and path.split("?", 1)[0].startswith("/rest/"):
+        return ks_rest_json_escape(text)
+    return text
 
 
 class SiteState:
@@ -226,9 +549,7 @@ def rotation_pages(site: str, keyword: str | None) -> int:
     """keyword → 稳定数据窗口平移（0..N-1 页）；e2e 用同公式核对数据一致性。
 
     oracle-lite：窗口上限按数据集大小自适应（模数 = min(400, 数据集页数)）。
-    完整 oracle 数据集 ≥8 万条/站，固定 400 页（8000 条）窗口永不出界；
-    迷你数据集（300 条/站 → 15 页）用同公式缩模数，保证任意关键词都能命中
-    数据窗口——确定性不变（模数由数据集记录数唯一确定）。"""
+    完整 oracle 数据集 ≥8 万条/站固定 400 页永不出界；迷你集 300 条 → 15 页。"""
     kw = (keyword or "").strip() or "<default>"
     n_pages = max(1, len(STATES[site].dataset()) // DEFAULT_PAGE_SIZE)
     return stable_hash("%s::%s" % (site, kw)) % min(KEYWORD_ROTATION_PAGES, n_pages)
@@ -270,6 +591,35 @@ def _refresh_dy_volatile(val: dict) -> dict:
     if isinstance(val.get("log_pb"), dict):
         out["log_pb"] = dict(val["log_pb"], impr_id=logid)
     return out
+
+
+def ks_llsid_fresh() -> str:
+    """ks llsid 每请求重掷（红队 R6C-P3-2）：19 位数字（首位非 0）。
+
+    语料真值：ks_search_video 同一会话内 2 次 search/feed 的 llsid 两两不同
+    （sample_0004/0006 均 2/2 不同、跨 sample 亦全不同）——逐请求掷出的会话
+    标识。与 dy logid（R5C-P3-1）同族的响应时变字段处理：内容确定性字段不动，
+    仅 llsid 按请求唯一（secrets 随机源，进程内任意两次调用必不同）。
+    """
+    import secrets
+    return secrets.choice("123456789") + "".join(
+        secrets.choice("0123456789") for _ in range(18))
+
+
+def _refresh_ks_volatile(val):
+    """递归重掷响应内全部非空字符串 llsid 键（R6C-P3-2，同 dy logid 家族）。
+
+    search/feed、graphql likeDataQuery / visionShortVideoReco 等信封均带
+    llsid；None 值（visionProfilePhotoList）保持 None——只刷新已是字符串的键，
+    不引入/删除键。返回新结构，不动入参。
+    """
+    if isinstance(val, dict):
+        return {k: (ks_llsid_fresh() if k == "llsid" and isinstance(v, str)
+                    and v else _refresh_ks_volatile(v))
+                for k, v in val.items()}
+    if isinstance(val, list):
+        return [_refresh_ks_volatile(v) for v in val]
+    return val
 
 
 def _cached_response(key: tuple, fn):
@@ -381,6 +731,11 @@ def dy_search_stream(state: SiteState, params: dict) -> dict:
     count = _int_param(params, "count", DEFAULT_PAGE_SIZE)
     if offset < 0:  # 红队 P2 修复 10：负 offset 视为 0
         offset = 0
+    if not keyword.strip():
+        # 红队 R6C-P3-1：空/缺关键词 → 真站空态族（H10 口径三站统一；
+        # xhs 语料 37/37 空关键词实证空信封，dy/ks 语料无空关键词样本——
+        # 按 H10 声明口径统一为 data=[] 空集，不再回默认窗口满页）
+        return synth_render.render_douyin_search_empty(keyword, offset, stream=True)
     if count <= 0:  # count=0 → 空集（不再钳到 1）
         return synth_render.render_douyin_search_empty(keyword, offset, stream=True)
     n_total = len(state.dataset())
@@ -401,6 +756,8 @@ def dy_search_single(state: SiteState, params: dict) -> dict:
     search_id = (params.get("search_id") or [""])[0] or None
     if offset < 0:
         offset = 0
+    if not keyword.strip():  # 红队 R6C-P3-1：空/缺关键词 → H10 空态族
+        return synth_render.render_douyin_search_empty(keyword, offset, stream=False)
     if count <= 0:
         return synth_render.render_douyin_search_empty(keyword, offset, stream=False)
     n_total = len(state.dataset())
@@ -422,6 +779,8 @@ def dy_search_item(state: SiteState, params: dict) -> dict:
     search_id = (params.get("search_id") or [""])[0] or None
     if offset < 0:
         offset = 0
+    if not keyword.strip():  # 红队 R6C-P3-1：空/缺关键词 → H10 空态族
+        return synth_render.render_douyin_search_empty(keyword, offset, stream=False)
     if count <= 0:
         return synth_render.render_douyin_search_empty(keyword, offset, stream=False)
     n_total = len(state.dataset())
@@ -662,17 +1021,26 @@ def ks_search_feed(state: SiteState, body: dict) -> dict:
     keyword = _body_str(body, "keyword")
     rot = rotation_pages("kuaishou", keyword)
     session_id = _body_str(body, "searchSessionId") or synth_render.ks_session_id_for(keyword)
+    # 红队 R6C-P3-1：空/缺关键词（含 BOM body 整体解析失败 → body={} 场景）→
+    # H10 空态族 feeds=[]+no_more（xhs 语料 37/37 空关键词实证同族空信封；
+    # ks 语料无空关键词样本，按 H10 声明口径三站统一）
+    if not keyword.strip():
+        return {"result": 1, "pcursor": "no_more", "searchSessionId": session_id,
+                "llsid": ks_llsid_fresh(), "host-name": "", "webPageArea": "searchxxnull",
+                "feeds": []}
     # 红队 R5C-P3-5：终止游标 no_more 回传 → 保持 no_more + 空页（不回绕第 1 页，
     # 重试/回放型 agent 重发末游标不会陷入翻页死循环）
     if pcursor == "no_more":
         return {"result": 1, "pcursor": "no_more", "searchSessionId": session_id,
-                "llsid": "", "host-name": "", "webPageArea": "searchxxnull", "feeds": []}
+                "llsid": ks_llsid_fresh(), "host-name": "", "webPageArea": "searchxxnull",
+                "feeds": []}
     # 红队 R3-P3-2：关键词结果窗口有界（8-15 页确定性），翻尽 pcursor="no_more"
     max_rel = 8 + stable_hash("ks-window::%s" % ((keyword or "").strip() or "<default>")) % 8
     rel = int(pcursor) + 1 if pcursor.isdigit() and pcursor != "" else 1
     if rel > max_rel:
         return {"result": 1, "pcursor": "no_more", "searchSessionId": session_id,
-                "llsid": "", "host-name": "", "webPageArea": "searchxxnull", "feeds": []}
+                "llsid": ks_llsid_fresh(), "host-name": "", "webPageArea": "searchxxnull",
+                "feeds": []}
     page = _clip_page(state, rot + rel)
     size = _body_int(body, "page_size", DEFAULT_PAGE_SIZE, lo=1, hi=50)  # R5C-P2-1 容错
     req, resp = synth_render.render_ks_search_feed(
@@ -680,6 +1048,9 @@ def ks_search_feed(state: SiteState, body: dict) -> dict:
     # 契约形态：pcursor "1"→"2" 递增回传（窗口内相对页号）；末页回 no_more（R3-P3-2）
     resp["pcursor"] = "no_more" if rel >= max_rel else str(rel)
     resp["searchSessionId"] = session_id
+    # 红队 R6C-P3-2：llsid 每请求唯一（语料真值同会话两两不同；render 侧
+    # keyword/页级确定性派生 → 同词 3 连发恒定，可被「llsid 去重」识别）
+    resp["llsid"] = ks_llsid_fresh()
     return resp
 
 
@@ -709,10 +1080,39 @@ def ks_graphql(state: SiteState, body: dict) -> dict:
         if rc:
             line_no = _cid_lookup("kuaishou", str(rc))  # 只带 rootCommentId 也能翻子评论
     resp = synth_render.render_ks_graphql(state.dataset(), op, variables, line_no)
-    if op == "commentListQuery" and line_no is not None:
-        roots = ((resp.get("data") or {}).get("visionCommentList") or {}).get("rootCommentsV2") or []
-        _cid_remember("kuaishou", [{"cid": r.get("commentId")} for r in roots], line_no)
-    return resp
+    if op == "commentListQuery":
+        # 红队 R5A-P2-3（服务线修复层）：visionCommentList 信封对齐契约/语料真值——
+        # 28/28 语料样本键集恒为 {__typename, commentCount(null), commentCountV2,
+        # pcursor(null), pcursorV2(13 位数字串), rootComments([]), rootCommentsV2}：
+        # 续页游标在 pcursorV2（客户端把它回传进下页请求 variables.pcursor），
+        # pcursor 恒 null、rootComments 恒空数组（列表数据在 rootCommentsV2）。
+        # render 侧旧形态把续页游标放 pcursor 且缺 __typename/rootCommentsV2 键——
+        # 本层做结构归一（数据面来自 synthgen，键位/键集在服务层修齐）。
+        data = resp.get("data") if isinstance(resp.get("data"), dict) else None
+        vcl = (data or {}).get("visionCommentList")
+        if isinstance(vcl, dict):
+            cont = vcl.get("pcursor")  # render 旧键位：more 时 13 位数字串、尾页 None
+            roots = vcl.get("rootCommentsV2") or []
+            normalized = {
+                "__typename": "VisionRootCommentFeed",
+                "commentCount": None,
+                "commentCountV2": vcl.get("commentCountV2", 0),
+                "pcursor": None,
+                "pcursorV2": str(cont) if cont else "no_more",
+                "rootComments": [],
+                "rootCommentsV2": roots,
+            }
+            # 保留归一集之外的未知键（对 synthgen 演进鲁棒）
+            for k, v in vcl.items():
+                if k not in normalized:
+                    normalized[k] = v
+            resp["data"]["visionCommentList"] = normalized
+            if line_no is not None:
+                _cid_remember("kuaishou",
+                              [{"cid": r.get("commentId")} for r in roots], line_no)
+    # 红队 R6C-P3-2：graphql 信封内 llsid（likeDataQuery / visionShortVideoReco）
+    # 每请求重掷（同 search/feed 处理；None 保持 None）
+    return _refresh_ks_volatile(resp)
 
 
 def ks_photo_comment_list(state: SiteState, body: dict) -> dict:
@@ -733,26 +1133,34 @@ def ks_photo_comment_list(state: SiteState, body: dict) -> dict:
 
 
 def ks_profile_get(state: SiteState, params: dict) -> dict:
-    """GET /rest/v/profile/get（作者头部：eid/userName/fans/follows…）。"""
+    """GET /rest/v/profile/get（作者头部：eid/userName/fans/follows…）。
+
+    红队 R12A-P3-2：未知/缺失 userId → 语料唯一错误形态 `{"result":109}` 单键体
+    （语料 3/3，搜索场景点击已注销作者）。旧版兜底伪造完整实体（result=1 +
+    userId=0 + 「快手用户」 + 默认头像）与语料错误形态相反，且假实体本身是
+    探测用户存在性的 agent 的自指纹——按语料回 109，不再伪造。"""
     user_id = (params.get("userId") or [""])[0]
     line_nos = state.author_line_nos(user_id) if user_id else []
     if not line_nos:
-        return {"result": 1, "eid": user_id, "like": 0, "userTex": "", "sex": "M",
-                "mobile": "", "follows": 0, "host-name": "", "userName": "快手用户",
-                "userId": 0, "userDefineId": "0", "fans": 0,
-                "userHead": "http://p5.a.yximgs.com/s1/i/def/head_m.png"}
+        return {"result": 109}
     return synth_render.render_ks_profile_get(state.dataset(), line_nos, user_id)
 
 
 def ks_profile_feed(state: SiteState, body: dict) -> dict:
-    """POST /rest/v/profile/feed（作者作品页：type/tags/authorStatement/author/photo）。"""
+    """POST /rest/v/profile/feed（作者作品页：type/tags/authorStatement/author/photo）。
+
+    红队 R8C-P3-2：信封族并入 search/feed 同款（host-name/llsid/webPageArea）——
+    llsid 每请求重掷（R6C-P3-2 同法，render 侧确定性派生会被「llsid 去重」识别）。"""
     body = dict(body or {})
     user_id = _body_str(body, "user_id") or _body_str(body, "userId")
     pcursor = _body_str(body, "pcursor")
     line_nos = state.author_line_nos(user_id) if user_id else []
     if not line_nos:
-        return {"result": 1, "pcursor": "no_more", "feeds": []}
-    return synth_render.render_ks_profile_feed(state.dataset(), line_nos, user_id, pcursor)
+        return {"result": 1, "pcursor": "no_more", "feeds": [], "host-name": "",
+                "llsid": ks_llsid_fresh(), "webPageArea": "profilexxnull"}
+    resp = synth_render.render_ks_profile_feed(state.dataset(), line_nos, user_id, pcursor)
+    resp["llsid"] = ks_llsid_fresh()
+    return resp
 
 
 def ks_user_info(state: SiteState, params: dict) -> dict:
@@ -761,7 +1169,9 @@ def ks_user_info(state: SiteState, params: dict) -> dict:
     （MM 契约自述 reconstructed），数据从 synthgen 作者池派生、跨请求确定性。
     ks 数据集作者主键为 author.id（3x…，搜索/作者面回传的都是它）——sec_uid 参数
     值即按该主键解析，同时兼容 userId 参数名；未知 id（如评论面合成的 author_id）
-    按 f(id) 确定性合成档案（与 /rest/v/profile/get 对未知 id 的兜底口径一致），
+    按 f(id) 确定性合成档案（本端点语料无错误形态真值、MM 契约要求 $.user_list
+    恒可绑定，故保留合成兜底；REST /rest/v/profile/get 的未知 id 面按语料回
+    {"result":109}，两端口径不同——R12A-P3-2），
     保证 $.user_list 恒可绑定。"""
     sec_uid = (params.get("sec_uid") or params.get("userId") or [""])[0]
     if not sec_uid:
@@ -783,6 +1193,489 @@ def ks_kconf_get(state: SiteState, body: dict) -> dict:
     """POST /rest/v/kconf/get（页面前置配置：loginConfig/pcMenuConfig 静态键集）。"""
     body = dict(body or {})
     return synth_render.render_ks_kconf_get(state.dataset(), _body_str(body, "kconfKey"))
+
+
+# ---------------------------------------------------------------------------
+# 契约端点补面（红队 round 6A 报告 C 段差集 C-2 组 12 个新数据面端点）：
+#   dy  suggest_words（搜索联想，88 req）/ emoji/list（评论表情面板，178）/
+#       multi/aweme/detail（批量详情，14）/ mix/aweme（合集，3）/ series/aweme
+#       （短剧系列，12）/ user/profile/self（自档案，120）
+#   xhs search/recommend（搜索发现词，111）/ search/filter（筛选层，23）/
+#       search/onebox（23）/ homefeed/category（2）/ feed（笔记详情流，1）/
+#       v2/widgets（笔记相关搜索组件，39）
+# 形态全部按 contracts/*.contract.json + 语料 sanitized_corpus 实响应体；静态站
+# 常量（emoji 名录/筛选层/分类表）落在 fixtures/round6_static_payloads.json，
+# 数据面（联想词/合集条目/详情流）从 synthgen 数据集确定性派生（对数据集内容
+# 变化鲁棒：字段缺失回静态池，绝不 500）。
+# ---------------------------------------------------------------------------
+_ROUND6_FIXTURE = {"loaded": False, "data": {}}
+
+
+def _round6_fixture() -> dict:
+    if not _ROUND6_FIXTURE["loaded"]:
+        try:
+            f = _HERE / "fixtures" / "round6_static_payloads.json"
+            _ROUND6_FIXTURE["data"] = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            _ROUND6_FIXTURE["data"] = {}
+        _ROUND6_FIXTURE["loaded"] = True
+    return _ROUND6_FIXTURE["data"]
+
+
+def _dy_env() -> dict:
+    """dy 详情族公共时变信封（extra/log_pb 同源 logid，R5C-P3-1 口径）。"""
+    logid = synth_ids.dy_logid(None)
+    return {"extra": {"fatal_item_ids": [], "logid": logid, "now": _now_ms()},
+            "log_pb": {"impr_id": logid}}
+
+
+def _uuid4_str() -> str:
+    import uuid
+    return str(uuid.uuid4())
+
+
+# dy suggest_words 兜底词池（数据集话题词元不足 9 个时补位；语料 rsp_source=inbox 形态）
+_DY_SUGGEST_POOL = ["美食探店", "旅行攻略", "家常菜", "萌宠日常", "健身打卡", "手机摄影",
+                    "露营装备", "咖啡拉花", "穿搭分享", "职场干货", "农村生活", "赶集",
+                    "街头采访", "家居收纳", "夜市小吃", "自驾游"]
+
+# 红队 R7C-P2-1：带 query 形态词面必须与 query 强相关——按关键词→类目映射派生
+# 前缀扩展后缀池（对照语料真值形态：街头采访→街头采访搞笑/街头采访外国人/街头挑战/
+# 采访类视频；无人机航拍→大疆neo2/高清航拍无人机/无人机航拍视频；滑板教学→滑板教学
+# 新手入门/附近滑板培训班）。未命中类目回通用池（语料 40/40 带 query 样本词面全部
+# 与 query 强相关；旧版对任意 query 回 inbox 轮转窗口话题标签，9 词含 query 的 0 个）。
+_DY_RELATED_SUFFIX_POOLS = [
+    (("美食", "菜", "厨", "小吃", "夜市", "探店", "烘焙", "辅食", "吃货", "食谱"),
+     ("做法", "探店", "教程", "推荐", "避雷", "家常菜", "视频", "博主", "团购", "合集")),
+    (("采访",), ("搞笑", "外国人", "热门", "名场面", "视频", "博主", "挑战", "合集",
+                 "高能", "翻车")),
+    (("航拍", "无人机", "摄影", "拍照", "相机",),
+     ("航拍视频", "多少钱", "大片", "教程", "入门", "推荐", "视频", "技巧", "风景", "剪辑")),
+    (("健身", "减肥", "增肌", "瑜伽", "拉伸", "腹肌",),
+     ("教程", "跟练", "入门", "计划", "动作", "视频", "干货", "合集", "打卡", "饮食")),
+    (("旅行", "旅游", "攻略", "自驾", "露营", "徒步",),
+     ("攻略", "路线", "必备", "清单", "避雷", "vlog", "花费", "景点", "装备", "跟拍")),
+    (("穿搭", "美妆", "护肤", "化妆", "显白", "发型",),
+     ("推荐", "教程", "避雷", "合集", "显瘦", "日常", "平价", "通勤", "干货", "好物")),
+    (("教学", "教程", "入门", "新手", "课程", "培训", "滑板", "滑雪", "游泳",),
+     ("新手入门", "培训班", "免费课程", "附近", "教程", "入门", "视频", "动作", "技巧",
+      "装备")),
+    (("电视剧", "电影", "综艺", "动漫", "影视", "短剧", "剧场", "食堂",),
+     ("全集", "第二季", "在线观看", "解说", "结局", "演员表", "高清", "免费", "剧情",
+      "幕后")),
+    (("考研", "考试", "复习", "学习", "数学", "英语", "公考",),
+     ("经验", "分享", "课程", "资料", "时间表", "攻略", "上岸", "题库", "计划", "干货")),
+    (("装修", "家居", "收纳", "布置", "打扫", "整理",),
+     ("风格效果图", "步骤流程", "预算", "风格", "避雷", "清单", "设计", "攻略", "日记",
+      "干货")),
+]
+_DY_RELATED_SUFFIX_DEFAULT = ("推荐", "教程", "视频", "合集", "热门", "博主", "入门",
+                              "避雷", "附近", "干货")
+
+# 语料真值：query 形态 3 值分布 94349535277×28 / 94349538563×40 / 94349563971×20，
+# 带 query 样本多为 94349538563；无 query（inbox）恒 94349535277。
+_DY_SUG_CHANNEL_QUERY = 94349538563
+_DY_SUG_CHANNEL_INBOX = 94349535277
+
+
+def _dy_related_suffixes(query: str) -> tuple:
+    for pats, sfx in _DY_RELATED_SUFFIX_POOLS:
+        if any(p in query for p in pats):
+            return sfx
+    return _DY_RELATED_SUFFIX_DEFAULT
+
+
+def _dy_suggest_time_cost() -> dict:
+    """extra.time_cost 9 键非空字符串（语料 inbox/related_search 两形态同键集）。
+
+    旧版恒 {}——R7C 伴随项：networkServer* 为响应时点毫秒、其余为耗时毫秒，
+    确定性小值 + 时点字段（不参与任何断言的稳定性面）。
+    """
+    now = _now_ms()
+    cost = 40 + stable_hash("dy-sug-cost::%d" % (now // 1000)) % 160
+    return {"call_extra_time": "0", "call_rpc_time": str(cost), "init_time": "3",
+            "networkServerEngineRequestTime": str(now - 9),
+            "networkServerEngineResponseTime": str(now),
+            "networkServerRequestTime": str(now - 12),
+            "networkServerResponseTime": str(now),
+            "server_engine_cost": str(cost), "stream_inner": str(cost + 20)}
+
+
+def dy_suggest_words(state: SiteState, params: dict) -> dict:
+    """GET /aweme/v1/web/api/suggest_words（搜索联想）。
+
+    语料真值两形态（R7C A4 复核，88 req）：
+    - 带 query（聚焦搜索框逐字输入）：data[0] source/type="related_search"、**10 词**、
+      词面为 query 的强相关扩展/联想、channel_id=94349538563；
+    - 无 query：source/type="inbox"、9 词（热搜词）、channel_id=94349535277。
+    顶层 7 键（StabilityStatistics/data/errno/extra/log_id/msg/real_log_id），
+    word 项 {id(19 位), params, word}。无 query 词面从数据集 rotation 窗口的 desc
+    话题词元派生（确定性），不足回静态池。
+    """
+    query = (params.get("query") or [""])[0].strip()
+    env_logid = synth_ids.dy_logid(None)
+    if query:
+        # R7C-P2-1：带 query → related_search 10 词（词面与 query 强相关）
+        sfx = _dy_related_suffixes(query)
+        words: list = []
+        for s in sfx:
+            w = query + s
+            if w not in words:
+                words.append(w)
+            if len(words) >= 10:
+                break
+        core = query[:-2] if len(query) >= 4 else ""   # 语料样本含核心短词（滑板教学→滑板）
+        if core and core not in words and len(words) < 10:
+            words.insert(min(6, len(words)), core)
+        while len(words) < 10:
+            w = query + sfx[len(words) % len(sfx)]
+            if w not in words:
+                words.append(w)
+        source = "related_search"
+        channel = _DY_SUG_CHANNEL_QUERY
+    else:
+        words = []
+        try:
+            n = len(state.dataset())
+            start = rotation_pages("douyin", "<default>") * DEFAULT_PAGE_SIZE
+            i = start
+            while len(words) < 9 and i < min(start + 200, n):
+                desc = str((state.dataset().read(i) or {}).get("desc") or "")
+                for t in re.findall(r"#([^\s#，。！？.,!?]{1,24})", desc):
+                    w = t.strip()
+                    if w and w not in words:
+                        words.append(w)
+                        if len(words) >= 9:
+                            break
+                i += 1
+        except Exception:
+            words = []
+        for w in _DY_SUGGEST_POOL:
+            if len(words) >= 9:
+                break
+            if w not in words:
+                words.append(w)
+        source = "inbox"
+        channel = _DY_SUG_CHANNEL_INBOX
+    group_words = [{
+        "id": str(1000000000000000000 + stable_hash("dy-sug::%s" % w) % 8000000000000000000),
+        "params": {"challenge_id": "0",
+                   "extra_info": {"enable_prefetch": "0", "hotboard_label": "0",
+                                  "is_trending_hotboard_source": "0",
+                                  "sentence_id": "0", "sim_id": "0"},
+                   "info": "{}", "reason": ""},
+        "word": w,
+    } for w in words]
+    return {
+        "StabilityStatistics": {"1": "1"},
+        "data": [{"params": {"channel_id": channel,
+                             "extra_info": {"qrec_channel": "AWEME_RECOMMEND_GUESS",
+                                            "qrec_channel_is_aweme": "1"}},
+                  "source": source, "type": source, "words": group_words}],
+        "errno": "0",
+        "extra": {"RespFrom": "do_search", "call_per_refresh": "",
+                  "qrec_extra": "", "time_cost": _dy_suggest_time_cost()},
+        "log_id": env_logid, "msg": "success", "real_log_id": env_logid,
+    }
+
+
+def _dense_hex32(key: str) -> str:
+    """稠密 32-hex（红队 R7C-P3-1：64 位哈希 %032x 恒带 16 个前导零，整族 URI 可
+    编程一辨——双段拼接后均匀覆盖全宽；语料真值 emoji uri 为稠密 32-hex）。"""
+    return "%016x%016x" % (stable_hash("a::%s" % key), stable_hash("b::%s" % key))
+
+
+def dy_emoji_list(state: SiteState, params: dict) -> dict:
+    """GET /aweme/v1/web/emoji/list（评论表情面板，371 项语料名录）。
+
+    语料真值：{status_code:0, version:13 位, emoji_list:[{origin_uri,
+    display_name, hide, emoji_url:{uri, url_list}}]}。名录为站静态常量
+    （fixtures）；emoji_url 按名确定性派生，url_list 用本机同源 CDN 形态路径
+    （R3-P1-3 口径，synth cover 路由可服务）。
+    """
+    pairs = _round6_fixture().get("dy_emoji_list") or []
+    emoji_list = []
+    for e in pairs:
+        uri = "tos-cn-i-tsj2vxp0zn/%s" % _dense_hex32("dy-emoji::%s" % e["origin_uri"])
+        emoji_list.append({
+            "origin_uri": e["origin_uri"], "display_name": e["display_name"],
+            "hide": int(e.get("hide", 1)),
+            "emoji_url": {"uri": uri,
+                          "url_list": ["/obj/%s?from=876277922" % uri,
+                                       "/obj/%s?from=876277922" % uri]},
+        })
+    return {"emoji_list": emoji_list, "status_code": 0, "version": 1766572369433}
+
+
+def _dy_id_list(raw) -> list:
+    """multi/aweme/detail 的 aweme_ids 参数（JSON 数组串，form 体 percent 编码）。"""
+    if isinstance(raw, list):
+        return [str(x) for x in raw]
+    s = str(raw or "")
+    try:
+        v = json.loads(s)
+        if isinstance(v, list):
+            return [str(x) for x in v]
+    except Exception:
+        pass
+    return [m for m in re.findall(r"\d{15,21}", s)]
+
+
+def dy_multi_aweme_detail(state: SiteState, body: dict) -> dict:
+    """POST /aweme/v1/web/multi/aweme/detail（批量详情，form 体 aweme_ids=[id,…]）。
+
+    语料真值：{aweme_details:[aweme…], emoji_list:null, extra, filter_list:null,
+    log_pb, status_code:0, verification_filter_list:null}；条目复用 detail 端点
+    的 render_aweme(detail=True) 全量 aweme 形态，未命中 id 静默省略。
+    """
+    ids = _dy_id_list(body.get("aweme_ids"))
+    details = []
+    for aid in ids[:20]:
+        line_no = state.line_no_of(aid) if aid else None
+        if line_no is None:
+            continue
+        details.append(synth_render.render_aweme(state.dataset().read(line_no), detail=True))
+    env = _dy_env()
+    return {"aweme_details": details, "emoji_list": None, "extra": env["extra"],
+            "filter_list": None, "log_pb": env["log_pb"], "status_code": 0,
+            "verification_filter_list": None}
+
+
+def _dy_series_slice(state: SiteState, series_key: str, cursor: int, count: int):
+    """mix/series 共用：确定性合集窗口（起点/总集数由 series_key 派生）。"""
+    n = len(state.dataset())
+    total = 12 + stable_hash("series-total::%s" % series_key) % 38
+    start = stable_hash("series-start::%s" % series_key) % max(1, n - 64)
+    items, episode = [], {}
+    for idx in range(cursor, min(cursor + count, total)):
+        rec = state.dataset().read((start + idx) % n)
+        items.append(synth_render.render_aweme(rec, detail=True))
+        episode[str(rec.get("aweme_id") or "")] = idx + 1
+    has_more = 1 if cursor + len(items) < total else 0
+    return items, episode, cursor + len(items), has_more
+
+
+def dy_mix_aweme(state: SiteState, params: dict) -> dict:
+    """GET /aweme/v1/web/mix/aweme（合集：?mix_id=&cursor=&count=）。
+
+    语料真值：{aweme_list, cursor:<下页起点>, has_more, item_id_to_episode:
+    "<json str id→集号>", log_pb, status_code}（cursor 49/count 6 → 6 条、
+    cursor 55、has_more 1）。
+    """
+    mix_id = (params.get("mix_id") or [""])[0]
+    cursor = _int_param(params, "cursor", 0, lo=0)
+    count = _int_param(params, "count", 10, lo=1, hi=20)
+    env = _dy_env()
+    if not mix_id:
+        return {"aweme_list": [], "cursor": cursor, "has_more": 0,
+                "item_id_to_episode": "{}", "log_pb": env["log_pb"], "status_code": 0}
+    items, episode, next_cursor, has_more = _dy_series_slice(state, "mix::%s" % mix_id,
+                                                             cursor, count)
+    return {"aweme_list": items, "cursor": next_cursor, "has_more": has_more,
+            "item_id_to_episode": json.dumps(episode, ensure_ascii=False,
+                                             separators=(",", ":")),
+            "log_pb": env["log_pb"], "status_code": 0}
+
+
+def dy_series_aweme(state: SiteState, params: dict) -> dict:
+    """GET /aweme/v1/web/series/aweme（短剧系列：?series_id=&pull_type=&cursor=&count=）。
+
+    语料真值：{aweme_list, extra, has_more, log_pb, max_cursor, min_cursor,
+    related_item_tag:-1, selection_panel_conf:{has_segment:false}, status_code:0,
+    status_msg:"", watch_histories:null}。
+    """
+    series_id = (params.get("series_id") or [""])[0]
+    cursor = _int_param(params, "cursor", 0, lo=0)
+    count = _int_param(params, "count", 10, lo=1, hi=20)
+    env = _dy_env()
+    if not series_id:
+        return {"aweme_list": [], "extra": env["extra"], "has_more": 0,
+                "log_pb": env["log_pb"], "max_cursor": 0, "min_cursor": 0,
+                "related_item_tag": -1, "selection_panel_conf": {"has_segment": False},
+                "status_code": 0, "status_msg": "", "watch_histories": None}
+    items, _episode, next_cursor, has_more = _dy_series_slice(
+        state, "series::%s" % series_id, cursor, count)
+    return {"aweme_list": items, "extra": env["extra"], "has_more": has_more,
+            "log_pb": env["log_pb"], "max_cursor": next_cursor,
+            "min_cursor": cursor or 1, "related_item_tag": -1,
+            "selection_panel_conf": {"has_segment": False}, "status_code": 0,
+            "status_msg": "", "watch_histories": None}
+
+
+def dy_user_profile_self(state: SiteState, params: dict) -> dict:
+    """GET /aweme/v1/web/user/profile/self（自档案，120 req 全最小 4 键 user）。
+
+    语料真值（sanitized corpus 120/120）：{extra, status_code:0, status_msg:"",
+    user:{uid, sec_uid, nickname, short_id}}——录制账号脱敏后即此形；合成站无
+    登录态，按同形返回稳定档案（uid/sec_uid 与语料脱敏值同形）。
+    """
+    env = _dy_env()
+    return {"extra": env["extra"], "status_code": 0, "status_msg": "",
+            "user": {"uid": "219430709953",
+                     "sec_uid": "GT6yKpSN5719416626661872150602267720742142353697",
+                     "nickname": "replay_user", "short_id": "0000000000"}}
+
+
+# xhs search/recommend 后缀池（红队 R7C-P3-2：语料 96 组渐进输入实证——后缀随关键词
+# 类目强变化（美食探→店/店博主/图文/拍摄技巧、考研经验→贴/分享/PPT、装修→风格效果图/
+# 步骤流程），且 96/96 首词恒为扩展词、无一返回输入本身；旧版跨关键词共享固定池 +
+# 首词空后缀裸词）。按类目分池，全部非空后缀（首词必为扩展）。
+_XHS_SUG_POOLS = [
+    (("美食", "菜", "小吃", "探店", "吃货", "烘焙", "食谱", "做菜"),
+     ("店", "店博主", "探店攻略", "家常菜做法大全", "推荐", "图片", "视频", "避雷",
+      "教程", "附近")),
+    (("考研", "考公", "考试", "复习", "学习", "英语", "数学", "四六级"),
+     ("贴", "分享", "上岸", "复习资料", "课程", "攻略", "时间表", "经验", "书单", "提醒")),
+    (("装修", "家居", "收纳", "布置", "软装", "家电"),
+     ("风格效果图", "步骤流程", "预算", "风格", "避雷", "清单", "设计", "攻略", "日记",
+      "干货")),
+    (("旅行", "旅游", "攻略", "自由行", "行程", "签证", "徒步"),
+     ("攻略", "自由行", "路线", "必去景点", "避雷", "花费", "跟团", "拍照机位", "文案",
+      "清单")),
+    (("健身", "减肥", "增肌", "瑜伽", "拉伸", "瘦腿", "腹肌"),
+     ("计划", "动作", "减脂", "跟练", "食谱", "打卡", "入门", "器械", "一周", "效果")),
+    (("穿搭", "美妆", "护肤", "化妆", "显白", "发型", "平价"),
+     ("推荐", "攻略", "视频", "图片", "教程", "显瘦", "日常", "通勤", "好物", "避雷")),
+    (("摄影", "拍照", "相机", "修图", "调色", "构图"),
+     ("技巧", "教程", "参数", "构图", "手机", "入门", "调色", "风格", "攻略", "后期")),
+    (("萌宠", "猫", "狗", "养猫", "养狗", "宠物"),
+     ("日常", "攻略", "用品", "健康", "训练", "掉毛", "吃什么", "疫苗", "避雷", "日记")),
+]
+_XHS_SUG_DEFAULT = ("推荐", "攻略", "视频", "图片", "教程", "避雷", "合集", "日常",
+                    "清单", "怎么拍")
+
+
+def _xhs_sug_suffixes(kw: str) -> tuple:
+    for pats, sfx in _XHS_SUG_POOLS:
+        if any(p in kw for p in pats):
+            return sfx
+    return _XHS_SUG_DEFAULT
+
+
+def xhs_search_recommend(state: SiteState, params: dict) -> dict:
+    """GET /api/sns/web/v1/search/recommend（搜索发现词，?keyword= 渐进输入）。
+
+    语料真值：{success:true, msg:"成功", code:1000, data:{word_request_id:
+    "<uuid>#<ms>", sug_items:[10×{highlight_flags(逐字符), search_type:"notes",
+    type:"top_note", text}], search_cpl_id:<32hex>}}——联想词 = 输入前缀+补全
+    （首词恒为扩展词、后缀随类目分池，R7C-P3-2）；highlight_flags 前 len(kw) 位
+    为 true（前缀命中段），余位 false。
+    """
+    kw = (params.get("keyword") or [""])[0].strip()
+    words: list = []
+    if kw:
+        for suf in _xhs_sug_suffixes(kw):
+            w = kw + suf
+            if w not in words:
+                words.append(w)
+            if len(words) >= 10:
+                break
+    else:  # 空关键词 → 静态热词池（无语料真值，站级兜底口径）
+        words = list(_DY_SUGGEST_POOL[:10])
+    sug = [{"highlight_flags": [True] * min(len(kw), len(w))
+            + [False] * max(0, len(w) - len(kw)),
+            "search_type": "notes", "type": "top_note", "text": w} for w in words]
+    return {"success": True, "msg": "成功", "code": 1000,
+            "data": {"word_request_id": "%s#%d" % (_uuid4_str(), _now_ms()),
+                     "sug_items": sug, "search_cpl_id": _hex(32)}}
+
+
+def xhs_search_filter(state: SiteState, params: dict) -> dict:
+    """GET /api/sns/web/v1/search/filter（筛选层，站静态常量 + 逐请求 word_request_id）。"""
+    import copy
+    payload = copy.deepcopy(_round6_fixture().get("xhs_search_filter") or
+                            {"data": {"filters": []}, "code": 0, "success": True,
+                             "msg": "成功"})
+    rid = "%s#%d" % (_uuid4_str(), _now_ms())
+    for g in (payload.get("data") or {}).get("filters") or []:
+        g["word_request_id"] = rid
+    return payload
+
+
+def xhs_search_onebox(state: SiteState, body: dict) -> dict:
+    """POST /api/sns/web/v1/search/onebox（语料真值：空 onebox 信封 success=false）。"""
+    return {"msg": "成功", "data": {}, "code": 0, "success": False}
+
+
+def xhs_homefeed_category(state: SiteState, params: dict) -> dict:
+    """GET /api/sns/web/v1/homefeed/category（/explore 分类表，站静态常量）。"""
+    payload = _round6_fixture().get("xhs_homefeed_category")
+    if payload:
+        return payload
+    return {"code": 0, "success": True, "msg": "成功",
+            "data": {"categories": [{"id": "homefeed.fashion_v3", "name": "穿搭"},
+                                    {"id": "homefeed.food_v3", "name": "美食"}]}}
+
+
+def xhs_feed(state: SiteState, body: dict) -> dict:
+    """POST /api/sns/web/v1/feed（笔记详情流：source_note_id → 该笔记单条流）。
+
+    语料真值：{code:0, success:true, msg:"成功", data:{cursor_score:"", items:
+    [{model_type:"note", note_card, ignore:false, id}], current_time:<ms>}}。
+    """
+    body = dict(body or {})
+    note_id = _body_str(body, "source_note_id") or _body_str(body, "note_id")
+    data = {"cursor_score": "", "items": [], "current_time": _now_ms()}
+    line_no = state.line_no_of(note_id) if note_id else None
+    if line_no is not None:
+        rec = state.dataset().read(line_no)
+        # R8C-P3-5：note_card 用 v1/feed 上下文模板物化（详情流形态，非搜索卡模板）
+        data["items"] = [{"model_type": "note",
+                          "note_card": synth_render.render_xhs_feed_note_card(rec),
+                          "ignore": False, "id": rec.get("id")}]
+    return {"code": 0, "success": True, "msg": "成功", "data": data}
+
+
+def xhs_widgets(state: SiteState, body: dict) -> dict:
+    """POST /api/sns/web/v2/widgets（笔记相关搜索组件：猜你想搜胶囊）。
+
+    语料真值：{code:0, success:true, msg:"成功", data:{result:{code,message,
+    success}, widgets:{widget_list:[{track, model, biz_type, ui, position}]}}}；
+    联想词从笔记标题派生（数据面），icon 用本机同源 /sns-webpic 形态。
+    """
+    body = dict(body or {})
+    note_id = _body_str(body, "note_id")
+    word = ""
+    line_no = state.line_no_of(note_id) if note_id else None
+    if line_no is not None:
+        nc = (state.dataset().read(line_no).get("note_card")) or {}
+        title = str(nc.get("display_title") or "").strip()
+        m = re.match(r"^[^#\s，。！？]{2,8}", title)
+        word = m.group(0) if m else ""
+    if not word:
+        word = _DY_SUGGEST_POOL[stable_hash("xhs-wdg::%s" % (note_id or ""))
+                                % len(_DY_SUGGEST_POOL)]
+    rid = _hex(32)
+    kw_q = quote(word, safe="")
+    nid = note_id or ""
+    api_extra = quote('{"source_note_id":"%s"}' % nid, safe="")
+    # 红队 R7C-P3-1：icon 静态化语料常量（6/6 样本同一图标；路径段取语料真值、
+    # 主机段换本机同源 /sns-webpic —— 旧版 %032x 派生恒带 16 前导零可编程一辨）
+    icon = "/sns-webpic/fe-platform/09c136c01bac91a3eb7284b6e107e4714d7c06da.png"
+    icon_dark = "/sns-webpic/fe-platform/104101l031ul732v92a06ftel2030k000000000blfjmfc"
+    return {"code": 0, "success": True, "msg": "成功",
+            "data": {"result": {"code": 0, "message": "success", "success": True},
+                     "widgets": {"widget_list": [{
+                         "track": {"track_id": word, "name": "WEB_RELATED_SEARCH"},
+                         "model": {
+                             "sub_title": word,
+                             "icon_dark": icon_dark,
+                             "icon": icon,
+                             "link": ("xhsdiscover://search/result?keyword=%s"
+                                      "&target_search=notes&mode=note_text_recommend"
+                                      "&word_from=SEARCH_WORD_FROM_NOTE_TEXT_RECOMMEND"
+                                      "&source=normal_note&noteId=%s&word_request_id=%s"
+                                      "&api_extra=%s&add_to_history=true"
+                                      % (kw_q, nid, rid, api_extra)),
+                             "title": "猜你想搜",
+                             "biz_extra": json.dumps(
+                                 {"word_request_id": rid, "keyword": word},
+                                 ensure_ascii=False, separators=(",", ":"))},
+                         "biz_type": "image_related_search",
+                         "ui": {"type": "native", "name": "capsule"},
+                         "position": {"container": "content_under_capsule",
+                                      "order": 100, "show_type": 0},
+                     }]}}}
 
 
 # ---------------------------------------------------------------------------
@@ -940,7 +1833,21 @@ API_ROUTES = {
         ("GET", "/aweme/v1/web/user/profile/other/"): dy_user_profile,
         ("GET", "/aweme/v1/web/user/profile/other"): dy_user_profile,
         ("GET", "/aweme/v1/web/aweme/post/"): dy_user_posted,
-        ("GET", "/aweme/v1/web/aweme/post"): dy_user_posted,    },
+        ("GET", "/aweme/v1/web/aweme/post"): dy_user_posted,
+        # 红队 round 6A C-2 组：新数据面端点（suggest/emoji/multi/mix/series/self）
+        ("GET", "/aweme/v1/web/api/suggest_words/"): dy_suggest_words,
+        ("GET", "/aweme/v1/web/api/suggest_words"): dy_suggest_words,
+        ("GET", "/aweme/v1/web/emoji/list/"): dy_emoji_list,
+        ("GET", "/aweme/v1/web/emoji/list"): dy_emoji_list,
+        ("POST", "/aweme/v1/web/multi/aweme/detail/"): dy_multi_aweme_detail,
+        ("POST", "/aweme/v1/web/multi/aweme/detail"): dy_multi_aweme_detail,
+        ("GET", "/aweme/v1/web/mix/aweme/"): dy_mix_aweme,
+        ("GET", "/aweme/v1/web/mix/aweme"): dy_mix_aweme,
+        ("GET", "/aweme/v1/web/series/aweme/"): dy_series_aweme,
+        ("GET", "/aweme/v1/web/series/aweme"): dy_series_aweme,
+        ("GET", "/aweme/v1/web/user/profile/self/"): dy_user_profile_self,
+        ("GET", "/aweme/v1/web/user/profile/self"): dy_user_profile_self,
+    },
     "xhs": {
         ("POST", "/api/sns/web/v2/search/notes"): xhs_search_notes,
         # 契约 path_template=/api/sns/web/v2/comment/page（render 端点 ID 写作 comment_page，
@@ -952,6 +1859,19 @@ API_ROUTES = {
         ("GET", "/api/sns/web/v2/comment/sub/page"): xhs_comment_sub_page,
         ("GET", "/api/sns/web/v2/comment/sub/page/"): xhs_comment_sub_page,
         ("GET", "/api/sns/web/v1/user_posted"): xhs_user_posted,
+        # 红队 round 6A C-2 组：新数据面端点（recommend/filter/onebox/category/feed/widgets）
+        ("GET", "/api/sns/web/v1/search/recommend"): xhs_search_recommend,
+        ("GET", "/api/sns/web/v1/search/recommend/"): xhs_search_recommend,
+        ("GET", "/api/sns/web/v1/search/filter"): xhs_search_filter,
+        ("GET", "/api/sns/web/v1/search/filter/"): xhs_search_filter,
+        ("POST", "/api/sns/web/v1/search/onebox"): xhs_search_onebox,
+        ("POST", "/api/sns/web/v1/search/onebox/"): xhs_search_onebox,
+        ("GET", "/api/sns/web/v1/homefeed/category"): xhs_homefeed_category,
+        ("GET", "/api/sns/web/v1/homefeed/category/"): xhs_homefeed_category,
+        ("POST", "/api/sns/web/v1/feed"): xhs_feed,
+        ("POST", "/api/sns/web/v1/feed/"): xhs_feed,
+        ("POST", "/api/sns/web/v2/widgets"): xhs_widgets,
+        ("POST", "/api/sns/web/v2/widgets/"): xhs_widgets,
     },
     "kuaishou": {
         ("POST", "/rest/v/search/feed"): ks_search_feed,
@@ -987,6 +1907,8 @@ PAGE_FILES = {  # 路由 → pages/out/<site>/ 文件
 # /short-video/<id>、/profile/<id>（ks））
 # 红队 R5B-P3-7/R5B-P2-3/R5B-P2-4 增补：dy /jingxuan/search/<kw>（录制实录 URL 形态）、
 # ks /search/user（用户 tab 页）、xhs /search_result/<id>（模态承载路径）。
+# 红队 R12C-P3-2：xhs `/` → 302 /explore 带体（语料 25/25 CL:47 text/html;
+# charset=utf-8）——体为语料等长小页（47 字节，内容无 CJK，形态对齐）。
 _DY_SEARCH_PATH_RE = re.compile(r"^/search/(?P<kw>.+)$")
 _DY_JINGXUAN_RE = re.compile(r"^/jingxuan/search/(?P<kw>.+)$")
 _DY_VIDEO_PATH_RE = re.compile(r"^/video/(?P<id>[0-9A-Za-z_-]+)$")
@@ -999,6 +1921,10 @@ _KS_SEARCH_VIDEO_RE = re.compile(r"^/search/video/?$")
 _KS_SEARCH_USER_RE = re.compile(r"^/search/user/?$")
 _KS_SHORTVIDEO_PATH_RE = re.compile(r"^/short-video/(?P<id>[0-9A-Za-z_-]+)$")
 _KS_PROFILE_PATH_RE = re.compile(r"^/profile/(?P<id>[0-9A-Za-z_-]+)$")
+
+# xhs `/` 302 体（R12C-P3-2/3：语料 CL:47 带体；`<html><head></head><body>/explore</body></html>` 恰 47 字节）
+_XHS_ROOT_302_BODY = b"<html><head></head><body>/explore</body></html>"
+assert len(_XHS_ROOT_302_BODY) == 47
 
 # 详情/作者页 SSR 注入点（真站详情数据 SSR 内嵌，红队 R3-P1-3：页面不再走内部取数端点）
 _SSR_TOKEN = "/*__STATE__*/null"
@@ -1050,8 +1976,9 @@ def _link_rel(rel: str, href) -> str:
 
 
 def _jsonld(obj) -> str:
+    # R8C-P3-1：JSON-LD 注入同紧凑分隔符（语料 ld+json 无空格形态）
     return ('<script type="application/ld+json">%s</script>'
-            % json.dumps(obj, ensure_ascii=False))
+            % json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
 
 
 def _breadcrumb(items: list) -> str:
@@ -1100,7 +2027,7 @@ def _dy_detail_meta(state: SiteState, rec: dict) -> tuple[str, str]:
                      else (_BRAND_NAME["douyin"], origin),
                      ("视频作品", "%s/video/%s" % (origin, vid))]),
     ])
-    return desc, head
+    return "%s - %s" % (desc, _BRAND_NAME["douyin"]), head   # R9B-P3-3：语料 caption+「 - 抖音」后缀（3/3）
 
 
 def _dy_user_meta(state: SiteState, rec: dict, sec_uid: str) -> tuple[str, str]:
@@ -1116,14 +2043,28 @@ def _dy_user_meta(state: SiteState, rec: dict, sec_uid: str) -> tuple[str, str]:
 
 
 def _xhs_image_urls(entity: dict, limit: int = 4) -> list:
-    """note_card.image_list → og:image URL 列表（WB_DFT 场景；数据集字段缺失则空）。"""
+    """note_card.image_list → og:image URL 列表（WB_DFT 场景；数据集字段缺失则空）。
+
+    R9A-P3-1：og:image 走同一 URL 值形态规整（语料 webpic 模板形态）。"""
     out = []
     for img in ((entity.get("note_card") or {}).get("image_list") or [])[:limit]:
         for info in (img.get("info_list") or []):
             if info.get("image_scene") == "WB_DFT" and info.get("url"):
-                out.append(info["url"])
+                out.append(_mu_rewrite(str(info["url"])))
                 break
     return out
+
+
+def _xhs_note_bg_keyword(entity: dict) -> str:
+    """红队 R7B-P3-3：/search_result/<id> 直开页背景列表派生词。
+
+    URL 无 keyword 参数——背景列表不再回退构建期默认词（旧版与 URL/内容/title
+    三者脱节），改按笔记实体 display_title 派生（SSR 注入 state.keyword，页面
+    JS INIT_KW 以 URL 参数优先、此处次之）。
+    """
+    title = str(((entity.get("note_card") or {}).get("display_title")) or "").strip()
+    m = re.match(r"^[^#\s，。！？!?.,{}()（）【】\[\]]{2,8}", title)
+    return m.group(0) if m else (title[:4] or "小红书")
 
 
 def _xhs_detail_meta(state: SiteState, entity: dict) -> tuple[str, str]:
@@ -1195,7 +2136,8 @@ def _ks_search_meta(kw: str) -> tuple[str, str]:
         _meta_prop("og:url", url),
         _link_rel("canonical", url),
     ])
-    return "%s - %s" % (kw, _BRAND_NAME["kuaishou"]), head
+    # R9B-P3-3：ks 搜索页 <title> 恒静态「快手」（语料 20/20，关键词不入 title）
+    return "快手", head
 
 
 def _ks_user_meta(state: SiteState, uid: str, author: dict) -> tuple[str, str]:
@@ -1210,7 +2152,8 @@ def _ks_user_meta(state: SiteState, uid: str, author: dict) -> tuple[str, str]:
         _link_rel("canonical", url),
         _breadcrumb([(_BRAND_NAME["kuaishou"], origin), (name, url)]),
     ])
-    return "%s - %s" % (name, _BRAND_NAME["kuaishou"]), head
+    # R9B-P3-3：ks 作者页 <title> 恒静态「快手」（语料 20/20，作者名不入 title）
+    return "快手", head
 
 
 def _ks_detail_meta(rec: dict) -> tuple[str, str]:
@@ -1328,12 +2271,25 @@ def _site_api_headers(site: str, payload=None) -> dict:
     return {}
 
 
-# 真站 Content-Type 实证（红队 P2-D4）：dy stream/detail/comment 无 charset、single 带 charset
+# 真站 Content-Type 实证（红队 P2-D4）：dy stream/detail/comment 无 charset、single 带 charset；
+# R7C-P3-3：新补 5 端点（suggest_words 88 / mix 2 / multi 28 / series 12 / profile/self
+# 120 语料请求全 application/json 无 charset）并入 dy 无 charset 族。
+# 红队 R11C-P3-6（全路由 × 语料逐路径 CT 真值对照，rt11c_ct）：search/item 语料
+# 49/49 **带** charset（移出无 charset 族）；related/（39）、user/profile/other/
+# （20）、aweme/post/（25）语料**无** charset（并入）；ks /graphql 语料 295/295
+# application/json 无 charset（_json 单独分支）。
 _DY_NO_CHARSET_PATHS = (
     "/aweme/v1/web/general/search/stream",
     "/aweme/v1/web/aweme/detail",
     "/aweme/v1/web/comment/list",
-    "/aweme/v1/web/search/item",
+    "/aweme/v1/web/api/suggest_words",
+    "/aweme/v1/web/aweme/related",
+    "/aweme/v1/web/user/profile/other",
+    "/aweme/v1/web/aweme/post",
+    "/aweme/v1/web/mix/aweme",
+    "/aweme/v1/web/multi/aweme/detail",
+    "/aweme/v1/web/series/aweme",
+    "/aweme/v1/web/user/profile/self",
 )
 
 
@@ -1345,6 +2301,12 @@ class SynthHandler(BaseHTTPRequestHandler):
     # 由 make_handler 注入（每端口一个 site）
     site: str = "douyin"
 
+    def handle_one_request(self):
+        # 红队 R11C-P1-1：每请求重置「响应已发送」标记（_send/send_error 置位，
+        # _serve_page 入口防御——一请求至多一响应，RFC 7230 §5.1 消息成帧语义）
+        self._response_sent = False
+        return super().handle_one_request()
+
     def version_string(self):
         # 红队 R4-P3-8：基类 version_string = server_version + ' ' + sys_version，
         # sys_version 置空后会拼出尾随空格（"TLB "）；语料真值无空格——先拼后 strip。
@@ -1352,6 +2314,60 @@ class SynthHandler(BaseHTTPRequestHandler):
         if self.sys_version:
             v = "%s %s" % (v, self.sys_version)
         return v.rstrip()
+
+    def parse_request(self):
+        """红队 R8C-P3-6：头部级畸形前置 400（请求走私/坏头行向量）。
+
+        语料无此类请求真值（录制会话从未发过 TE+CL 共存/缺 Host/无冒号头行），
+        按 RFC 7230 §5.4/§5.5.3 与 nginx 族的保守 400（站点错误族体由 send_error
+        站点化，不泄解释器特征）。三入口：
+          ① Transfer-Encoding 与 Content-Length 共存（ smuggling 消歧向量）；
+          ② HTTP/1.1+ 请求缺 Host 头；
+          ③ 头行缺冒号（email 解析器吸收该行并记 MissingHeaderBodySeparatorDefect，
+            过时折行 continuation 不产生 defect——合法折叠不受影响）。
+        其余头部级形态（重复 Host/NUL 值/原始 UTF-8 头值/300 头）维持可预期受理。
+
+        红队 R9C-P3-2（第④入口）：重复 Content-Length 且值不一致 → 400
+        （RFC 7230 §3.3.2「多个 Content-Length 头或单值含逗号列表且值不同，
+        必须视为无效消息」；与 TE+CL 入口同族。值完全一致的重复按单值受理）。
+        红队 R11C-P3-4（第⑤入口）：重复 Host（多 header 或单值逗号列表形态，
+        不分同值）→ 400（RFC 7230 §5.4「server MUST respond 400 to any request
+        that contains more than one Host header field」；nginx/Go 族同款）。
+        红队 R11C-P3-5（第⑥入口）：非数字单值 Content-Length → 400（旧版只在
+        POST 读体入口有 ValueError 兜底，GET/HEAD/OPTIONS 排空入口 int() 抛
+        被吞、不排空 → 连接污染；前置到 parse_request 后全方法一致 400）。"""
+        ok = super().parse_request()
+        if not ok:
+            return False
+        try:
+            hdrs = self.headers
+            bad = None
+            if "transfer-encoding" in hdrs and "content-length" in hdrs:
+                bad = "te+cl"
+            elif self.request_version not in ("HTTP/0.9", "HTTP/1.0") \
+                    and "host" not in hdrs:
+                bad = "missing-host"
+            elif any(getattr(d, "__class__", type(d)).__name__
+                     == "MissingHeaderBodySeparatorDefect" for d in hdrs.defects):
+                bad = "bad-header-line"
+            if bad is None:
+                hosts = [str(h) for h in (hdrs.get_all("Host") or [])]
+                if len(hosts) > 1 or any("," in h for h in hosts):
+                    bad = "dup-host"
+            if bad is None:
+                cl_vals = []
+                for v in (hdrs.get_all("Content-Length") or []):
+                    cl_vals.extend(p.strip() for p in str(v).split(",") if p.strip())
+                if len(set(cl_vals)) > 1:
+                    bad = "dup-cl"
+                elif any(not re.fullmatch(r"\d+", v) for v in cl_vals):
+                    bad = "invalid-cl"
+            if bad:
+                self.send_error(400)
+                return False
+        except Exception:
+            pass
+        return True
 
     def log_message(self, fmt, *args):  # 单行访问日志
         print("[synth_api] %s %s" % (self.site, fmt % args), flush=True)
@@ -1361,6 +2377,57 @@ class SynthHandler(BaseHTTPRequestHandler):
         if keyword.lower() == "server" and not str(value or "").strip():
             return
         return super().send_header(keyword, value)
+
+    def send_error(self, code, message=None, explain=None):
+        """红队 R7C-P3-5：错误族的最后一层站点化。
+
+        BaseHTTPRequestHandler 对未知方法（PUT/PATCH/DELETE）与畸形/坏版本/超长
+        请求行走 send_error → CPython 默认英文 HTML（「Error response…Error code
+        explanation: 501 - …」），站级 Server 头正确但 body 为解释器模板——实现
+        指纹。现按站点错误族回体：API 前缀 → 站点 JSON 族（dy status_code 族 /
+        xhs code 族 / ks result 族），其余 → 站点 404 页形态；畸形请求行
+        （HTTP/0.9 单词回退形态）强制以 HTTP/1.1 状态行回 400（不再裸 body），
+        不支持的超大版本号（HTTP/9.9 → 基类 505）按「畸形行统一 400」口径折为
+        400（nginx 同款处置，消 CPython 505 指纹），不回显请求行原文、不泄露
+        解释器特征。
+        """
+        try:
+            self.log_error('"%s" %s', getattr(self, "requestline", "") or "-", code)
+            if code == 505:  # 版本号不支持 → 畸形行统一 400（R7C-P3-5）
+                code = 400
+            self.close_connection = True
+            if getattr(self, "request_version", "HTTP/0.9") == "HTTP/0.9":
+                self.request_version = "HTTP/1.1"  # 单词请求行回退 0.9 语义 → 强制状态行
+            path = (getattr(self, "path", "") or "").split("?", 1)[0]
+            if path and any(path.startswith(p) for p in API_PREFIXES[self.site]):
+                body = wire_json_escape(
+                    self.site, path,
+                    json.dumps(_miss_body(self.site, path, self.command or ""),
+                               ensure_ascii=False,
+                               separators=(",", ":"))).encode("utf-8")
+                ctype = ("application/json" if self.site == "douyin"
+                         else "application/json;charset=UTF-8" if self.site == "kuaishou"
+                         else "application/json; charset=utf-8")
+            else:
+                title, text = self._PAGE_MISS_TITLES.get(
+                    self.site, self._PAGE_MISS_TITLES["douyin"])
+                body = ("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">"
+                        "<title>%s</title></head><body style=\"font:14px/1.8 sans-serif;"
+                        "text-align:center;padding-top:12vh\">"
+                        "<h1 style=\"font-size:20px;color:#333\">%s</h1>"
+                        "<p style=\"color:#888\"><a href=\"/\">返回首页</a></p></body></html>"
+                        % (title, text)).encode("utf-8")
+                ctype = "text/html; charset=utf-8"
+            self.send_response(code)   # 标准理由短语（不透传 message，避免回显请求行原文）
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            if self.command != "HEAD" and self.request_version != "HTTP/0.9":
+                self.wfile.write(body)
+            self._response_sent = True  # R11C-P1-1：send_error 路径同样置位
+        except Exception:
+            pass
 
     # ---- 基础设施 ----
     def _allowed_origin(self) -> str | None:
@@ -1381,39 +2448,58 @@ class SynthHandler(BaseHTTPRequestHandler):
             return origin
         return None
 
-    def _send(self, code: int, body: bytes, ctype: str, extra: dict | None = None,
-              api: bool = False):
+    def _send(self, code: int, body: bytes, ctype: str | None, extra: dict | None = None,
+              api: bool = False) -> bool:
         """发响应（红队 R5C-P3-2/P3-3：压缩协商按 q 值；主域 API 不附 Vary:Origin/
         Cache-Control:no-store——语料 dy 3625 主域 API 响应 cache-control 0 次、xhs
         edith /api/sns 2074 响应两头均 0 次；dy 压缩响应按语料主形态回
-        Vary: Accept-Encoding，xhs/ks 不回）。"""
+        Vary: Accept-Encoding，xhs/ks 不回）。
+
+        红队 R11C-P1-1：返回哨兵 True（旧版无 return 恒 None → _page_alias 命中
+        分支返回 None，do_GET `if alias is not None` 判 None 穿透到 _serve_page
+        二次发包——同连接追加幻影 404 站点页，连接复用型客户端下一请求必吃到）。
+        ctype=None 不发 Content-Type（R11C-P3-3：语料 edith OPTIONS 3,072 例无 CT）。
+        红队 R11C-P3-2：204 不发 Content-Length（RFC 7230 §3.3.2 明文 MUST NOT；
+        nginx 族同款）。"""
         ce = None
         if code != 204 and body:
             ce = self._pick_content_encoding()
         if ce:
             body = _COMPRESS[ce](body)
             self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
+            if ctype:
+                self.send_header("Content-Type", ctype)
+            if code != 204:
+                self.send_header("Content-Length", str(len(body)))
             self.send_header("Content-Encoding", ce)
             if api and self.site == "douyin":
                 self.send_header("Vary", "Accept-Encoding")  # dy 语料主形态（2264/3625）
         else:
             self.send_response(code)
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
+            if ctype:
+                self.send_header("Content-Type", ctype)
+            if code != 204:
+                self.send_header("Content-Length", str(len(body)))
         origin = self._allowed_origin()
         extra_keys = {k.lower() for k in (extra or {})}
+        # 红队 R7C-P3-4：ks 主域 http/1.1 响应全带 Connection: keep-alive（语料
+        # 903/903）；dy/xhs 主域走 h2 无此头（不补）。请求明示 Connection: close
+        # （close_connection 已置位）时不声称 keep-alive。
+        if self.site == "kuaishou" and not self.close_connection:
+            self.send_header("Connection", "keep-alive")
         if origin:  # 不匹配/无 Origin → 不回任何 CORS 头
             self.send_header("Access-Control-Allow-Origin", origin)
             if "access-control-allow-methods" not in extra_keys:  # 调用方已给 ACAM 时不重复
                 self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-S, X-T")
+            if "access-control-allow-headers" not in extra_keys:  # 调用方已给 ACAH 时不重复
+                self.send_header("Access-Control-Allow-Headers", "Content-Type, X-S, X-T")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
         self.end_headers()
         if self.command != "HEAD":
             self.wfile.write(body)
+        self._response_sent = True  # R11C-P1-1：本请求已有响应落盘（_serve_page 防御用）
+        return True
 
     def _pick_content_encoding(self) -> str | None:
         """Accept-Encoding 协商（红队 R5C-P3-2）。
@@ -1442,35 +2528,152 @@ class SynthHandler(BaseHTTPRequestHandler):
         return None
 
     def _json(self, code: int, obj, api: bool = False):
-        """api=True 时补站级头集 + 真站 Content-Type 形态（P2-D4/P2-X2）。"""
+        """api=True 时补站级头集 + 真站 Content-Type 形态（P2-D4/P2-X2）。
+
+        红队 R8C-P3-1：序列化全面紧凑化（separators=(",",":")）——语料三站主域
+        API JSON 体 7,580/7,580 无空格分隔（唯一 spaced 的 240 个为 vmok-manifest
+        静态文件）；旧版 Python 默认（", "/": "）是单正则可辨的最宽格式指纹。
+        红队 R9A-P3-1：序列化前媒体 URL 值形态规整（见 media_url_pass 注，盐=
+        "api:<路径>"——R10A-P3-4 跨端点按次签发）。
+        红队 R10A-P3-1：dy 出口 &<> / U+2028 转义表；ks REST /rest/v/* 出口
+        emoji 代理对转义（序列化后套表，不触碰结构位/紧凑分隔）。
+        红队 R11A-P3-1：响应体尾换行按站/端点族分流——xhs 全 JSON 面（语料
+        3,949/3,949 体以 \n 结尾）与 ks graphql（295/295）追加 \n；dy 主域与
+        ks REST（逐验无尾换行）不追加（size==byte_len 字节级口径）。"""
+        obj = media_url_pass(obj, "api:" + self.path.split("?", 1)[0])
+        text = json.dumps(obj, ensure_ascii=False, separators=(",", ":"))
+        text = wire_json_escape(self.site, self.path, text)
+        path0 = self.path.split("?", 1)[0]
+        if self.site == "xhs" or \
+                (self.site == "kuaishou" and path0.rstrip("/") == "/graphql"):
+            text += "\n"  # R11A-P3-1：语料 xhs/ks-graphql 体末 \n
         extra = _site_api_headers(self.site, obj) if api else None
         ctype = "application/json; charset=utf-8"
         if api and self.site == "douyin":
-            p = self.path.split("?", 1)[0].rstrip("/")
+            p = path0.rstrip("/")
             if any(p.startswith(q.rstrip("/")) for q in _DY_NO_CHARSET_PATHS):
                 ctype = "application/json"  # 真站 stream/detail/comment/search_item 无 charset
         elif api and self.site == "kuaishou":
-            ctype = "application/json;charset=UTF-8"  # 真站无空格大写形态（R3-P3-5）
-        return self._send(code, json.dumps(obj, ensure_ascii=False).encode("utf-8"),
-                          ctype, extra, api=api)
+            if path0.rstrip("/") == "/graphql":
+                ctype = "application/json"  # R11C-P3-6：语料 295/295 无 charset
+            else:
+                ctype = "application/json;charset=UTF-8"  # 真站无空格大写形态（R3-P3-5）
+        return self._send(code, text.encode("utf-8"), ctype, extra, api=api)
+
+    def _read_chunked_body(self) -> bytes:
+        """红队 R9C-P3-1：Transfer-Encoding: chunked 请求体逐帧解码（RFC 7230 §4.1）。
+
+        读至 0 长度帧（含 trailer 行）；chunk-ext 忽略；8MB 上限防钉连接。
+        旧版仅按 Content-Length 读体——合法 chunked 请求的帧字节全部滞留不读：
+        体被静默丢弃（同 body 用 CL 发送则正常出数）且 keep-alive 连接被滞留
+        字节污染（紧随其后的合法请求得 400）。"""
+        out = bytearray()
+        try:
+            while len(out) <= 8 * 1024 * 1024:
+                line = self.rfile.readline(65536)
+                if not line:
+                    break
+                try:
+                    sz = int(line.strip().split(b";")[0] or b"0", 16)
+                except ValueError:
+                    break
+                if sz <= 0:
+                    while True:  # trailer 至空行
+                        t = self.rfile.readline(65536)
+                        if not t or t in (b"\r\n", b"\n"):
+                            break
+                    break
+                out += self.rfile.read(sz)
+                self.rfile.read(2)  # 帧尾 CRLF
+        except Exception:
+            pass
+        return bytes(out)
 
     def _read_body(self) -> dict:
-        n = int(self.headers.get("Content-Length") or 0)
-        if n <= 0:
-            return {}
-        raw = self.rfile.read(n)
+        te = (self.headers.get("Transfer-Encoding") or "").strip().lower()
+        if "chunked" in te:   # R9C-P3-1：TE 末编码 chunked → 按 chunked 帧读体
+            raw = self._read_chunked_body()
+        else:
+            # R10C-P3-1：单头逗号同值 CL（`7,7` / `7, 7`）按单值受理（RFC 7230
+            # §3.3.2——R9C-P3-2「值完全一致的重复按单值受理」宣称的形态兑现；
+            # 旧版 int('7,7') 直接 ValueError 穿透到 socketserver handle_error，
+            # 连接零响应直断）。不同值逗号在 parse_request 第④入口已 400，此处
+            # 兜底再拦（ValueError 由 do_POST 的站点 400 族接住，绝不无响应断连）。
+            vals = [p.strip() for p in
+                    str(self.headers.get("Content-Length") or "").split(",") if p.strip()]
+            uniq = sorted(set(vals))
+            if len(uniq) > 1:
+                raise ValueError("dup-cl: %r" % ",".join(uniq))
+            if not vals:
+                return {}
+            n = int(uniq[0])
+            if n <= 0:
+                return {}
+            raw = self.rfile.read(n)
         try:
             return json.loads(raw.decode("utf-8"))
         except Exception:
-            return {}
+            pass
+        # 红队 round 6A C-2：dy multi/aweme/detail 语料调用形为
+        # application/x-www-form-urlencoded（aweme_ids=%5B…%5D&origin_type=…）——
+        # JSON 解析失败时按 form 体取值（值保持字符串，调用方自行容错），
+        # 其余非法形态仍回 {}（R5C-P2-1 容错口径不变）。
+        try:
+            form = parse_qs(raw.decode("utf-8"))
+            if form and any(k.strip() for k in form):
+                return {k: v[0] if len(v) == 1 else v for k, v in form.items()}
+        except Exception:
+            pass
+        return {}
+
+    def _drain_request_body(self):
+        """红队 R10C-P3-2：GET/HEAD 携带请求体时排空再复用连接（nginx discard 语义）。
+
+        旧版 do_GET 全程不读体：`GET <API>` + `Content-Length: 5` + body 的 5 字节
+        滞留 rfile，同一 keep-alive 连接紧随的合法请求 request line 被残留字节破坏
+        （读成 body 首词 → 501 站点页，三站全复现）。语料 68,405 请求 0 例
+        GET+body（浏览器不发），实现指纹面修复——对无 body 方法在连接复用前
+        丢弃请求体（RFC 7230 §3.3 允许 GET 带体；nginx 族 ngx_http_discard_
+        request_body 同款）。HEAD 经 do_HEAD→do_GET 同路；chunked 体读尽帧链。
+        """
+        try:
+            te = (self.headers.get("Transfer-Encoding") or "").strip().lower()
+            if "chunked" in te:
+                self._read_chunked_body()
+                return
+            vals = [p.strip() for p in
+                    str(self.headers.get("Content-Length") or "").split(",") if p.strip()]
+            uniq = sorted(set(vals))
+            if len(uniq) > 1 or not uniq:
+                return  # 畸形 CL：parse_request 前置 400 已关连接，无体可排
+            n = int(uniq[0])
+            while n > 0:
+                chunk = self.rfile.read(min(n, 65536))
+                if not chunk:
+                    break
+                n -= len(chunk)
+        except Exception:
+            pass
 
     def do_OPTIONS(self):
         # 红队 R5C-P3-4：xhs 同源 OPTIONS 真站形态 = 200 + ACAM 五方法、无 Allow 头
         # （edith /api/sns 语料 3,074 次同源 OPTIONS，4 样本同形）；dy/ks 主域同源
         # OPTIONS 语料 0 次（无真值）——维持 204 + Allow 形态（R3-P3-5）。
+        # 红队 R11C-P3-1：OPTIONS 携带请求体时排空再复用连接（R10C-P3-2 只挂
+        # do_GET/do_HEAD，本入口同款——无 body 方法族排空覆盖面补齐）。
+        self._drain_request_body()
         if self.site == "xhs":
-            return self._send(200, b"", "text/plain",
-                              {"access-control-allow-methods": "POST, GET, OPTIONS, PUT, DELETE"})
+            # 红队 R11C-P3-3：头集全量对齐语料 edith 3,072/3,072——无 Content-Type、
+            # CL:0、ACAM 五方法、ACAC:true、ACMA:7200、ACAH 六项列表（旧版多 CT、
+            # 缺 ACAC/ACMA、ACAH 为通用三项）。
+            return self._send(200, b"", None, {
+                "access-control-allow-methods": "POST, GET, OPTIONS, PUT, DELETE",
+                "access-control-allow-credentials": "true",
+                "access-control-max-age": "7200",
+                "access-control-allow-headers":
+                    "content-type,x-b3-traceid,x-s,x-s-common,x-t,x-xray-traceid",
+            })
+        # 红队 R11C-P3-2：204 不携带 Content-Length（RFC 7230 §3.3.2 MUST NOT）
         return self._send(204, b"", "text/plain", {"Allow": "GET, POST, OPTIONS"})
 
     def do_HEAD(self):
@@ -1517,6 +2720,7 @@ class SynthHandler(BaseHTTPRequestHandler):
         return self._send(404, body.encode("utf-8"), "text/html; charset=utf-8")
 
     def do_GET(self):
+        self._drain_request_body()   # R10C-P3-2：GET/HEAD 带体请求先排空（keep-alive 零污染）
         state = STATES[self.site]
         parsed = urlparse(self.path)
         path = parsed.path
@@ -1587,7 +2791,14 @@ class SynthHandler(BaseHTTPRequestHandler):
         if not f.is_file():
             return self._page_miss()  # R5C-P2-1：骨架缺失不回内部构建提示
         html = f.read_text(encoding="utf-8")
-        payload = json.dumps(state_obj, ensure_ascii=False)
+        # R8C-P3-1：SSR state 注入同紧凑分隔符（与 API 体线格式一致）；
+        # R9A-P3-1：state 内媒体 URL 同过值形态规整（盐="ssr:<骨架名>"，与 API
+        # 面跨端点必异——R10A-P3-4）；R10A-P3-1：dy 内嵌 JSON 同转义表（语料 dy
+        # 页面内嵌 JSON 体 \u0026 族实证；ks/xhs SSR 保持原生）
+        payload = wire_json_escape(
+            self.site, fname,
+            json.dumps(media_url_pass(state_obj, "ssr:" + fname),
+                       ensure_ascii=False, separators=(",", ":")))
         if _SSR_TOKEN in html:
             html = html.replace(_SSR_TOKEN, payload)
         else:  # 兜底：无占位时注入到 <head> 尾部
@@ -1650,7 +2861,34 @@ class SynthHandler(BaseHTTPRequestHandler):
                   or ((a or {}).get("avatar_thumb") or {}).get("url_list", [""])[0]
                   or (a or {}).get("avatar") or ""}
         if self.site == "douyin" and author_rec:
-            author["followers"] = (author_rec.get("author") or {}).get("follower_count")
+            da = author_rec.get("author") or {}
+            author["followers"] = da.get("follower_count")
+            # 红队 R11B-P3-6：作者页 header 统计块显示字段补齐（数据面
+            # follower_count/total_favorited 在；following_count/抖音号/IP 属地
+            # 语料显示面真值，数据集无源——显示层确定性派生，同请求恒定）
+            author["favorited"] = da.get("total_favorited")
+            h = stable_hash("dy-prof::%s" % author_key)
+            author["following"] = 1 + h % 480
+            author["number"] = str(10 ** 9 + stable_hash("dy-no::%s" % author_key)
+                                   % 9 * 10 ** 8 + h % 10 ** 8)
+            author["ip_location"] = (
+                "广东", "河南", "河北", "四川", "山东", "江苏", "浙江", "湖北",
+                "湖南", "福建", "陕西", "安徽", "上海", "北京", "重庆", "辽宁"
+            )[stable_hash("dy-ip::%s" % author_key) % 16]
+        elif self.site == "xhs":
+            # 红队 R11B-P3-6：xhs 作者页 header「关注 N 粉丝 M 获赞与收藏」
+            # （语料显示面真值；xhs user 实体无计数字段——显示层确定性派生）
+            author["following"] = 5 + stable_hash("xhs-fo::%s" % author_key) % 1900
+            author["fans"] = 80 + stable_hash("xhs-fans::%s" % author_key) % 46000
+            author["likes"] = 300 + stable_hash("xhs-lk::%s" % author_key) % 970000
+        elif self.site == "kuaishou":
+            # 红队 R11B-P3-6：ks 作者页「快手号」+ 统计块（数据集 author 无计数
+            # 源，显示层确定性派生）
+            author["kwai_number"] = str(10 ** 9 + stable_hash("ks-no::%s" % author_key) % 9 * 10 ** 8
+                                        + stable_hash("ks-no2::%s" % author_key) % 10 ** 8)
+            author["following"] = 1 + stable_hash("ks-fo::%s" % author_key) % 900
+            author["followers"] = 100 + stable_hash("ks-fans::%s" % author_key) % 900000
+            author["favorited"] = 500 + stable_hash("ks-lk::%s" % author_key) % 9500000
         return {"author": author, "works": works}
 
     def _page_alias(self, path: str, params: dict):
@@ -1708,16 +2946,41 @@ class SynthHandler(BaseHTTPRequestHandler):
                 return None  # 无 id 走 _serve_page（页面 JS 处理）
             return None
         if self.site == "xhs":
+            if path == "/":
+                # 红队 R12C-P3-2：语料 25/25 `/` → 302 /explore（text/html;
+                # charset=utf-8，CL:47 带体小页——302 带体为 R12C-P3-3 语料全量
+                # 形态 20/20；首页本体挂 /explore 不变，跳转后内容等价）
+                return self._send(302, _XHS_ROOT_302_BODY, "text/html; charset=utf-8",
+                                  {"Location": "/explore"})
             if _XHS_SEARCH_RESULT_RE.match(path):
+                # 红队 R6B-P3-2（SSR 侧）：?keyword= 直开时静态 <title> 注入关键词态
+                # （与 doSearch 运行时同口径，消「fetch 型 agent 读原始 HTML 只见
+                # 品牌串」的观察 3 之 xhs 部分）
+                kw = (params.get("keyword") or [None])[0]
+                if kw:
+                    return self._serve_state_page(
+                        "search.html", {}, title="%s - 小红书搜索" % kw)
                 return self._serve_file("search.html")
             m = _XHS_SEARCH_RESULT_NOTE_RE.match(path)
             if m:  # R5B-P2-4：真站搜索卡 href=/search_result/<id>（模态承载）——
                 # 不存在 id 与 /explore/<id> 同走 302 /404；存在则搜索页 + 笔记 SSR
                 item_id = m.group("id")
-                if state.line_no_of(item_id) is None:
+                line_no = state.line_no_of(item_id)
+                if line_no is None:
                     return self._xhs_note_302(path)
+                entity = state.dataset().read(line_no)
+                # 红队 R6B-P3-2：直开/刷新 /search_result/<id> 的 SSR title =
+                # 笔记标题形态（语料 sample_0011 开笔记态 DOM title 实证），
+                # 页面 JS 开模态后同口径覆写运行时 title
+                title = "%s - %s" % ((((entity.get("note_card") or {})
+                                       .get("display_title")) or "").strip()
+                                     or "小红书笔记", _BRAND_NAME["xhs"])
+                # 红队 R7B-P3-3：背景列表词按笔记实体派生注入（URL 无 keyword 参数，
+                # 不再回退默认词——URL↔列表↔title 三者语义一致）
                 return self._serve_state_page(
-                    "search.html", {"entity": state.dataset().read(state.line_no_of(item_id))})
+                    "search.html",
+                    {"entity": entity, "keyword": _xhs_note_bg_keyword(entity)},
+                    title=title)
             if path in ("/explore", "/explore/"):  # R5B-P2-4：真站首页即 /explore（分类 feed）
                 return self._serve_file("home.html")
             item_id = None
@@ -1747,6 +3010,14 @@ class SynthHandler(BaseHTTPRequestHandler):
                 return self._serve_state_page("profile.html", st, title=title, head=head)
             return None
         # kuaishou（红队 R3-P1-2：真站 URL 约定路由）
+        if path in ("/new-reco", "/new-reco/"):
+            # 红队 R12C-P3-4：语料 20/20 `/new-reco` = ks PC 首页真路径名
+            # （200 text/html; charset=utf-8）；旧版仅挂 `/` → 404
+            return self._serve_file("home.html")
+        if path in ("/404", "/404/"):
+            # 红队 R12C-P3-5：语料 78/78 `/404` → 200 状态 404 页（ks 旅程的
+            # 404 落点直达形态；xhs 同为 200）；旧版折成 page-miss 404
+            return self._serve_file("404.html")
         if _KS_SEARCH_VIDEO_RE.match(path):
             kw = (params.get("searchKey") or [None])[0]
             if kw:  # R5B-P3-1：ks 搜索页 og/canonical 按关键词注入
@@ -1780,13 +3051,19 @@ class SynthHandler(BaseHTTPRequestHandler):
         return None
 
     def _xhs_note_302(self, path: str):
-        """真站实证（live）：302 → /404?source=/404/sec_…&error_code=300031。"""
+        """真站实证（live）：302 → /404?source=/404/sec_…&error_code=300031。
+        R12C-P3-3：302 带体——语料 20/20 全部 CL>0（笔记 404 落点 302 携完整
+        404 页，84,924B 样本在档）；旧版发空体 CL:0 为整族形态断裂。"""
         src = "/404/sec_pVswaPpO?redirectPath=%s" % quote(
             "https://www.xiaohongshu.com%s" % path, safe="")
         loc = "/404?source=%s&error_code=300031&error_msg=%s&uuid=%s" % (
             quote(src, safe=""), quote("当前笔记暂时无法浏览", safe=""),
             _hex(8) + "-" + _hex(4) + "-4" + _hex(3) + "-a" + _hex(3) + "-" + _hex(12))
-        return self._send(302, b"", "text/html", {"Location": loc})
+        body = b""
+        f = _CFG["pages"] / self.site / "404.html"
+        if f.is_file():
+            body = f.read_bytes()   # 302 落点页整页随体（语料形态）
+        return self._send(302, body, "text/html; charset=utf-8", {"Location": loc})
 
     def do_POST(self):
         state = STATES[self.site]
@@ -1795,7 +3072,13 @@ class SynthHandler(BaseHTTPRequestHandler):
         bad = path_reject_reason(self._request_target()) or path_reject_reason(path)
         if bad:
             return self._api_or_page_miss("POST", path)
-        body = self._read_body()
+        try:
+            body = self._read_body()
+        except ValueError:
+            # 红队 R10C-P3-1：读体入口的 ValueError（非数字 CL、逗号不同值等）
+            # → 站点 400 族有响应（旧版异常穿透 socketserver handle_error，
+            # 连接零响应直断；nginx/Go 族或合并受理或 400，均必有响应）
+            return self.send_error(400)
         try:
             fn = API_ROUTES[self.site].get(("POST", path))
             if fn is None:
@@ -1819,6 +3102,10 @@ class SynthHandler(BaseHTTPRequestHandler):
         return self._send(200, f.read_bytes(), "text/html; charset=utf-8")
 
     def _serve_page(self, path: str):
+        # 红队 R11C-P1-1 防御：本请求已有响应落盘（别名命中/前置 400 等）时不再
+        # 二次发包——杜绝同连接幻影响应（一请求至多一响应的协议公理）
+        if getattr(self, "_response_sent", False):
+            return True
         fname = PAGE_FILES.get(path)
         if fname is None:
             # 页面骨架内引用的静态文件（如 style.css）按需透传——纵深第 2 层：
@@ -1833,8 +3120,10 @@ class SynthHandler(BaseHTTPRequestHandler):
                          else "application/octet-stream")
                 return self._send(200, data, ctype)
             return self._api_or_page_miss("GET", path)
-        if fname == "404.html" and self.site != "xhs":
-            return self._page_miss()  # 404 页仅 xhs 生成（真站形态）
+        if fname == "404.html" and self.site not in ("xhs", "kuaishou"):
+            # 404 页 xhs/ks 生成（真站形态；ks /404 落点 200——R12C-P3-5，别名
+            # 层已接，此处兜底放宽）；dy 语料 0 样本，维持 page-miss 形态
+            return self._page_miss()
         if fname == "search.html" and self.site == "kuaishou" and path.rstrip("/") == "/search":
             # 红队 R3-P1-2（live 反向验证）：快手真站无 /search（404），搜索页在 /search/video
             return self._page_miss()
@@ -1844,6 +3133,19 @@ class SynthHandler(BaseHTTPRequestHandler):
 def make_handler(site: str):
     return type("Handler_%s" % site, (SynthHandler,),
                 {"site": site, "server_version": SITE_SERVER[site]})
+
+
+class SynthHTTPServer(ThreadingHTTPServer):
+    """红队 R6C-P3-3：listen backlog 提升到 512。
+
+    socketserver 默认 request_queue_size=5（Windows 上 listen backlog 受限更明显），
+    50 并发连接实测 25/50 被 ConnectionRefusedError 10061 拒绝（真站形态：语料
+    68,405 请求 0 拒连、0 ratelimit 头）——线程模型本身可承载（ThreadingHTTPServer
+    一连接一线程），瓶颈只在 accept 队列；调大 backlog 后 50 并发 0 拒绝。
+    """
+
+    request_queue_size = 512
+    daemon_threads = True
 
 
 def port_free(port: int) -> bool:
@@ -1888,7 +3190,7 @@ def main(argv=None) -> int:
     servers = []
     for i, site in enumerate(sites):
         port = base + i if base is not None else SITE_PORTS[site]
-        httpd = ThreadingHTTPServer((args.bind, port), make_handler(site))
+        httpd = SynthHTTPServer((args.bind, port), make_handler(site))
         httpd.daemon_threads = True
         servers.append((site, port, httpd, "primary"))
         if i < len(compat):
@@ -1896,7 +3198,7 @@ def main(argv=None) -> int:
             if cport == port:
                 continue
             if port_free(cport):
-                ch = ThreadingHTTPServer((args.bind, cport), make_handler(site))
+                ch = SynthHTTPServer((args.bind, cport), make_handler(site))
                 ch.daemon_threads = True
                 servers.append((site, cport, ch, "compat(hoverfly)"))
             else:

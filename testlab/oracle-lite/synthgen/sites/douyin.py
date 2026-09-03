@@ -145,11 +145,15 @@ def _audio_url(rng: np.random.Generator) -> str:
 def build_record(rng: np.random.Generator, stats: dict, author: dict, ctx) -> dict:
     pools = ctx.pools
     title = ctx.make_title(rng, stats["category"])
+    title = (title + ctx.title_emoji(rng, 0.088)).strip()   # R6A-P2-3：dy 语料 8.8% desc 含 emoji
     # 标签数按语料实证分布（detail/search 真值 text_extra 长度：众数 5、3-7 覆盖 65/65，
     # 旧 1-2 使 text_extra 长度倍率带超 2 → L3 分页层失分；保真修复轮）
     n_tags = int(rng.choice(np.array([3, 4, 5, 6, 7]),
                             p=np.array([0.06, 0.15, 0.68, 0.02, 0.09])))
     tags = ctx.make_tags(rng, stats["category"], n_tags)
+    act = ctx.pick_activity_tag(rng)   # R6A-P2-3③：平台活动 tag（语料 top tag 族）
+    if act:
+        tags.append(act)
     desc = title + " " + " ".join(f"#{t}" for t in tags)
 
     ratio, w, h = _RESOLUTIONS[int(rng.integers(0, len(_RESOLUTIONS)))]

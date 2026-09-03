@@ -12,7 +12,10 @@ body{font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;backgro
 header.site-header{display:flex;align-items:center;gap:16px;padding:14px 28px;background:#fff;border-bottom:1px solid #e8e8e8;position:sticky;top:0;z-index:9}
 .brand{font-size:20px;font-weight:700;color:var(--brand)}
 .nav a{margin-right:14px;color:#555;text-decoration:none}
-.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px}
+.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px;position:relative}
+.search-suggest{position:absolute;top:44px;left:0;width:100%;background:#fff;border:1px solid #eee;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:30;overflow:hidden}
+.search-suggest .sug-item{padding:8px 16px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-suggest .sug-item:hover{background:#f7f7f7;color:var(--brand)}
 .searchbar .input-box{flex:1;border:1px solid #ddd;border-radius:18px;padding:8px 16px;background:#fafafa;display:flex;align-items:center;gap:8px}
 .searchbar input{border:0;outline:0;background:transparent;width:100%;font-size:14px}
 .searchbar .search-button{border:0;background:var(--brand);color:#fff;border-radius:18px;padding:8px 22px;cursor:pointer}
@@ -22,6 +25,7 @@ main{max-width:1180px;margin:18px auto;padding:0 20px}
 .cards .search-result-card,.cards .note-item,.cards .card-container{width:216px;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:transform .15s}
 .cards>*:hover{transform:translateY(-3px)}
 .card-link{display:block;text-decoration:none;color:inherit}
+.card-permalink{display:none}  /* R6B-P3-1：卡首隐藏锚 /explore/<id>（语料形态） */
 .cover{position:relative;background:#eee}
 .cover img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
 .cover .duration{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
@@ -81,6 +85,13 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
 .note-modal .m-author{color:#666;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px}
 .note-modal .m-metrics{display:flex;gap:18px;color:var(--sub);font-size:13px;margin-bottom:10px}
 .note-modal .m-metrics .like-count{color:#e02040}
+.note-modal .bottom-container{color:var(--sub);font-size:12px;margin:2px 0 10px}
+.note-modal .bottom-container .date{margin-right:10px}
+.comment-item .c-meta{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .comment-item-time{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .date{color:var(--sub);font-size:12px;margin-top:2px}
+.comment-item .date .location{margin-left:10px}
+.cards .metrics .ic{display:inline-block;width:14px;height:14px;margin-right:4px;vertical-align:-2px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e02040' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E")}
 .profile-tabs{display:flex;gap:34px;border-bottom:1px solid #eee;margin:6px 0 16px}
 .profile-tabs .p-tab{padding:10px 2px;color:#555;cursor:pointer;font-size:15px;position:relative}
 .profile-tabs .p-tab.active{color:var(--brand);font-weight:600}
@@ -114,8 +125,53 @@ footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
 function enc(s){return encodeURIComponent(s||'')}
 function str(v){return String(v==null?0:v)}
 function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c=='x'?r:(r&0x3|0x8)).toString(16)})}
-function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000)return (n/10000).toFixed(1)+'万';return String(n)}
-function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;return m+':'+(s<10?'0':'')+s}
+function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000){var w=(n/10000).toFixed(1);
+  /* R11B-P3-5：整万形态按站分流——dy 保留 N.0万（语料 47-67 例/场景真值）；
+     xhs/ks 整数万去 .0（两站语料 N.0万 0 例、整数万 21+/30+ 例） */
+  if(typeof SITE_KEY!=='undefined'&&SITE_KEY!=='douyin'&&/\.0$/.test(w))w=w.slice(0,-2);
+  return w+'万'}return String(n)}
+/* R9B-P3-1/P3-2：显示层时间形态（语料：dy「5天前·四川」/xhs「03-27」/ks「2月前」；
+   dy 卡 footer「@作者 · 4天前」）。
+   R10B-P3-1（语法档位，page_dom 全量真值）：周前档补齐（dy 544 例 / ks 68 例），
+   月去「个」（dy 896 + ks 175 例「N月前」、评论 UI 层「个月前」0 例），天数封顶
+   个位（全语料「NN天前」0 例——该区间真站走周/月/年档）：≤6 天「N天前」、
+   7-29 天「N周前」、30 天+「N月前」、年档「N年前」。ts 为秒（xhs 评论为毫秒，
+   调用侧已除）。 */
+function relTime(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function relDay(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<7*86400)return Math.max(1,Math.floor(d/86400))+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function ksRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+/* R10B-P3-1③：ks 首页卡 footer 独立语法（语料 <a>@馆长严选</a><span
+   class="timestamp"> · 3 天前</span>、 · 2 个月前——@ 前缀 + 数字与单位间空格、
+   该 surface 月带「个」；真站两套语法并存，搜索卡保持无空格族）。
+   R11B-P3-2 勘误（语料逐元素精提 20/20）：该 surface 周档 0 例、天数不封顶
+   （「 · 22 天前」×3、「 · 25 天前」在档，两位数天 7/20 例）——去周档、
+   <30 天恒「N 天前」，≥30 天「N 个月前」，≥年「N 年前」 */
+function ksHomeRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<30*86400)return Math.max(1,Math.floor(d/86400))+' 天前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+' 个月前';
+  return Math.floor(d/(365*86400))+' 年前'}
+function mmdd(tsSec){try{var t=new Date((tsSec||0)*1000);var m=t.getMonth()+1,d=t.getDate();
+  return (m<10?'0':'')+m+'-'+(d<10?'0':'')+d}catch(e){return ''}}
+/* R11B-P3-3：时长 badge 分钟两位补零（语料四场景卡时长元素 10 分钟以下
+   补零 2915 : 不补零 0——05:18/00:31/01:28 全两位形态） */
+function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
 function coverUrl(seed,label,w,h){return '/kos/nlav111422/pc-vision/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
 function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
 function contEl(){return document.querySelector('.cards');}
@@ -126,13 +182,14 @@ function setStatus(t,retry){var e=document.getElementById('loadStatus');if(!e)re
   if(retry){e.onclick=function(){loadMore&&loadMore();};}else{e.onclick=null;}}
 var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0,type:'general'};
 var SEARCH_TYPE='general';   /* dy 搜索页按 ?type= 覆写（R5B-P2-3 频道分流） */
+var SITE_KEY='kuaishou'; /* R11B-P3-5：显示层按站分流标记（fmt 整万 .0 形态） */
 
 function initSearchUsers(){
   var q=new URLSearchParams(location.search);
   var kw=(q.get('searchKey')||q.get('keyword')||DEFAULT_KW);
   var cont=document.querySelector('.user-cards');
   cont.setAttribute('data-keyword',kw);
-  document.title=kw+' - 快手';
+  document.title='快手';   /* R9B-P3-3：ks 用户 tab 页 title 恒「快手」（语料形态） */
   fetch('/rest/v/search/user',{method:'POST',
     headers:{'Content-Type':'application/json','Accept':'application/json'},
     body:JSON.stringify({keyword:kw,pcursor:'',searchSessionId:'',webPageArea:''})})
@@ -166,11 +223,19 @@ function cardNode(f){
   if(f.dur>0){cov.appendChild(el('span','duration',fmtDur(f.dur*1000)))}
   var info=el('div','card-info');
   info.appendChild(el('div','title video-title',f.title));
-  var aw=el('div','author-wrapper'); aw.textContent=f.author; info.appendChild(aw);
+  /* R9B-P3-2：三站卡补发布时间（ks 语料搜索为用户 tab 无视频卡真值，随 dy
+     「@作者 · N天前」同族形态）；计数收敛单计数（ks timestamp 为毫秒）。
+     R10B-P3-1③：ks 首页卡 footer 独立语法（语料 @ 前缀 + 数字单位间空格 +
+     月带「个」——「@馆长严选 · 3 天前」「 · 2 个月前」；搜索卡保持原族） */
+  var aw=el('div','author-wrapper');
+  var _ksHome=(typeof PAGE_KIND!=='undefined'&&PAGE_KIND==='home');
+  aw.textContent=(_ksHome?'@':'')+(f.author||'快手用户')
+    +((f.ct)?(' · '+(_ksHome?ksHomeRel(f.ct):relDay((f.ct||0)/1000))):'');
+  info.appendChild(aw);
   var m=el('div','metrics');
-  m.appendChild(el('span','like-count','赞 '+fmt(f.like)));
-  m.appendChild(el('span','play-count','看 '+fmt(f.play)));
-  m.appendChild(el('span','comment-count','评 '+fmt(f.comment)));
+  var lk=el('span','like-count'); lk.appendChild(el('i','ic',''));
+  lk.appendChild(document.createTextNode(fmt(f.like)));
+  m.appendChild(lk);
   info.appendChild(m);
   a.appendChild(cov); a.appendChild(info); d.appendChild(a); return d;
 }
