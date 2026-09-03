@@ -2832,6 +2832,20 @@ def render_ks_user_info(dataset: DatasetReader, line_nos: list, sec_uid: str) ->
     return {"result": 1, "host-name": _ks_host(rng), "user_list": [user]}
 
 
+def _ks_pcursor_encode(ms: int) -> str:
+    """毫秒整数 → 语料 pcursor 形态（科学计数法毫秒，如 1.785484910875E12）。"""
+    return ("%.12f" % (ms / 1e12)).rstrip("0") + "E12"
+
+
+def _ks_pcursor_decode(pcursor: str):
+    """语料 pcursor → 毫秒 float；非数值形态返回 None（调用方按首页处理）。"""
+    try:
+        v = float(str(pcursor).replace("E", "e"))
+    except ValueError:
+        return None
+    return v if v > 0 else None
+
+
 def render_ks_profile_feed(dataset: DatasetReader, line_nos: list, user_id: str,
                            pcursor: str = "") -> dict:
     """POST /rest/v/profile/feed（作者作品页：type/tags/authorStatement/author/photo）。
@@ -2839,14 +2853,35 @@ def render_ks_profile_feed(dataset: DatasetReader, line_nos: list, user_id: str,
     红队 R8C-P3-2：信封并入 search/feed 同款键族——L1 {feeds, host-name, llsid,
     pcursor, result, webPageArea}（语料 3/3 恒有；webPageArea='profilexxnull'）、
     feeds 项内补 comment.us_c=0（语料真值恒 0，同 R5A-P2-2 口径）/danmakuSwitch=true/
-    photo.profileUserTopPhoto=true；llsid 由 synth_api 层每请求重掷（R6C-P3-2 同法）。"""
+    photo.profileUserTopPhoto=true；llsid 由 synth_api 层每请求重掷（R6C-P3-2 同法）。
+
+    价值挖掘修复（2026-09-01，与 dy aweme/post 同族）：旧版下一页 pcursor 用墙钟
+    _now_ms() 派生（时变、不可复现），回翻映射 stable_hash(pcursor)%12*18（随机
+    跳页——作者作品 >216 条时尾页永不可达，页间可重复）。修法（render 层）：
+    作品按 (photo.timestamp 降序, photo.id) 稳定排序（语料真站形态：最新在前），
+    pcursor = 末条时间戳的语料科学计数法毫秒形态（同毫秒并列时组内 -1ms 保持
+    严格单调），回翻定位首个时间戳 < pcursor 的作品 → 游标单调、页间 0 重复、
+    页数=ceil(作品数/18)、末页 pcursor="no_more"、复读确定性。"""
     rng = _page_rng(dataset, f"ks-pfeed-{user_id}-{pcursor or 'p0'}")
     per_page = 18
-    start = 0
-    if pcursor and pcursor not in ("", "no_more"):
-        # 语料形态 pcursor 为科学计数法毫秒（"1.785484910875E12"）：确定性映射回页号
-        start = (_stable_hash("ks-pfeed-cur::%s" % pcursor) % 12) * per_page
     recs = [dataset.read(i) for i in line_nos]
+    recs.sort(key=lambda r: (-int(((r.get("photo") or {}).get("timestamp")) or 0),
+                             str(((r.get("photo") or {}).get("id")) or "")))
+    keys = []   # 每条作品的游标键（photo.timestamp 毫秒；严格单调递减）
+    for r in recs:
+        k = int(((r.get("photo") or {}).get("timestamp")) or 0)
+        if keys and k > keys[-1] - 1:
+            k = keys[-1] - 1
+        keys.append(k)
+    start = 0
+    if pcursor and pcursor != "no_more":
+        cur_ms = _ks_pcursor_decode(pcursor)
+        if cur_ms is not None:
+            start = len(keys)   # 游标早于全部作品 → 空页 + no_more 终止
+            for i, k in enumerate(keys):
+                if k < cur_ms:
+                    start = i
+                    break
     page_recs = recs[start:start + per_page]
     feeds = []
     for r in page_recs:
@@ -2870,7 +2905,8 @@ def render_ks_profile_feed(dataset: DatasetReader, line_nos: list, user_id: str,
         feeds.append(feed)
         _ks_zero_collect(feeds[-1])   # R7A-P2-1：作者作品页同口径（web 不暴露收藏数）
     more = start + per_page < len(recs)
-    next_cur = "no_more" if not more else ("%.12f" % (_now_ms() / 1e12)).rstrip("0") + "E12"
+    next_cur = (_ks_pcursor_encode(keys[start + per_page - 1])
+                if more and page_recs else "no_more")
     return {"result": 1, "pcursor": next_cur, "feeds": feeds,
             "host-name": _ks_host(rng),
             "llsid": ids.digits_str(rng, 19),
@@ -3022,30 +3058,49 @@ def render_douyin_user_posted(dataset: DatasetReader, line_nos: list,
     replace_series_cover(=1)/request_item_cursor(=请求 max_cursor 回显)/time_list
     （作品月份筛选条「YYYY·MM」降序去重），删语料恒不存在的 extra 键
     （契约 L1 无该键）；aweme_list 改用语料直提模板 dy_post_aweme（旧版搜索卡
-    模板逐样本差 300+ 键）。"""
+    模板逐样本差 300+ 键）。
+
+    价值挖掘修复（2026-09-01，capability_proposals 建议 A「已发现坑」）：数据集
+    create_time 未按时间排序（行序 ≠ 时间序），旧版在行序上扫「首个
+    create_time*1000<=max_cursor」的记录作页起点——游标语义回跳（扫不到时回卷
+    首页），3/5 作者 50 页不终止、页间大量重复。修法（render 层，数据集不动）：
+    同作者作品按 (create_time 降序, aweme_id) 稳定排序（语料真站形态：最新在前）
+    后按游标切窗；游标键 = create_time*1000（语料毫秒形态），同秒并列时组内逐条
+    -1ms 保持键序列严格单调递减 → 翻页位置由游标精确恢复：页间 0 重复 0 跳过、
+    页数=ceil(作品数/count)、末页 has_more=0。time_list 随排序真正降序（旧版行序
+    拼出的月份条非降序，与语料形态不符）。"""
     rng = _page_rng(dataset, "dy-uposted-%d" % (len(line_nos)))
+    recs = [dataset.read(i) for i in line_nos]
+    recs.sort(key=lambda r: (-(int(r.get("create_time") or 0)),
+                             str(r.get("aweme_id") or "")))
+    keys = []   # 每条作品的游标键（毫秒形态；严格单调递减）
+    for r in recs:
+        k = int(r.get("create_time") or 0) * 1000
+        if keys and k > keys[-1] - 1:
+            k = keys[-1] - 1
+        keys.append(k)
     start = 0
     if max_cursor:
-        for i, ln in enumerate(line_nos):
-            if dataset.read(ln).get("create_time", 0) * 1000 <= max_cursor:
+        # 游标早于全部作品 → 空页终止（旧版回卷首页重发即 50 页死循环根因）
+        start = len(keys)
+        for i, k in enumerate(keys):
+            if k <= max_cursor:
                 start = i
                 break
-    page = line_nos[start:start + count]
-    recs = [dataset.read(i) for i in page]
+    page = recs[start:start + count]
     logid = ids.dy_logid(rng)
-    next_cursor = (recs[-1]["create_time"] * 1000 - 1) if recs else 0
+    next_cursor = (keys[start + len(page) - 1] - 1) if page else 0
     months = []
-    for ln in line_nos:
-        ct = dataset.read(ln).get("create_time") or 0
-        label = time.strftime("%Y·%m", time.gmtime(int(ct)))
+    for ct in (int(r.get("create_time") or 0) for r in recs):
+        label = time.strftime("%Y·%m", time.gmtime(ct))
         if label not in months:
             months.append(label)
     return {
         "status_code": 0,
         "min_cursor": 0,
         "max_cursor": next_cursor,
-        "has_more": 1 if start + count < len(line_nos) else 0,
-        "aweme_list": [_dy_related_or_post_aweme(r, "dy_post_aweme") for r in recs],
+        "has_more": 1 if start + count < len(recs) else 0,
+        "aweme_list": [_dy_related_or_post_aweme(r, "dy_post_aweme") for r in page],
         "log_pb": {"impr_id": logid},
         "post_serial": 2,
         "replace_series_cover": 1,
