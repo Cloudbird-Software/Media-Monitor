@@ -64,6 +64,8 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 			"group":        "xhs-group-members",
 			"send_message": "",
 			"user_posts":   "xhs-user-notes",
+			// capability D: search discovery words (suggest face)
+			"suggest": "xhs-search-recommend",
 		},
 	}, reg, nil
 }
