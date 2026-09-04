@@ -1,0 +1,29 @@
+{
+  "name": "douyin-profile",
+  "platform": "douyin",
+  "category": "profile",
+  "version": "1",
+  "doc": "single-author profile head (author chain face, capability A AuthorDossier claimed metrics). Evidence: corpus dy_user_profile_tabs 14 req /aweme/v1/web/user/profile/other?sec_user_id=... -> {extra, log_pb, status_code, status_msg, user{follower_count, total_favorited, aweme_count, signature, ...}}; oracle probe: follower/total_favorited/aweme_count/signature all present. Response binding note: the corpus call form is sec_user_id; the engine's profile/enrich faces send sec_uid, and the synth oracle attaches a flat user_list array (12-field bindUser paths) for that call form — this contract binds $.user_list. A real-site adaptation bumps the version and rebinds to the corpus $.user object (single-record envelope).",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/user/profile/other/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["sec_uid"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "users": "$.user_list",
+    "fields": {
+      "uid": "$.user_list[].uid",
+      "sec_uid": "$.user_list[].sec_uid",
+      "nickname": "$.user_list[].nickname",
+      "signature": "$.user_list[].signature",
+      "follower_count": "$.user_list[].follower_count",
+      "following_count": "$.user_list[].following_count",
+      "aweme_count": "$.user_list[].aweme_count",
+      "total_favorited": "$.user_list[].total_favorited"
+    }
+  }
+}

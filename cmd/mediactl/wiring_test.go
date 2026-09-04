@@ -81,4 +81,11 @@ func TestAccountPoolForValidation(t *testing.T) {
 	if err != nil || p == nil {
 		t.Fatalf("valid account = (%v, %v)", p, err)
 	}
+	// "auto" passes through with the pool (silent-scraping fix: the CLI used
+	// to reject --account auto with "not found"; the engine's auto mode was
+	// reachable only through mediad REST).
+	p, err = accountPoolFor("douyin", "auto")
+	if err != nil || p == nil {
+		t.Fatalf("auto account = (%v, %v)", p, err)
+	}
 }

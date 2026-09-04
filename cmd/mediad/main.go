@@ -233,12 +233,18 @@ func (d *daemon) wireAdapt(dataDir string) {
 	}
 	d.collectCtx = collect.Context{
 		Registry: reg,
-		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()}),
+		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents(), MaxRetries: httpclient.MaxRetriesFromEnv()}),
 		Obs:      d.counters,
 		Signers:  signers,
 		Cookies:  cookies,
 		Names:    names,
 		Accounts: d.accounts,
+		BrowserHeaders: map[string]map[string]string{
+			douyin.Platform:   douyin.BrowserHeaders(),
+			kuaishou.Platform: kuaishou.BrowserHeaders(),
+			xhs.Platform:      xhs.BrowserHeaders(),
+		},
+		UAPool: sessionUAPool(),
 	}
 	d.engine = collect.New(d.collectCtx)
 	d.reg = reg

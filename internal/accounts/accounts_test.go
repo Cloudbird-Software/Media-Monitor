@@ -267,15 +267,16 @@ func TestDefaultUAPoolPath(t *testing.T) {
 }
 
 // TestBundledUAPool: the ua-pool.json compiled into the binary (via go:embed)
-// holds the 44-entry pool extracted verbatim from the original software's
-// ua.js. This is the guaranteed-available source in CI, where the data/ dir is
-// gitignored.
+// holds the silent-scraping pool of real, currently-existing desktop
+// Chrome/Edge UAs (the original 44 fabricated-version Android UAs were
+// replaced — report B2). This is the guaranteed-available source in CI,
+// where the data/ dir is gitignored.
 func TestBundledUAPool(t *testing.T) {
 	pool, err := BundledUAPool()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pool.Len() != 44 {
-		t.Fatalf("bundled pool Len = %d, want 44 (ua.js extraction)", pool.Len())
+	if pool.Len() < 20 {
+		t.Fatalf("bundled pool Len = %d, want >= 20 real desktop UAs", pool.Len())
 	}
 }

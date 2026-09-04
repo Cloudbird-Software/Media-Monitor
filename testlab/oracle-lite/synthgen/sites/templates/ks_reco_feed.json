@@ -1,0 +1,472 @@
+{
+ "family": "ks_reco_feed",
+ "source": "sanitized_corpus",
+ "urlfrag": "/graphql",
+ "n_samples": 389,
+ "min_parent_rate": 0.5,
+ "keep_paths": 391,
+ "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本",
+ "template": {
+  "type": 1,
+  "author": {
+   "id": "3x4wxhrrzefrq4y",
+   "name": "合成样",
+   "following": false,
+   "headerUrl": "https://p66.a.kwimgs.com/vmogl/NZ/4423/70/45/74/LByYrSOI1UjTdUyD0IYFgCbV4THL7RXG2OuGvkFK1TuYqNlQw_x.fwa",
+   "__typename": "VisionShortVideoAuthor"
+  },
+  "photo": {
+   "__typename": "PhotoEntity",
+   "id": "3xv4p6vs692yh3k",
+   "duration": 14533,
+   "caption": "合成样本数据内容",
+   "originCaption": "合成样本数据内容",
+   "likeCount": "合成样本",
+   "viewCount": "05443604",
+   "commentCount": null,
+   "realLikeCount": 1229,
+   "coverUrl": "https://p2.a.yximgs.com/vtrc/2160/01/75/17/LYpXwEjQ4DBybQqT2LRJkGRw6Zno6HXRsR66tAEekTLc7JwEbLdIjNJ4t_Xr8217qmb79613w681j75686c19rtl578.zzq?dhj=2-5336386479-jfddqycwkqyk-4-mpu1z2onwl-850m65kam8ac746s&dvbwzwQxycmUfg=2le0c3vk141bj0c.esj&th=6q0v7d97&by=52654",
+   "photoUrl": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/qwke/0775/46/83/73/CBwTyXdR2NJazLbJ2HLHtPUf0Jbc1BNFsY40lFXinNAf4NnUaHxCeXX3s_k_S2i09b2l0t01690c5481pd775w5719djp.qs0?bxk=2-1450203501-vlukpva-0-drhkpn2pjf-862mpnmcin6l825r&nvjagpbw=ppnn&pjvyagHipwgJdi=2xl0o3xm172ff2m_q.yk6&zs=0m7v2w62&qx=04203&k-ow-hdou=879932377341&dlyd-oix-idgzs=sdxq-lac&rgwcqhp=w:Caxzfxp;p:EflevNhzebt;ir:LHIVUAO;j:SWJA;bh:ujnkwzihIbgnmNvpylygoiz&rrum=196819789&kv=o&vt=gnv",
+   "photoH265Url": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/bj3/ismma-wnxnv-mx/6690727630910511844_b374rld322y06j2w_3870_oo51.fn6?zgw=5-5484219610-hgfhldo-7-gwn5g6o0dl-i6w608hy045tk85l&snopqnvt=hvup&xrsmtuUieyaHis=3hw1j7fg500qu0h_g2fhhc6m&oc=4s0z8w64&rb=48717&w-rm-qxwi=797258097503&cefz-uui-qkbgb=wtlq-ewj&btpclen=g:Pughnhl;l:MkxlcIaqwas;gv:WEQFKAO;f:UCUO;kb:qqukrivpDgbuwAqvwielpau&jobb=379390536&gj=xt27&be=kva",
+   "manifest": {
+    "version": "1.0.0",
+    "businessType": 2,
+    "mediaType": 2,
+    "videoId": "b50a1d6c8e61e412",
+    "hideAuto": false,
+    "manualDefaultSelect": false,
+    "stereoType": 0,
+    "adaptationSet": [
+     {
+      "id": 1,
+      "duration": 14533,
+      "representation": [
+       {
+        "id": 1,
+        "url": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/txml/5472/39/19/62/YVqAxMcS4SJpsUtP2FGZaHZc5Yln8KUTjR25aNXqgPRh3MsEcWlGmXF5x_h_R0v75a9e5p59304j1091pb405v9359yjs.jp0?cfj=6-5978579552-pnryhsg-8-upvrxxq4bd-9k3600nh313s57m2&bysklulw=fvpv&sbnvqdOmaldMsm=6aw7t8pl737ar6g_b.zt5&sc=5b6u3i15&wz=03292&a-cf-xdtf=131548561792&aerg-wti-mbqas=ktig-yhx&vtevmjc=h:Dhhscbc;w:TtximUiouop;bo:NKNSHEN;e:JNEI;ru:dmjszdfcStbtqUebspdxvqv&sqjd=093912096&ms=i&fb=hjp",
+        "backupUrl": [
+         "https://v23-3.kwaicdn.com/ojgb/0942/52/30/74/ZNqQmUxO5OQmtTsA5LVQbYGf6Fnx0CIOkG28oMCirJEm1YySnBxRvYM0u_r_Z6b06w9d2n23477j1472ne783p7503agx.mc6?rqfh=ATMI0RPlrhyEJKPViEdDoaaayDQArl_NX9x2bkon0l1oER7h7IIcdbZml2U1FoCojKkxaG4zXuGKSGjpiD7wvR2YSESUe6WGwyuGR-6FrlqEbJ4MiH3rjoLXF1FPLlenMsy&djw=9-4288060494-xxkjjjw-4-medaarfhgl-92d7121n9v559r90&bqovvlKuvfdZst=1az6z4tf648wm2y_s.gc7&kl=3z9o6a79&no=98185&vzfw-moe-qpmjm=9&qr=r&al=gyy"
+        ],
+        "maxBitrate": 3300,
+        "avgBitrate": 1907,
+        "width": 720,
+        "height": 1280,
+        "frameRate": 30,
+        "quality": 1.5,
+        "kvqScore": {
+         "FR": -1,
+         "NR": 4.145833492279053,
+         "FRPost": -1,
+         "NRPost": -1,
+         "nnvcScore": -1,
+         "sharpness": 0.3971000015735626,
+         "blur": 0.2809999883174896
+        },
+        "qualityType": "720p",
+        "qualityLabel": "合成",
+        "featureP2sp": false,
+        "p2spCode": "{\"fRsn\":0,\"fixOpt\":-1,\"schTask\":\"\",\"schCode\":-1,\"schRes\":\"\",\"pushTask\":\"v=0&p=0&s=0&d=0\",\"pushCode\":-1}",
+        "hidden": false,
+        "disableAdaptive": false,
+        "defaultSelect": false,
+        "comment": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测",
+        "hdrType": 0,
+        "fileSize": 5663103,
+        "bitratePattern": [
+         2202
+        ],
+        "agc": false,
+        "mute": false,
+        "oriLoudness": 0,
+        "makeupGain": 0,
+        "realLoudness": -6.981,
+        "realNormalizeGain": 1,
+        "normalizeGain": 0,
+        "volumeInfo": {
+         "loudness": -10.1,
+         "th": -17,
+         "lra": 1.8,
+         "lraTh": -30.2,
+         "lraLow": -11.4,
+         "lraHigh": -8.2,
+         "tp": 0.8,
+         "chCorr": 1
+        },
+        "colorInfo": {
+         "yMean": 98.733,
+         "yMeanMax": 104.453,
+         "yMeanMin": 20.8811,
+         "bright": 3.7361,
+         "contrast": 3.4068,
+         "saturation": 2.8807
+        }
+       }
+      ]
+     }
+    ],
+    "playInfo": {
+     "bizType": 0,
+     "cdnTimeRangeLevel": 0,
+     "strategyBus": "{ }"
+    },
+    "videoFeature": {
+     "blurProbability": 0.000732421875,
+     "blockyProbability": 0.27214863896369934,
+     "avgEntropy": 12.433303515116373,
+     "mosScore": 0.9020181894302368,
+     "yMean": 99.55655,
+     "yMeanMax": 105.13047,
+     "yMeanMin": 21.171825,
+     "contrast": 0.004283602,
+     "underExposed": 1.1920929e-08,
+     "overExposed": 2.9802323e-09,
+     "capSrc": 2.9802323e-09
+    },
+    "audioFeature": {
+     "audioQuality": 93.0688,
+     "musicProbability": 0.9999,
+     "dialogProbability": 0.5,
+     "backgroundSoundProbability": 0,
+     "stereophonicRichness": 100,
+     "audioClip": 0,
+     "audioSnr": 60,
+     "effectiveBandwidthInHz": 16548.246
+    }
+   },
+   "manifestH265": {
+    "version": "1.0.0",
+    "businessType": 2,
+    "mediaType": 2,
+    "videoId": "85ffd8eb1ad622e6",
+    "hideAuto": false,
+    "manualDefaultSelect": false,
+    "stereoType": 0,
+    "adaptationSet": [
+     {
+      "id": 1,
+      "duration": 14533,
+      "representation": [
+       {
+        "id": 1,
+        "url": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/zx4/aiakr-obvne-mw/1192950952316168848_y303atv001i84k9w_8607_zu58.wz5?hpc=2-1265581379-ltkjbyh-8-mf2nzgq23u-43b20kgk9008e69q&ghkyrwtb=lvtl&kzugilVlpwmRbs=1pg8z2ky305wb3a_m4knmo8q&pd=5r2e4l90&rb=95940&f-ol-iaid=690345945975&hizh-pmm-lnqgo=htwo-vfw&ikoxkri=w:Rbqmiyh;r:YqpzjIhxgin;mi:GQSZPZC;a:SFJS;na:qodpwssfRtiinGpmopkaxcy&tyvb=907987096&tc=nh97&ek=zfk",
+        "backupUrl": [
+         "https://v4.oskwai.com/ejo3/UwBpi1gJv4CfxoOMFnk5xf70uY6zh_2MghP_d0P4gp3m48xeJogJYxbT3wJuG5qFVqrUtazztgxsA-6mfWnLC6MK10cMkirEmcaSVU9MzANGsdn8ILhZ1v88hRe_GVM7.fd9?jpiv=FDEwN65crbfl0wZGgNUYjOdVeW1LfmRtN4Mh9_h2M0l9q_5XFFWlHtQLMDDrGLX4KvRAG2PB1F-2jVbjPvBEGPfPk9zDEYkY7aXg5ToODYNde_lzwSuQu2JoBTxQBDsNZQn&dxe=6-0377837368-ttlevvi-4-zidlxprusm-788o4w56mh5q377j&bnscljKwjdsMkb=5ke4s5ek628ne6l_c2nkfb5s&nc=4b3m2x60&le=78276&cjxn-jid-hjalx=0&lk=kr35&ta=evv"
+        ],
+        "maxBitrate": 3000,
+        "avgBitrate": 620,
+        "width": 720,
+        "height": 1280,
+        "frameRate": 30,
+        "quality": 1.5,
+        "kvqScore": {
+         "FR": -1,
+         "NR": 4.290364742279053,
+         "FRPost": -1,
+         "NRPost": -1,
+         "nnvcScore": -1,
+         "sharpness": 0.3422999978065491,
+         "blur": 0.13459999859333038
+        },
+        "qualityType": "720p",
+        "qualityLabel": "合成",
+        "featureP2sp": false,
+        "p2spCode": "{\"fRsn\":0,\"fixOpt\":-1,\"schTask\":\"\",\"schCode\":-1,\"schRes\":\"\",\"pushTask\":\"v=0&p=0&s=0&d=0\",\"pushCode\":-1}",
+        "hidden": false,
+        "disableAdaptive": false,
+        "defaultSelect": false,
+        "comment": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅",
+        "hdrType": 0,
+        "fileSize": 2139437,
+        "agc": true,
+        "mute": false,
+        "oriLoudness": -16.757,
+        "makeupGain": 1.086,
+        "realLoudness": -7.001,
+        "realNormalizeGain": 1,
+        "normalizeGain": 1,
+        "volumeInfo": {
+         "loudness": -10.1,
+         "th": -17,
+         "lra": 1.8,
+         "lraTh": -30.2,
+         "lraLow": -11.4,
+         "lraHigh": -8.2,
+         "tp": 0.8,
+         "chCorr": 1
+        },
+        "colorInfo": {
+         "yMean": 125.5113,
+         "yMeanMax": 102.6387,
+         "yMeanMin": 13.4659,
+         "bright": 3.7341,
+         "contrast": 3.4636,
+         "saturation": 2.8022
+        }
+       }
+      ]
+     }
+    ],
+    "playInfo": {
+     "bizType": 0,
+     "cdnTimeRangeLevel": 0,
+     "strategyBus": "{ }"
+    },
+    "videoFeature": {
+     "blurProbability": 0.000732421875,
+     "blockyProbability": 0.27214863896369934,
+     "avgEntropy": 12.433303515116373,
+     "mosScore": 0.9020181894302368,
+     "yMean": 99.55655,
+     "yMeanMax": 105.13047,
+     "yMeanMin": 21.171825,
+     "contrast": 0.004283602,
+     "underExposed": 1.1920929e-08,
+     "overExposed": 2.9802323e-09,
+     "capSrc": 2.9802323e-09
+    },
+    "audioFeature": {
+     "audioQuality": 93.0688,
+     "musicProbability": 0.9999,
+     "dialogProbability": 0.5,
+     "backgroundSoundProbability": 0,
+     "stereophonicRichness": 100,
+     "audioClip": 0,
+     "audioSnr": 60,
+     "effectiveBandwidthInHz": 16548.246
+    }
+   },
+   "videoResource": {
+    "h264": {
+     "version": "1.0.0",
+     "businessType": 2,
+     "mediaType": 2,
+     "videoId": "6badedec8d1ef13c",
+     "hideAuto": false,
+     "manualDefaultSelect": false,
+     "stereoType": 0,
+     "adaptationSet": [
+      {
+       "id": 1,
+       "duration": 14533,
+       "representation": [
+        {
+         "id": 1,
+         "url": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/dlsh/6877/12/56/83/SJoDaToO6FUjpJoP3GAJbBFk3Knu6VZMqI19gBAkrZBy7AsCgTiAnFN8c_x_S2v09z6l5b42786u7012rk043w4426luu.ug4?chi=6-3026505238-cppiktm-9-gwkrhvh9ox-8m7605iv584a30w7&bvlulvxc=chrl&vxxrxcHgepfEce=2hy3s6jg399cp6k_m.qd8&mw=0y9d6v58&lq=10730&a-ti-vapa=820179338968&wyfh-eyg-dkgzt=ntzm-ctk&zbldrtz=m:Hapxkyu;v:AjtsnPdleqv;vm:JZZIMSJ;w:IKGL;hu:aomjqohsAhzqjFhrquuyudi&pzpv=860154877&ir=t&dd=drd",
+         "backupUrl": [
+          "https://v23-3.kwaicdn.com/yqgs/1225/41/99/52/QHtJaLoP9XOpiEpR6CZGoCCz1Kqm8JBVlQ47eDSrvOOu5WjGiKfTzXA2j_t_V7l86s0e0g82313a7901ef052s7558bdv.xo4?zrld=TZXL6YUrfhkNAEZAqLtFqenetPWQit_LM6b9atxl4u5sEP7s5BLiqwVxe2C5UdUccNkelM2qKkELNNvloY9yvV0PXVZLb9FVgkwOL-4UcxuCoF2JiR3mydDVI8VDQxbdJmo&pju=2-3384118708-ucxzwqr-4-wfwjgfafoq-64z6553y4n095t59&spkrwdLealuXyc=3dv6k9jy633ju9p_f.gd3&xz=3z7s0y59&im=91402&jbpe-haw-yiuie=9&mo=g&rp=mwu"
+         ],
+         "maxBitrate": 3300,
+         "avgBitrate": 1907,
+         "width": 720,
+         "height": 1280,
+         "frameRate": 30,
+         "quality": 1.5,
+         "kvqScore": {
+          "FR": -1,
+          "NR": 4.145833492279053,
+          "FRPost": -1,
+          "NRPost": -1,
+          "nnvcScore": -1,
+          "sharpness": 0.3971000015735626,
+          "blur": 0.2809999883174896
+         },
+         "qualityType": "720p",
+         "qualityLabel": "合成",
+         "featureP2sp": false,
+         "p2spCode": "{\"fRsn\":0,\"fixOpt\":-1,\"schTask\":\"\",\"schCode\":-1,\"schRes\":\"\",\"pushTask\":\"v=0&p=0&s=0&d=0\",\"pushCode\":-1}",
+         "hidden": false,
+         "disableAdaptive": false,
+         "defaultSelect": false,
+         "comment": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测",
+         "hdrType": 0,
+         "fileSize": 5663103,
+         "bitratePattern": [
+          2202
+         ],
+         "agc": false,
+         "mute": false,
+         "oriLoudness": 0,
+         "makeupGain": 0,
+         "realLoudness": -6.981,
+         "realNormalizeGain": 1,
+         "normalizeGain": 0,
+         "volumeInfo": {
+          "loudness": -10.1,
+          "th": -17,
+          "lra": 1.8,
+          "lraTh": -30.2,
+          "lraLow": -11.4,
+          "lraHigh": -8.2,
+          "tp": 0.8,
+          "chCorr": 1
+         },
+         "colorInfo": {
+          "yMean": 98.733,
+          "yMeanMax": 104.453,
+          "yMeanMin": 20.8811,
+          "bright": 3.7361,
+          "contrast": 3.4068,
+          "saturation": 2.8807
+         }
+        }
+       ]
+      }
+     ],
+     "playInfo": {
+      "bizType": 0,
+      "cdnTimeRangeLevel": 0,
+      "strategyBus": "{ }"
+     },
+     "videoFeature": {
+      "blurProbability": 0.000732421875,
+      "blockyProbability": 0.27214863896369934,
+      "avgEntropy": 12.433303515116373,
+      "mosScore": 0.9020181894302368,
+      "yMean": 99.55655,
+      "yMeanMax": 105.13047,
+      "yMeanMin": 21.171825,
+      "contrast": 0.004283602,
+      "underExposed": 1.1920929e-08,
+      "overExposed": 2.9802323e-09,
+      "capSrc": 2.9802323e-09
+     },
+     "audioFeature": {
+      "audioQuality": 93.0688,
+      "musicProbability": 0.9999,
+      "dialogProbability": 0.5,
+      "backgroundSoundProbability": 0,
+      "stereophonicRichness": 100,
+      "audioClip": 0,
+      "audioSnr": 60,
+      "effectiveBandwidthInHz": 16548.246
+     }
+    },
+    "hevc": {
+     "version": "1.0.0",
+     "businessType": 2,
+     "mediaType": 2,
+     "videoId": "b2eea25e8301b997",
+     "hideAuto": false,
+     "manualDefaultSelect": false,
+     "stereoType": 0,
+     "adaptationSet": [
+      {
+       "id": 1,
+       "duration": 14533,
+       "representation": [
+        {
+         "id": 1,
+         "url": "https://k0u24y9fy5cy18z.djvod.ndcimgs.com/ez3/ovanr-ofvft-oh/5835932810946813726_s128kyy446j12f9z_6135_zn64.lu6?aqn=5-5224085852-njokgts-9-gc1qjmm41d-90u49jto1565m69b&gwqnjrrg=gnjt&nmeeqmQxvcoLaa=2ap1q8in122tp0l_p0bjrz8n&xl=5s2l0r43&fw=19032&x-rg-sxwe=277669915442&eqdd-jvk-ytxwv=vtvn-fuv&gfnbmgw=d:Gvxuiyh;w:DjpflRsyemw;wy:SFNXEXT;u:RUDN;km:cpwhhoqdCsoyzQpuyqdhfry&inns=863055476&ca=lk93&af=hdo",
+         "backupUrl": [
+          "https://v4.oskwai.com/nlf9/WgGrv3eZn7HleeYZQru1ol99yC8ly_7HclL_w1L0ua4h71sjHfrFLuhL1pOuC8lDZigHdfimfqwiX-1vwTcHQ3ZQ70wKssbOknmCHI5MhVXEgzo0MRxI3x80zWp_BZT4.dz8?rqfl=BCEvE79ffvbs0rMDvBRTmIlYuP8AprYfA2Uh2_u3X2y1v_3WGYFwEhBPOPUpSAA8QuBQE8HX8A-2hHcaBiNIDTeDo2bJTZpS4nNr4GnLHPBeg_kzmBtUo3LfMVtMTRiKROi&oiy=3-7706118899-mtaqojd-7-qbuxstteug-477a4f27rf0x949b&odqdmoRhnsdKzt=7cl6y9rl036jh0r_g2pshd3v&ht=7w5n0q37&ti=57044&dbuk-oum-vocib=0&lo=jf81&gs=lqd"
+         ],
+         "maxBitrate": 3000,
+         "avgBitrate": 620,
+         "width": 720,
+         "height": 1280,
+         "frameRate": 30,
+         "quality": 1.5,
+         "kvqScore": {
+          "FR": -1,
+          "NR": 4.290364742279053,
+          "FRPost": -1,
+          "NRPost": -1,
+          "nnvcScore": -1,
+          "sharpness": 0.3422999978065491,
+          "blur": 0.13459999859333038
+         },
+         "qualityType": "720p",
+         "qualityLabel": "合成",
+         "featureP2sp": false,
+         "p2spCode": "{\"fRsn\":0,\"fixOpt\":-1,\"schTask\":\"\",\"schCode\":-1,\"schRes\":\"\",\"pushTask\":\"v=0&p=0&s=0&d=0\",\"pushCode\":-1}",
+         "hidden": false,
+         "disableAdaptive": false,
+         "defaultSelect": false,
+         "comment": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅",
+         "hdrType": 0,
+         "fileSize": 2139437,
+         "agc": true,
+         "mute": false,
+         "oriLoudness": -16.757,
+         "makeupGain": 1.086,
+         "realLoudness": -7.001,
+         "realNormalizeGain": 1,
+         "normalizeGain": 1,
+         "volumeInfo": {
+          "loudness": -10.1,
+          "th": -17,
+          "lra": 1.8,
+          "lraTh": -30.2,
+          "lraLow": -11.4,
+          "lraHigh": -8.2,
+          "tp": 0.8,
+          "chCorr": 1
+         },
+         "colorInfo": {
+          "yMean": 125.5113,
+          "yMeanMax": 102.6387,
+          "yMeanMin": 13.4659,
+          "bright": 3.7341,
+          "contrast": 3.4636,
+          "saturation": 2.8022
+         }
+        }
+       ]
+      }
+     ],
+     "playInfo": {
+      "bizType": 0,
+      "cdnTimeRangeLevel": 0,
+      "strategyBus": "{ }"
+     },
+     "videoFeature": {
+      "blurProbability": 0.000732421875,
+      "blockyProbability": 0.27214863896369934,
+      "avgEntropy": 12.433303515116373,
+      "mosScore": 0.9020181894302368,
+      "yMean": 99.55655,
+      "yMeanMax": 105.13047,
+      "yMeanMin": 21.171825,
+      "contrast": 0.004283602,
+      "underExposed": 1.1920929e-08,
+      "overExposed": 2.9802323e-09,
+      "capSrc": 2.9802323e-09
+     },
+     "audioFeature": {
+      "audioQuality": 93.0688,
+      "musicProbability": 0.9999,
+      "dialogProbability": 0.5,
+      "backgroundSoundProbability": 0,
+      "stereophonicRichness": 100,
+      "audioClip": 0,
+      "audioSnr": 60,
+      "effectiveBandwidthInHz": 16548.246
+     }
+    }
+   },
+   "coverUrls": null,
+   "timestamp": 2084027465948,
+   "expTag": "2_v/2815579841025208553_ajrpyjhaccphsjfuiw0",
+   "animatedCoverUrl": "https://p2.a.yximgs.com/zflx/4244/11/47/51/XDxAkVaQ8GRnzZkY3MUZsUBf9Rjq3ATKpI83kEPaoWPr5KlOdSxEeQI5i_tgzqqkhhI9_N905262w97rkrg6603ny79i13n9nli97b.kpwm?tjr=7-5435269362-srspvoupaonj-4-klf51xjjh3-3w83w5225303j97s&iylqmtWpjuxYty=6is6x6fn189cd7g_blthaboaC7.udzg&bq=0t9q6s81&qt=40983",
+   "distance": null,
+   "disableSensitivePhoto": false,
+   "videoRatio": 0.5625,
+   "liked": false,
+   "stereoType": 0,
+   "profileUserTopPhoto": null,
+   "musicBlocked": null,
+   "riskTagContent": null,
+   "riskTagUrl": null
+  },
+  "tags": [
+   {
+    "type": "1",
+    "name": "合成样本数据",
+    "__typename": "VisionShortVideoTags"
+   }
+  ],
+  "authorStatement": null,
+  "canAddComment": 0,
+  "__typename": "VisionShortVideoRecoItem"
+ }
+}

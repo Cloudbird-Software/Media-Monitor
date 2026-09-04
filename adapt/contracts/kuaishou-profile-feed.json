@@ -1,0 +1,29 @@
+{
+  "name": "kuaishou-profile-feed",
+  "platform": "kuaishou",
+  "category": "user_posts",
+  "version": "1",
+  "doc": "creator post history by userId (profile/feed face — fills the ks user_posts matrix gap for the AuthorDossier observed walk). Evidence: oracle probe /rest/v/profile/feed body {userId, pcursor} -> L1 {feeds, host-name, llsid, pcursor, result, webPageArea}, feeds items {type, tags, author, photo{id, timestamp(ms), like_count}, comment.us_c=0}; terminal pcursor=\"no_more\". Cursor form: scientific-notation milliseconds (1.785484910875E12), strictly decreasing after the 2026-09-01 render fix (timestamp-desc stable sort + exact encode/decode); has_more rides the pcursor field (numeric-string truthy, no_more falsy sentinel).",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/rest/v/profile/feed",
+    "method": "POST",
+    "body": {"kpn": "PC_WEB"},
+    "placeholders": ["userId"]
+  },
+  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
+  "binding": {
+    "items": "$.feeds",
+    "fields": {
+      "id": "$.feeds[].photo.id",
+      "create_time": "$.feeds[].photo.timestamp",
+      "stats.digg": "$.feeds[].photo.like_count",
+      "author.avatar_url": "$.feeds[].author.headerUrl"
+    }
+  },
+  "paging": {
+    "cursor_param": "pcursor",
+    "has_more_path": "$.pcursor",
+    "next_cursor_path": "$.pcursor"
+  }
+}

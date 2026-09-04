@@ -63,6 +63,10 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 			"user":         "kuaishou-user",
 			"group":        "kuaishou-group-members",
 			"send_message": "",
+			// capability B (user discovery) + the ks leg of capability A's
+			// observed walk (profile/feed fills the ks user_posts gap)
+			"user_search": "kuaishou-user-search",
+			"user_posts":  "kuaishou-profile-feed",
 		},
 	}, reg, nil
 }

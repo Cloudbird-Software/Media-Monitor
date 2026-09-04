@@ -1,0 +1,1659 @@
+{
+ "schema_version": "draft-contract/1",
+ "generated_by": "extract_contracts.py v2.1.0",
+ "site": "xhs",
+ "endpoint_id": "edith.xiaohongshu.com_api_sns_web_v2_comment_page",
+ "host": "edith.xiaohongshu.com",
+ "path_template": "/api/sns/web/v2/comment/page",
+ "url_template": "https://edith.xiaohongshu.com/api/sns/web/v2/comment/page",
+ "method": "GET",
+ "traffic_class": "api",
+ "scenarios": {
+  "xhs_note_detail_comments": 20,
+  "xhs_search_notes": 1,
+  "xhs_video_note": 19
+ },
+ "samples": [
+  "sample_0001",
+  "sample_0002",
+  "sample_0003",
+  "sample_0004",
+  "sample_0005",
+  "sample_0006",
+  "sample_0007",
+  "sample_0008",
+  "sample_0009",
+  "sample_0010",
+  "sample_0011",
+  "sample_0012",
+  "sample_0013",
+  "sample_0014",
+  "sample_0015",
+  "sample_0016",
+  "sample_0017",
+  "sample_0018",
+  "sample_0019",
+  "sample_0020"
+ ],
+ "request_count": 40,
+ "preflight_count": 40,
+ "resource_type": {
+  "XHR": 40
+ },
+ "response_status": {
+  "200": 40
+ },
+ "response_mime": {
+  "application/json": 40
+ },
+ "response_body_kind": {
+  "text": 40
+ },
+ "response_body_size": {
+  "min": 201,
+  "avg": 9176,
+  "max": 23899,
+  "n": 40
+ },
+ "query_params": {
+  "cursor": {
+   "present": 40,
+   "total": 40,
+   "required": true,
+   "observed_types": {
+    "str:empty": {
+     "count": 39,
+     "rate": 0.975
+    },
+    "str:hex": {
+     "count": 1,
+     "rate": 0.025
+    }
+   },
+   "type": "str:empty",
+   "example": "",
+   "value_len": {
+    "min": 0,
+    "max": 24
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "image_formats": {
+   "present": 40,
+   "total": 40,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 40,
+     "rate": 1.0
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "jpg,webp,avif",
+   "value_len": {
+    "min": 13,
+    "max": 13
+   },
+   "role": "device_env",
+   "class": "snapshot"
+  },
+  "note_id": {
+   "present": 40,
+   "total": 40,
+   "required": true,
+   "observed_types": {
+    "str:hex": {
+     "count": 40,
+     "rate": 1.0
+    }
+   },
+   "type": "str:hex",
+   "example": "<hex:len=24>",
+   "value_len": {
+    "min": 24,
+    "max": 24
+   },
+   "class": "id"
+  },
+  "top_comment_id": {
+   "present": 40,
+   "total": 40,
+   "required": true,
+   "observed_types": {
+    "str:empty": {
+     "count": 40,
+     "rate": 1.0
+    }
+   },
+   "type": "str:empty",
+   "example": "",
+   "value_len": {
+    "min": 0,
+    "max": 0
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "xsec_token": {
+   "present": 40,
+   "total": 40,
+   "required": true,
+   "observed_types": {
+    "str:opaque": {
+     "count": 40,
+     "rate": 1.0
+    }
+   },
+   "type": "str:opaque",
+   "example": "<TOKEN>",
+   "value_len": {
+    "min": 46,
+    "max": 46
+   },
+   "class": "token"
+  }
+ },
+ "headers": {
+  "signature_headers_present": {
+   "x-b3-traceid": {
+    "count": 40,
+    "rate": 1.0
+   },
+   "x-s": {
+    "count": 40,
+    "rate": 1.0
+   },
+   "x-s-common": {
+    "count": 40,
+    "rate": 1.0
+   },
+   "x-t": {
+    "count": 40,
+    "rate": 1.0
+   },
+   "x-xray-traceid": {
+    "count": 40,
+    "rate": 1.0
+   }
+  },
+  "cookie_header_rate": 1.0,
+  "cookie_names_observed": [
+   "abRequestId",
+   "xsecappid",
+   "a1",
+   "webId",
+   "gid",
+   "web_session",
+   "id_token",
+   "x-rednote-datactry",
+   "x-rednote-holderctry",
+   "acw_tc",
+   "ets",
+   "webBuild",
+   "loadts",
+   "websectiga",
+   "sec_poison_id",
+   "unread"
+  ],
+  "referer_templates": [
+   "https://www.xiaohongshu.com/"
+  ],
+  "sensitive_response_headers_present": {
+   "xhs-real-ip(redacted)": 40
+  }
+ },
+ "response_schema": {
+  "path": "$",
+  "types": {
+   "object": 40
+  },
+  "class": "snapshot",
+  "object_count": 40,
+  "fields": {
+   "code": {
+    "path": "$.code",
+    "types": {
+     "number": 40
+    },
+    "value_shapes": {
+     "int": {
+      "count": 40,
+      "rate": 1.0
+     }
+    },
+    "example": 0,
+    "class": "snapshot",
+    "present": 40,
+    "rate": 1.0
+   },
+   "data": {
+    "path": "$.data",
+    "types": {
+     "object": 40
+    },
+    "class": "snapshot",
+    "object_count": 40,
+    "fields": {
+     "comments": {
+      "path": "$.data.comments",
+      "types": {
+       "array": 40
+      },
+      "class": "snapshot",
+      "len": {
+       "min": 0,
+       "max": 10,
+       "avg": 6.17
+      },
+      "items": {
+       "path": "$.data.comments[]",
+       "types": {
+        "object": 247
+       },
+       "class": "snapshot",
+       "object_count": 247,
+       "fields": {
+        "at_users": {
+         "path": "$.data.comments[].at_users",
+         "types": {
+          "array": 247
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 0,
+          "max": 5,
+          "avg": 0.1
+         },
+         "items": {
+          "path": "$.data.comments[].at_users[]",
+          "types": {
+           "object": 25
+          },
+          "class": "snapshot",
+          "object_count": 25,
+          "fields": {
+           "ai_agent": {
+            "path": "$.data.comments[].at_users[].ai_agent",
+            "types": {
+             "bool": 25
+            },
+            "value_shapes": {
+             "bool": {
+              "count": 25,
+              "rate": 1.0
+             }
+            },
+            "example": false,
+            "class": "snapshot",
+            "present": 25,
+            "rate": 1.0
+           },
+           "nickname": {
+            "path": "$.data.comments[].at_users[].nickname",
+            "types": {
+             "string": 25
+            },
+            "value_shapes": {
+             "str:ascii-word": {
+              "count": 4,
+              "rate": 0.16
+             },
+             "str:cjk-text": {
+              "count": 20,
+              "rate": 0.8
+             },
+             "str:text": {
+              "count": 1,
+              "rate": 0.04
+             }
+            },
+            "class": "pii",
+            "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+            "present": 25,
+            "rate": 1.0
+           },
+           "user_id": {
+            "path": "$.data.comments[].at_users[].user_id",
+            "types": {
+             "string": 25
+            },
+            "value_shapes": {
+             "str:hex": {
+              "count": 25,
+              "rate": 1.0
+             }
+            },
+            "class": "id",
+            "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+            "present": 25,
+            "rate": 1.0
+           },
+           "xsec_token": {
+            "path": "$.data.comments[].at_users[].xsec_token",
+            "types": {
+             "string": 25
+            },
+            "value_shapes": {
+             "str:opaque": {
+              "count": 25,
+              "rate": 1.0
+             }
+            },
+            "class": "token",
+            "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+            "present": 25,
+            "rate": 1.0
+           }
+          },
+          "present": 25,
+          "arrays": 247
+         },
+         "present": 247,
+         "rate": 1.0
+        },
+        "content": {
+         "path": "$.data.comments[].content",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:ascii-word": {
+           "count": 2,
+           "rate": 0.0081
+          },
+          "str:cjk-text": {
+           "count": 241,
+           "rate": 0.9757
+          },
+          "str:empty": {
+           "count": 3,
+           "rate": 0.0121
+          },
+          "str:hex": {
+           "count": 1,
+           "rate": 0.004
+          }
+         },
+         "example": "合成样本数据内容仅供本地测试填充文案合成",
+         "enum": [
+          "",
+          "DP V8",
+          "[doge]"
+         ],
+         "class": "snapshot",
+         "present": 247,
+         "rate": 1.0
+        },
+        "create_time": {
+         "path": "$.data.comments[].create_time",
+         "types": {
+          "number": 247
+         },
+         "value_shapes": {
+          "int": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": "<digits:len=13>",
+         "class": "timestamp",
+         "class_reason": "(?i)(_time$|_at$|timestamp|_ts$|^ts$|^time$|create_time|publish|expire|login_time|last_update)",
+         "present": 247,
+         "rate": 1.0
+        },
+        "id": {
+         "path": "$.data.comments[].id",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:hex": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": "<hex:len=24>",
+         "class": "id",
+         "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+         "present": 247,
+         "rate": 1.0
+        },
+        "invalid": {
+         "path": "$.data.comments[].invalid",
+         "types": {
+          "bool": 247
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 247,
+         "rate": 1.0
+        },
+        "ip_location": {
+         "path": "$.data.comments[].ip_location",
+         "types": {
+          "string": 245
+         },
+         "value_shapes": {
+          "str:cjk-text": {
+           "count": 245,
+           "rate": 1.0
+          }
+         },
+         "example": "合成",
+         "class": "snapshot",
+         "present": 245,
+         "rate": 0.9919
+        },
+        "like_count": {
+         "path": "$.data.comments[].like_count",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:cjk-text": {
+           "count": 2,
+           "rate": 0.0081
+          },
+          "str:digits": {
+           "count": 245,
+           "rate": 0.9919
+          }
+         },
+         "example": "<digits:len=2>",
+         "class": "count",
+         "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+         "present": 247,
+         "rate": 1.0
+        },
+        "liked": {
+         "path": "$.data.comments[].liked",
+         "types": {
+          "bool": 247
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": false,
+         "class": "snapshot",
+         "present": 247,
+         "rate": 1.0
+        },
+        "note_id": {
+         "path": "$.data.comments[].note_id",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:hex": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": "<hex:len=24>",
+         "class": "id",
+         "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+         "present": 247,
+         "rate": 1.0
+        },
+        "pictures": {
+         "path": "$.data.comments[].pictures",
+         "types": {
+          "array": 174
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 0,
+          "max": 9,
+          "avg": 0.36
+         },
+         "items": {
+          "path": "$.data.comments[].pictures[]",
+          "types": {
+           "object": 63
+          },
+          "class": "snapshot",
+          "object_count": 63,
+          "fields": {
+           "height": {
+            "path": "$.data.comments[].pictures[].height",
+            "types": {
+             "number": 63
+            },
+            "value_shapes": {
+             "int": {
+              "count": 63,
+              "rate": 1.0
+             }
+            },
+            "example": 431,
+            "class": "snapshot",
+            "present": 63,
+            "rate": 1.0
+           },
+           "info_list": {
+            "path": "$.data.comments[].pictures[].info_list",
+            "types": {
+             "array": 63
+            },
+            "class": "snapshot",
+            "len": {
+             "min": 2,
+             "max": 2,
+             "avg": 2.0
+            },
+            "items": {
+             "path": "$.data.comments[].pictures[].info_list[]",
+             "types": {
+              "object": 126
+             },
+             "class": "snapshot",
+             "object_count": 126,
+             "fields": {
+              "image_scene": {
+               "path": "$.data.comments[].pictures[].info_list[].image_scene",
+               "types": {
+                "string": 126
+               },
+               "value_shapes": {
+                "str:ascii-word": {
+                 "count": 126,
+                 "rate": 1.0
+                }
+               },
+               "example": "WB_PRV",
+               "enum": [
+                "WB_PRV",
+                "WB_DFT"
+               ],
+               "class": "snapshot",
+               "present": 126,
+               "rate": 1.0
+              },
+              "url": {
+               "path": "$.data.comments[].pictures[].info_list[].url",
+               "types": {
+                "string": 126
+               },
+               "value_shapes": {
+                "str:url": {
+                 "count": 126,
+                 "rate": 1.0
+                }
+               },
+               "example": "http://sns-webpic-qc.xhscdn.com/{ri}/{qs0}/wyffotr/{timt}",
+               "class": "snapshot",
+               "present": 126,
+               "rate": 1.0
+              }
+             },
+             "present": 126,
+             "arrays": 63
+            },
+            "present": 63,
+            "rate": 1.0
+           },
+           "url_default": {
+            "path": "$.data.comments[].pictures[].url_default",
+            "types": {
+             "string": 63
+            },
+            "value_shapes": {
+             "str:url": {
+              "count": 63,
+              "rate": 1.0
+             }
+            },
+            "example": "http://sns-webpic-qc.xhscdn.com/{pd}/{so6}/xxoibwv/{lwsb}",
+            "class": "snapshot",
+            "present": 63,
+            "rate": 1.0
+           },
+           "url_pre": {
+            "path": "$.data.comments[].pictures[].url_pre",
+            "types": {
+             "string": 63
+            },
+            "value_shapes": {
+             "str:url": {
+              "count": 63,
+              "rate": 1.0
+             }
+            },
+            "example": "http://sns-webpic-qc.xhscdn.com/{wg}/{ky2}/dqxvijb/{wllr}",
+            "class": "snapshot",
+            "present": 63,
+            "rate": 1.0
+           },
+           "width": {
+            "path": "$.data.comments[].pictures[].width",
+            "types": {
+             "number": 63
+            },
+            "value_shapes": {
+             "int": {
+              "count": 63,
+              "rate": 1.0
+             }
+            },
+            "example": 432,
+            "class": "snapshot",
+            "present": 63,
+            "rate": 1.0
+           }
+          },
+          "present": 63,
+          "arrays": 174
+         },
+         "present": 174,
+         "rate": 0.7045
+        },
+        "show_tags": {
+         "path": "$.data.comments[].show_tags",
+         "types": {
+          "array": 247
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 0,
+          "max": 2,
+          "avg": 0.02
+         },
+         "items": {
+          "path": "$.data.comments[].show_tags[]",
+          "types": {
+           "string": 5
+          },
+          "value_shapes": {
+           "str:ascii-word": {
+            "count": 5,
+            "rate": 1.0
+           }
+          },
+          "example": "is_author",
+          "enum": [
+           "is_author",
+           "user_top"
+          ],
+          "class": "snapshot",
+          "present": 5,
+          "arrays": 247
+         },
+         "present": 247,
+         "rate": 1.0
+        },
+        "status": {
+         "path": "$.data.comments[].status",
+         "types": {
+          "number": 247
+         },
+         "value_shapes": {
+          "int": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": 0,
+         "class": "snapshot",
+         "present": 247,
+         "rate": 1.0
+        },
+        "sub_comment_count": {
+         "path": "$.data.comments[].sub_comment_count",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:digits": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": "<digits:len=1>",
+         "class": "count",
+         "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+         "present": 247,
+         "rate": 1.0
+        },
+        "sub_comment_cursor": {
+         "path": "$.data.comments[].sub_comment_cursor",
+         "types": {
+          "string": 247
+         },
+         "value_shapes": {
+          "str:empty": {
+           "count": 95,
+           "rate": 0.3846
+          },
+          "str:hex": {
+           "count": 152,
+           "rate": 0.6154
+          }
+         },
+         "example": "<hex:len=24>",
+         "enum": [
+          ""
+         ],
+         "class": "cursor",
+         "class_reason": "cursor($|\\.|\\[\\]$)|[A-Za-z][a-zA-Z]*Cursor$",
+         "present": 247,
+         "rate": 1.0
+        },
+        "sub_comment_has_more": {
+         "path": "$.data.comments[].sub_comment_has_more",
+         "types": {
+          "bool": 247
+         },
+         "value_shapes": {
+          "bool": {
+           "count": 247,
+           "rate": 1.0
+          }
+         },
+         "example": true,
+         "class": "snapshot",
+         "present": 247,
+         "rate": 1.0
+        },
+        "sub_comments": {
+         "path": "$.data.comments[].sub_comments",
+         "types": {
+          "array": 247
+         },
+         "class": "snapshot",
+         "len": {
+          "min": 0,
+          "max": 1,
+          "avg": 0.62
+         },
+         "items": {
+          "path": "$.data.comments[].sub_comments[]",
+          "types": {
+           "object": 152
+          },
+          "class": "snapshot",
+          "object_count": 152,
+          "fields": {
+           "at_users": {
+            "path": "$.data.comments[].sub_comments[].at_users",
+            "types": {
+             "array": 152
+            },
+            "class": "snapshot",
+            "len": {
+             "min": 0,
+             "max": 0,
+             "avg": 0.0
+            },
+            "items": {
+             "path": "$.data.comments[].sub_comments[].at_users[]",
+             "types": {},
+             "class": "snapshot",
+             "present": 0,
+             "arrays": 152
+            },
+            "present": 152,
+            "rate": 1.0
+           },
+           "content": {
+            "path": "$.data.comments[].sub_comments[].content",
+            "types": {
+             "string": 152
+            },
+            "value_shapes": {
+             "str:cjk-text": {
+              "count": 148,
+              "rate": 0.9737
+             },
+             "str:digits": {
+              "count": 1,
+              "rate": 0.0066
+             },
+             "str:empty": {
+              "count": 3,
+              "rate": 0.0197
+             }
+            },
+            "example": "合成样",
+            "enum": [
+             ""
+            ],
+            "class": "snapshot",
+            "present": 152,
+            "rate": 1.0
+           },
+           "create_time": {
+            "path": "$.data.comments[].sub_comments[].create_time",
+            "types": {
+             "number": 152
+            },
+            "value_shapes": {
+             "int": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": "<digits:len=13>",
+            "class": "timestamp",
+            "class_reason": "(?i)(_time$|_at$|timestamp|_ts$|^ts$|^time$|create_time|publish|expire|login_time|last_update)",
+            "present": 152,
+            "rate": 1.0
+           },
+           "id": {
+            "path": "$.data.comments[].sub_comments[].id",
+            "types": {
+             "string": 152
+            },
+            "value_shapes": {
+             "str:hex": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": "<hex:len=24>",
+            "class": "id",
+            "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+            "present": 152,
+            "rate": 1.0
+           },
+           "invalid": {
+            "path": "$.data.comments[].sub_comments[].invalid",
+            "types": {
+             "bool": 152
+            },
+            "value_shapes": {
+             "bool": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": false,
+            "class": "snapshot",
+            "present": 152,
+            "rate": 1.0
+           },
+           "ip_location": {
+            "path": "$.data.comments[].sub_comments[].ip_location",
+            "types": {
+             "string": 148
+            },
+            "value_shapes": {
+             "str:cjk-text": {
+              "count": 148,
+              "rate": 1.0
+             }
+            },
+            "example": "合成",
+            "class": "snapshot",
+            "present": 148,
+            "rate": 0.9737
+           },
+           "like_count": {
+            "path": "$.data.comments[].sub_comments[].like_count",
+            "types": {
+             "string": 152
+            },
+            "value_shapes": {
+             "str:digits": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": "<digits:len=1>",
+            "class": "count",
+            "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+            "present": 152,
+            "rate": 1.0
+           },
+           "liked": {
+            "path": "$.data.comments[].sub_comments[].liked",
+            "types": {
+             "bool": 152
+            },
+            "value_shapes": {
+             "bool": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": false,
+            "class": "snapshot",
+            "present": 152,
+            "rate": 1.0
+           },
+           "note_id": {
+            "path": "$.data.comments[].sub_comments[].note_id",
+            "types": {
+             "string": 152
+            },
+            "value_shapes": {
+             "str:hex": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": "<hex:len=24>",
+            "class": "id",
+            "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+            "present": 152,
+            "rate": 1.0
+           },
+           "pictures": {
+            "path": "$.data.comments[].sub_comments[].pictures",
+            "types": {
+             "array": 132
+            },
+            "class": "snapshot",
+            "len": {
+             "min": 0,
+             "max": 6,
+             "avg": 0.1
+            },
+            "items": {
+             "path": "$.data.comments[].sub_comments[].pictures[]",
+             "types": {
+              "object": 13
+             },
+             "class": "snapshot",
+             "object_count": 13,
+             "fields": {
+              "height": {
+               "path": "$.data.comments[].sub_comments[].pictures[].height",
+               "types": {
+                "number": 13
+               },
+               "value_shapes": {
+                "int": {
+                 "count": 13,
+                 "rate": 1.0
+                }
+               },
+               "example": 2560,
+               "class": "snapshot",
+               "present": 13,
+               "rate": 1.0
+              },
+              "info_list": {
+               "path": "$.data.comments[].sub_comments[].pictures[].info_list",
+               "types": {
+                "array": 13
+               },
+               "class": "snapshot",
+               "len": {
+                "min": 2,
+                "max": 2,
+                "avg": 2.0
+               },
+               "items": {
+                "path": "$.data.comments[].sub_comments[].pictures[].info_list[]",
+                "types": {
+                 "object": 26
+                },
+                "class": "snapshot",
+                "object_count": 26,
+                "fields": {
+                 "image_scene": {
+                  "path": "$.data.comments[].sub_comments[].pictures[].info_list[].image_scene",
+                  "types": {
+                   "string": 26
+                  },
+                  "value_shapes": {
+                   "str:ascii-word": {
+                    "count": 26,
+                    "rate": 1.0
+                   }
+                  },
+                  "example": "WB_PRV",
+                  "enum": [
+                   "WB_PRV",
+                   "WB_DFT"
+                  ],
+                  "class": "snapshot",
+                  "present": 26,
+                  "rate": 1.0
+                 },
+                 "url": {
+                  "path": "$.data.comments[].sub_comments[].pictures[].info_list[].url",
+                  "types": {
+                   "string": 26
+                  },
+                  "value_shapes": {
+                   "str:url": {
+                    "count": 26,
+                    "rate": 1.0
+                   }
+                  },
+                  "example": "http://sns-webpic-qc.xhscdn.com/{cc}/{tj8}/eizaljl/{gfqj}",
+                  "class": "snapshot",
+                  "present": 26,
+                  "rate": 1.0
+                 }
+                },
+                "present": 26,
+                "arrays": 13
+               },
+               "present": 13,
+               "rate": 1.0
+              },
+              "url_default": {
+               "path": "$.data.comments[].sub_comments[].pictures[].url_default",
+               "types": {
+                "string": 13
+               },
+               "value_shapes": {
+                "str:url": {
+                 "count": 13,
+                 "rate": 1.0
+                }
+               },
+               "example": "http://sns-webpic-qc.xhscdn.com/{mk}/{fp6}/smlumoa/{mfow}",
+               "class": "snapshot",
+               "present": 13,
+               "rate": 1.0
+              },
+              "url_pre": {
+               "path": "$.data.comments[].sub_comments[].pictures[].url_pre",
+               "types": {
+                "string": 13
+               },
+               "value_shapes": {
+                "str:url": {
+                 "count": 13,
+                 "rate": 1.0
+                }
+               },
+               "example": "http://sns-webpic-qc.xhscdn.com/{hk}/{sv5}/fbjsomq/{wiwh}",
+               "class": "snapshot",
+               "present": 13,
+               "rate": 1.0
+              },
+              "width": {
+               "path": "$.data.comments[].sub_comments[].pictures[].width",
+               "types": {
+                "number": 13
+               },
+               "value_shapes": {
+                "int": {
+                 "count": 13,
+                 "rate": 1.0
+                }
+               },
+               "example": 1178,
+               "class": "snapshot",
+               "present": 13,
+               "rate": 1.0
+              }
+             },
+             "present": 13,
+             "arrays": 132
+            },
+            "present": 132,
+            "rate": 0.8684
+           },
+           "show_tags": {
+            "path": "$.data.comments[].sub_comments[].show_tags",
+            "types": {
+             "array": 152
+            },
+            "class": "snapshot",
+            "len": {
+             "min": 0,
+             "max": 1,
+             "avg": 0.2
+            },
+            "items": {
+             "path": "$.data.comments[].sub_comments[].show_tags[]",
+             "types": {
+              "string": 30
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 30,
+               "rate": 1.0
+              }
+             },
+             "example": "is_author",
+             "enum": [
+              "is_author"
+             ],
+             "class": "snapshot",
+             "present": 30,
+             "arrays": 152
+            },
+            "present": 152,
+            "rate": 1.0
+           },
+           "status": {
+            "path": "$.data.comments[].sub_comments[].status",
+            "types": {
+             "number": 152
+            },
+            "value_shapes": {
+             "int": {
+              "count": 152,
+              "rate": 1.0
+             }
+            },
+            "example": 0,
+            "class": "snapshot",
+            "present": 152,
+            "rate": 1.0
+           },
+           "target_comment": {
+            "path": "$.data.comments[].sub_comments[].target_comment",
+            "types": {
+             "object": 152
+            },
+            "class": "snapshot",
+            "object_count": 152,
+            "fields": {
+             "id": {
+              "path": "$.data.comments[].sub_comments[].target_comment.id",
+              "types": {
+               "string": 152
+              },
+              "value_shapes": {
+               "str:hex": {
+                "count": 152,
+                "rate": 1.0
+               }
+              },
+              "example": "<hex:len=24>",
+              "class": "id",
+              "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+              "present": 152,
+              "rate": 1.0
+             },
+             "user_info": {
+              "path": "$.data.comments[].sub_comments[].target_comment.user_info",
+              "types": {
+               "object": 152
+              },
+              "class": "snapshot",
+              "object_count": 152,
+              "fields": {
+               "ai_agent": {
+                "path": "$.data.comments[].sub_comments[].target_comment.user_info.ai_agent",
+                "types": {
+                 "bool": 152
+                },
+                "value_shapes": {
+                 "bool": {
+                  "count": 152,
+                  "rate": 1.0
+                 }
+                },
+                "example": false,
+                "class": "snapshot",
+                "present": 152,
+                "rate": 1.0
+               },
+               "image": {
+                "path": "$.data.comments[].sub_comments[].target_comment.user_info.image",
+                "types": {
+                 "string": 152
+                },
+                "value_shapes": {
+                 "str:url": {
+                  "count": 152,
+                  "rate": 1.0
+                 }
+                },
+                "example": "https://sns-avatar-qc.xhscdn.com/uyhcbf/{od}",
+                "class": "snapshot",
+                "present": 152,
+                "rate": 1.0
+               },
+               "nickname": {
+                "path": "$.data.comments[].sub_comments[].target_comment.user_info.nickname",
+                "types": {
+                 "string": 152
+                },
+                "value_shapes": {
+                 "str:ascii-word": {
+                  "count": 26,
+                  "rate": 0.1711
+                 },
+                 "str:cjk-text": {
+                  "count": 122,
+                  "rate": 0.8026
+                 },
+                 "str:text": {
+                  "count": 4,
+                  "rate": 0.0263
+                 }
+                },
+                "class": "pii",
+                "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+                "present": 152,
+                "rate": 1.0
+               },
+               "user_id": {
+                "path": "$.data.comments[].sub_comments[].target_comment.user_info.user_id",
+                "types": {
+                 "string": 152
+                },
+                "value_shapes": {
+                 "str:hex": {
+                  "count": 152,
+                  "rate": 1.0
+                 }
+                },
+                "class": "id",
+                "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+                "present": 152,
+                "rate": 1.0
+               },
+               "xsec_token": {
+                "path": "$.data.comments[].sub_comments[].target_comment.user_info.xsec_token",
+                "types": {
+                 "string": 152
+                },
+                "value_shapes": {
+                 "str:opaque": {
+                  "count": 152,
+                  "rate": 1.0
+                 }
+                },
+                "class": "token",
+                "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+                "present": 152,
+                "rate": 1.0
+               }
+              },
+              "present": 152,
+              "rate": 1.0
+             }
+            },
+            "present": 152,
+            "rate": 1.0
+           },
+           "user_info": {
+            "path": "$.data.comments[].sub_comments[].user_info",
+            "types": {
+             "object": 152
+            },
+            "class": "snapshot",
+            "object_count": 152,
+            "fields": {
+             "ai_agent": {
+              "path": "$.data.comments[].sub_comments[].user_info.ai_agent",
+              "types": {
+               "bool": 152
+              },
+              "value_shapes": {
+               "bool": {
+                "count": 152,
+                "rate": 1.0
+               }
+              },
+              "example": false,
+              "class": "snapshot",
+              "present": 152,
+              "rate": 1.0
+             },
+             "image": {
+              "path": "$.data.comments[].sub_comments[].user_info.image",
+              "types": {
+               "string": 152
+              },
+              "value_shapes": {
+               "str:url": {
+                "count": 152,
+                "rate": 1.0
+               }
+              },
+              "example": "https://sns-avatar-qc.xhscdn.com/dginih/{rv}",
+              "class": "snapshot",
+              "present": 152,
+              "rate": 1.0
+             },
+             "nickname": {
+              "path": "$.data.comments[].sub_comments[].user_info.nickname",
+              "types": {
+               "string": 152
+              },
+              "value_shapes": {
+               "str:ascii-word": {
+                "count": 36,
+                "rate": 0.2368
+               },
+               "str:cjk-text": {
+                "count": 111,
+                "rate": 0.7303
+               },
+               "str:text": {
+                "count": 5,
+                "rate": 0.0329
+               }
+              },
+              "class": "pii",
+              "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+              "present": 152,
+              "rate": 1.0
+             },
+             "user_id": {
+              "path": "$.data.comments[].sub_comments[].user_info.user_id",
+              "types": {
+               "string": 152
+              },
+              "value_shapes": {
+               "str:hex": {
+                "count": 152,
+                "rate": 1.0
+               }
+              },
+              "class": "id",
+              "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+              "present": 152,
+              "rate": 1.0
+             },
+             "xsec_token": {
+              "path": "$.data.comments[].sub_comments[].user_info.xsec_token",
+              "types": {
+               "string": 152
+              },
+              "value_shapes": {
+               "str:opaque": {
+                "count": 152,
+                "rate": 1.0
+               }
+              },
+              "class": "token",
+              "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+              "present": 152,
+              "rate": 1.0
+             }
+            },
+            "present": 152,
+            "rate": 1.0
+           }
+          },
+          "present": 152,
+          "arrays": 247
+         },
+         "present": 247,
+         "rate": 1.0
+        },
+        "user_info": {
+         "path": "$.data.comments[].user_info",
+         "types": {
+          "object": 247
+         },
+         "class": "snapshot",
+         "object_count": 247,
+         "fields": {
+          "ai_agent": {
+           "path": "$.data.comments[].user_info.ai_agent",
+           "types": {
+            "bool": 247
+           },
+           "value_shapes": {
+            "bool": {
+             "count": 247,
+             "rate": 1.0
+            }
+           },
+           "example": false,
+           "class": "snapshot",
+           "present": 247,
+           "rate": 1.0
+          },
+          "image": {
+           "path": "$.data.comments[].user_info.image",
+           "types": {
+            "string": 247
+           },
+           "value_shapes": {
+            "str:url": {
+             "count": 247,
+             "rate": 1.0
+            }
+           },
+           "example": "https://sns-avatar-qc.xhscdn.com/kzaqdw/{kz}",
+           "class": "snapshot",
+           "present": 247,
+           "rate": 1.0
+          },
+          "nickname": {
+           "path": "$.data.comments[].user_info.nickname",
+           "types": {
+            "string": 247
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 45,
+             "rate": 0.1822
+            },
+            "str:cjk-text": {
+             "count": 193,
+             "rate": 0.7814
+            },
+            "str:digits": {
+             "count": 2,
+             "rate": 0.0081
+            },
+            "str:text": {
+             "count": 7,
+             "rate": 0.0283
+            }
+           },
+           "class": "pii",
+           "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+           "present": 247,
+           "rate": 1.0
+          },
+          "user_id": {
+           "path": "$.data.comments[].user_info.user_id",
+           "types": {
+            "string": 247
+           },
+           "value_shapes": {
+            "str:hex": {
+             "count": 247,
+             "rate": 1.0
+            }
+           },
+           "class": "id",
+           "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+           "present": 247,
+           "rate": 1.0
+          },
+          "xsec_token": {
+           "path": "$.data.comments[].user_info.xsec_token",
+           "types": {
+            "string": 247
+           },
+           "value_shapes": {
+            "str:opaque": {
+             "count": 247,
+             "rate": 1.0
+            }
+           },
+           "class": "token",
+           "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+           "present": 247,
+           "rate": 1.0
+          }
+         },
+         "present": 247,
+         "rate": 1.0
+        }
+       },
+       "present": 247,
+       "arrays": 40
+      },
+      "present": 40,
+      "rate": 1.0
+     },
+     "cursor": {
+      "path": "$.data.cursor",
+      "types": {
+       "string": 34
+      },
+      "value_shapes": {
+       "str:hex": {
+        "count": 34,
+        "rate": 1.0
+       }
+      },
+      "example": "<hex:len=24>",
+      "class": "cursor",
+      "class_reason": "(?i)(^|\\.)(cursor|pcursor|next_cursor|cursor_score|offset|page|page_size|has_more|searchSessionId|search_id|logid|request_id|top_comment_id)($|\\.|\\[\\])",
+      "present": 34,
+      "rate": 0.85
+     },
+     "has_more": {
+      "path": "$.data.has_more",
+      "types": {
+       "bool": 40
+      },
+      "value_shapes": {
+       "bool": {
+        "count": 40,
+        "rate": 1.0
+       }
+      },
+      "example": true,
+      "class": "cursor",
+      "class_reason": "(?i)(^|\\.)(cursor|pcursor|next_cursor|cursor_score|offset|page|page_size|has_more|searchSessionId|search_id|logid|request_id|top_comment_id)($|\\.|\\[\\])",
+      "present": 40,
+      "rate": 1.0
+     },
+     "time": {
+      "path": "$.data.time",
+      "types": {
+       "number": 40
+      },
+      "value_shapes": {
+       "int": {
+        "count": 40,
+        "rate": 1.0
+       }
+      },
+      "example": "<digits:len=13>",
+      "class": "snapshot",
+      "present": 40,
+      "rate": 1.0
+     },
+     "user_id": {
+      "path": "$.data.user_id",
+      "types": {
+       "string": 40
+      },
+      "value_shapes": {
+       "str:hex": {
+        "count": 40,
+        "rate": 1.0
+       }
+      },
+      "class": "id",
+      "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+      "present": 40,
+      "rate": 1.0
+     },
+     "xsec_token": {
+      "path": "$.data.xsec_token",
+      "types": {
+       "string": 40
+      },
+      "value_shapes": {
+       "str:opaque": {
+        "count": 40,
+        "rate": 1.0
+       }
+      },
+      "class": "token",
+      "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+      "present": 40,
+      "rate": 1.0
+     }
+    },
+    "present": 40,
+    "rate": 1.0
+   },
+   "msg": {
+    "path": "$.msg",
+    "types": {
+     "string": 40
+    },
+    "value_shapes": {
+     "str:cjk-text": {
+      "count": 40,
+      "rate": 1.0
+     }
+    },
+    "example": "合成",
+    "class": "snapshot",
+    "present": 40,
+    "rate": 1.0
+   },
+   "success": {
+    "path": "$.success",
+    "types": {
+     "bool": 40
+    },
+    "value_shapes": {
+     "bool": {
+      "count": 40,
+      "rate": 1.0
+     }
+    },
+    "example": true,
+    "class": "snapshot",
+    "present": 40,
+    "rate": 1.0
+   }
+  }
+ },
+ "response_parse": {
+  "json": 40
+ },
+ "pagination": {
+  "request_cursor_params": {
+   "cursor": {
+    "observed": [
+     "",
+     "<hex:len=24>"
+    ],
+    "n_obs": 40
+   }
+  },
+  "response_cursor_fields": {
+   "$.data.cursor": {
+    "observed": [
+     "<hex:len=24>"
+    ],
+    "n_obs": 34
+   },
+   "$.data.has_more": {
+    "observed": [
+     true,
+     false
+    ],
+    "n_obs": 40
+   }
+  }
+ },
+ "field_stats": {
+  "total": 87,
+  "must_vary": 27,
+  "must_vary_by_class": {
+   "count": 3,
+   "cursor": 3,
+   "id": 10,
+   "pii": 4,
+   "timestamp": 2,
+   "token": 5
+  }
+ }
+}

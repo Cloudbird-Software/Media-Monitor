@@ -1,0 +1,40 @@
+{
+  "name": "kuaishou-user-search",
+  "platform": "kuaishou",
+  "category": "user_search",
+  "version": "1",
+  "doc": "people search / author discovery (capability B UserSearch). Evidence: corpus /rest/v/search/user POST body {keyword, pcursor, searchSessionId} -> {result, pcursor, host-name, searchSessionId, users[30x{user_id, user_name, user_text, headurl, verified, isFollowing, livingInfo{living}}]}; oracle probe: 30 users/page, deterministic across repeat calls, cursor window bounded. Termination discipline: the last cursor can rewind to \"1\" — the engine's user_search atom dedupes by user_id and stops on a page with no new users (fetchPagesDedup), so the pcursor loop is declared has_more-on-pcursor like the other ks faces. dy (query/user) and xhs (onebox) equivalents are not implemented on the synth oracle — ks-first.",
+  "transport": {
+    "base_url": "https://www.kuaishou.com",
+    "path": "/rest/v/search/user",
+    "method": "POST",
+    "body": {
+      "kpn": "PC_WEB"
+    },
+    "placeholders": [],
+    "query": {
+      "keyword": ""
+    }
+  },
+  "cookie": {
+    "required": [
+      "did"
+    ],
+    "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"
+  },
+  "binding": {
+    "users": "$.users",
+    "fields": {
+      "avatar_url": "$.headurl",
+      "signature": "$.user_text",
+      "extra.verified": "$.verified",
+      "extra.living": "$.livingInfo.living",
+      "extra.is_following": "$.isFollowing"
+    }
+  },
+  "paging": {
+    "cursor_param": "pcursor",
+    "has_more_path": "$.pcursor",
+    "next_cursor_path": "$.pcursor"
+  }
+}

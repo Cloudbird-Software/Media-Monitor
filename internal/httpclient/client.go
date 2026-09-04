@@ -1,17 +1,24 @@
 // Package httpclient is a thin HTTP client for the media collectors: it adds
 // a rotating User-Agent pool, retry with exponential backoff on 429/5xx, and
 // an injectable request signer that can attach query parameters (e.g. a_bogus
-// / msToken) computed per contract. There is no cookie jar on purpose —
-// cookies are stateless and travel via the caller-supplied headers.
+// / msToken) computed per contract. Cookies are stateless by default and
+// travel via the caller-supplied headers; Session() clones get a real cookie
+// jar so server Set-Cookie rotations persist within one identity.
 package httpclient
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
+	"os"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 )
@@ -20,14 +27,19 @@ import (
 type Config struct {
 	// BaseHeaders are merged into every request first (caller headers win).
 	BaseHeaders map[string]string
-	// UserAgents is the rotation pool; a built-in pool of generic desktop
-	// and mobile UAs is used when empty.
+	// UserAgents is the rotation pool; a built-in pool of real desktop
+	// Chrome/Edge UAs is used when empty.
 	UserAgents []string
 	// Timeout per request (0 selects a 30s default).
 	Timeout time.Duration
 	// MaxRetries is the number of extra attempts after the first one for
 	// 429/Too Many Requests and 5xx responses. 0 means a single attempt.
 	MaxRetries int
+	// RetryBase is the exponential backoff base for retries (0 = 250ms).
+	// Each retry waits RetryBase·2^(n-1) with ±20% jitter (silent-scraping
+	// A2/E: constant-cadence error storms are a bot signature), and never
+	// less than a server-sent Retry-After (capped at 30s).
+	RetryBase time.Duration
 	// Proxy is an optional proxy URL (e.g. "http://user:pass@host:port",
 	// "socks5://host:port"). When set, every request is routed through it.
 	Proxy string
@@ -38,6 +50,25 @@ type Config struct {
 // into the outgoing query string.
 type Signer interface {
 	Sign(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error)
+}
+
+// DefaultMaxRetries is the silent-scraping default for collect traffic
+// (report item 5 / E: MaxRetries=0 meant a single attempt and an instant
+// error storm). Override with MEDIAMON_MAX_RETRIES.
+const DefaultMaxRetries = 2
+
+// MaxRetriesFromEnv resolves the retry budget: MEDIAMON_MAX_RETRIES wins
+// (0 = single attempt, the legacy explicit opt-out), default 2.
+func MaxRetriesFromEnv() int {
+	v := strings.TrimSpace(os.Getenv("MEDIAMON_MAX_RETRIES"))
+	if v == "" {
+		return DefaultMaxRetries
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 {
+		return DefaultMaxRetries
+	}
+	return n
 }
 
 // StaticSigner adapts a plain function to the Signer interface.
@@ -99,6 +130,29 @@ func (c *Client) WithContract(name string) *Client {
 	return c
 }
 
+// Session returns a clone backed by its own cookie jar (sharing the config,
+// signer, UA pool and transport of the receiver). Use one Session per
+// identity/cookie-lifetime so Set-Cookie rotations (msToken, ttwid refresh)
+// persist within the session and never leak across identities. Caller-set
+// Cookie headers are still honored — jar cookies are appended after them.
+func (c *Client) Session() *Client {
+	// Field-wise clone: a plain struct copy would duplicate the atomic UA
+	// counter by value (go vet: assignment copies lock value); the session
+	// starts its own rotation instead.
+	nc := &Client{
+		cfg:      c.cfg,
+		signer:   c.signer,
+		contract: c.contract,
+		uaPool:   c.uaPool,
+	}
+	base := &http.Client{Timeout: c.hc.Timeout, Transport: c.hc.Transport}
+	if jar, err := cookiejar.New(nil); err == nil {
+		base.Jar = jar
+	}
+	nc.hc = base
+	return nc
+}
+
 // UA returns the next User-Agent in the pool (round-robin rotation).
 func (c *Client) UA() string {
 	return c.uaPool[int(c.uaIdx.Add(1)-1)%len(c.uaPool)]
@@ -106,8 +160,9 @@ func (c *Client) UA() string {
 
 // Do performs one request with retry: transport errors and non-429/5xx
 // responses return immediately; 429/5xx responses retry with exponential
-// backoff starting at 100ms, honoring ctx cancellation between attempts.
-// Returns the last HTTP status and body (last attempt on exhaustion).
+// backoff plus ±20% jitter (never below a server Retry-After, capped at
+// 30s), honoring ctx cancellation between attempts. Returns the last HTTP
+// status and body (last attempt on exhaustion).
 func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, error) {
 	if ctx == nil {
 		ctx = context.Background()
@@ -121,20 +176,20 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 	}
 	var lastStatus int
 	var lastBody []byte
+	var lastRetryAfter time.Duration
 	for i := 0; i < attempts; i++ {
 		if i > 0 {
-			backoff := time.Duration(100*time.Millisecond) << uint(i-1)
 			select {
 			case <-ctx.Done():
 				return 0, nil, fmt.Errorf("httpclient: %w", ctx.Err())
-			case <-time.After(backoff):
+			case <-time.After(c.backoffFor(i, lastRetryAfter)):
 			}
 		}
-		status, rb, err := c.doOnce(ctx, method, rawURL, headers, body)
+		status, rb, ra, err := c.doOnce(ctx, method, rawURL, headers, body)
 		if err != nil {
 			return 0, nil, err
 		}
-		lastStatus, lastBody = status, rb
+		lastStatus, lastBody, lastRetryAfter = status, rb, ra
 		if status == http.StatusTooManyRequests || status >= 500 {
 			continue
 		}
@@ -144,17 +199,91 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 		fmt.Errorf("httpclient: %s %s failed after %d attempt(s), last status %d", method, rawURL, attempts, lastStatus)
 }
 
-func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, error) {
+// retryJitter spreads the ±20% jitter factor for backoffFor.
+func retryJitterFactor() float64 {
+	return 0.8 + 0.4*rand.Float64()
+}
+
+// backoffFor computes attempt n's wait: RetryBase·2^(n-1) scaled by ±20%
+// jitter, raised to the server's Retry-After when larger, capped at 30s.
+func (c *Client) backoffFor(attempt int, retryAfter time.Duration) time.Duration {
+	base := c.cfg.RetryBase
+	if base <= 0 {
+		base = 250 * time.Millisecond
+	}
+	d := time.Duration(float64(base<<uint(attempt-1)) * retryJitterFactor())
+	if retryAfter > d {
+		d = retryAfter
+	}
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	return d
+}
+
+// parseRetryAfter converts a Retry-After header value (delta-seconds or
+// HTTP-date) into a duration; ok=false when absent/invalid. The result is
+// clamped to [0, 30s] — a hostile/huge value must not stall the client.
+func parseRetryAfter(v string, now time.Time) (time.Duration, bool) {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return 0, false
+	}
+	if secs, err := strconv.Atoi(v); err == nil {
+		if secs < 0 {
+			return 0, true
+		}
+		d := time.Duration(secs) * time.Second
+		if d > 30*time.Second {
+			d = 30 * time.Second
+		}
+		return d, true
+	}
+	if ts, err := http.ParseTime(v); err == nil {
+		d := ts.Sub(now)
+		if d < 0 {
+			d = 0
+		}
+		if d > 30*time.Second {
+			d = 30 * time.Second
+		}
+		return d, true
+	}
+	return 0, false
+}
+
+// doOnce performs one attempt and also surfaces the server's Retry-After
+// (parsed against the attempt time) for the retry loop.
+func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[string]string, body []byte) (int, []byte, time.Duration, error) {
 	resp, err := c.doRequest(ctx, method, rawURL, headers, body)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, 0, err
 	}
 	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, nil, fmt.Errorf("httpclient: read body: %w", err)
+	var rdr io.Reader = resp.Body
+	// gzip answers to a manually-set Accept-Encoding: when the caller (or
+	// the merged browser header sets) declares Accept-Encoding, Go's
+	// transport passes it verbatim and does NOT transparently decompress —
+	// yet the xhs/ks surfaces answer gzip to exactly that offer (corpus
+	// truth; the synth data face models it, final-audit P3 e2e alignment
+	// exposed it). The transport strips Content-Encoding when it decompressed
+	// by itself, so the header's presence is the precise manual case. Only
+	// gzip is handled; anything else stays raw and fails loud at the parse
+	// boundary (no silent wrong data). DoStream (media bytes) is untouched.
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		zr, zerr := gzip.NewReader(resp.Body)
+		if zerr != nil {
+			return 0, nil, 0, fmt.Errorf("httpclient: gzip body: %w", zerr)
+		}
+		defer zr.Close()
+		rdr = zr
 	}
-	return resp.StatusCode, rb, nil
+	rb, err := io.ReadAll(rdr)
+	if err != nil {
+		return 0, nil, 0, fmt.Errorf("httpclient: read body: %w", err)
+	}
+	ra, _ := parseRetryAfter(resp.Header.Get("Retry-After"), time.Now())
+	return resp.StatusCode, rb, ra, nil
 }
 
 // DoStream performs a single-attempt request and returns the response body
@@ -231,17 +360,19 @@ func (c *Client) doRequest(ctx context.Context, method, rawURL string, headers m
 	return resp, nil
 }
 
-// defaultUAs is a pool of generic consumer User-Agents (desktop + mobile
-// WebKit/Gecko). No private or internal domains appear here.
+// defaultUAs is the built-in fallback pool: real, currently-existing desktop
+// Chrome/Edge User-Agents (majors 148-152 — the recorded human baseline runs
+// Chrome 152). Deployments should inject the fuller accounts UA pool via
+// Config.UserAgents. No fabricated version numbers (silent-scraping B2).
 var defaultUAs = []string{
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 Edg/123.0.0.0",
-	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-	"Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-	"Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Mobile Safari/537.36",
-	"Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1",
-	"Mozilla/5.0 (iPad; CPU OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
-	"Mozilla/5.0 (Linux; Android 12; M2012K11AC) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36",
-	"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36 Edg/152.0.0.0",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.0.0",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36",
 }

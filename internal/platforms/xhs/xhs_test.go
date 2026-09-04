@@ -160,13 +160,14 @@ func TestXhsDefaultsSmoke(t *testing.T) {
 }
 
 // TestXhsRepliesRealContract: the real xhs-comments-replies contract drives
-// a mocked sub-comment page; comment_id travels as the placeholder and the
+// a mocked sub-comment page; root_comment_id travels as the placeholder
+// (A-line corpus verdict 64/64, silent-scraping TODO-C) and the
 // data.comments records bind id/content/like_count + user_info author.
 func TestXhsRepliesRealContract(t *testing.T) {
 	var sawCommentID, sawPath string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sawPath = r.URL.Path
-		sawCommentID = r.URL.Query().Get("comment_id")
+		sawCommentID = r.URL.Query().Get("root_comment_id")
 		_, _ = w.Write([]byte(`{
 			"data": {
 				"comments": [
@@ -209,7 +210,7 @@ func TestXhsRepliesRealContract(t *testing.T) {
 		t.Fatalf("path = %q, want the contract sub-comment endpoint", sawPath)
 	}
 	if sawCommentID != "xhs-comment-0001" {
-		t.Fatalf("comment_id = %q", sawCommentID)
+		t.Fatalf("root_comment_id = %q", sawCommentID)
 	}
 }
 

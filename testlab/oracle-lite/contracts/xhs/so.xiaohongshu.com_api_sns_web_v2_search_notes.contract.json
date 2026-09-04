@@ -1,0 +1,1660 @@
+{
+ "schema_version": "draft-contract/1",
+ "generated_by": "extract_contracts.py v2.1.0",
+ "site": "xhs",
+ "endpoint_id": "so.xiaohongshu.com_api_sns_web_v2_search_notes",
+ "host": "so.xiaohongshu.com",
+ "path_template": "/api/sns/web/v2/search/notes",
+ "url_template": "https://so.xiaohongshu.com/api/sns/web/v2/search/notes",
+ "method": "POST",
+ "traffic_class": "api",
+ "scenarios": {
+  "xhs_search_notes": 37
+ },
+ "samples": [
+  "sample_0003",
+  "sample_0004",
+  "sample_0005",
+  "sample_0006",
+  "sample_0007",
+  "sample_0008",
+  "sample_0009",
+  "sample_0010",
+  "sample_0011",
+  "sample_0012",
+  "sample_0013",
+  "sample_0014",
+  "sample_0015",
+  "sample_0016",
+  "sample_0017",
+  "sample_0018",
+  "sample_0019",
+  "sample_0020",
+  "sample_0021",
+  "sample_0022",
+  "sample_0023",
+  "sample_0024",
+  "sample_0025"
+ ],
+ "request_count": 37,
+ "preflight_count": 37,
+ "resource_type": {
+  "XHR": 37
+ },
+ "response_status": {
+  "200": 37
+ },
+ "response_mime": {
+  "application/json": 37
+ },
+ "response_body_kind": {
+  "text": 37
+ },
+ "response_body_size": {
+  "min": 32152,
+  "avg": 66358,
+  "max": 94978,
+  "n": 37
+ },
+ "body_params": {
+  "ext_flags": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {},
+   "example": "<list>",
+   "class": "snapshot"
+  },
+  "filters": {
+   "present": 6,
+   "total": 6,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 6,
+     "rate": 0.2
+    },
+    "str:cjk-text": {
+     "count": 24,
+     "rate": 0.8
+    }
+   },
+   "type": "str:cjk-text",
+   "example": "<list>",
+   "class": "snapshot"
+  },
+  "geo": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:empty": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:empty",
+   "example": "",
+   "value_len": {
+    "min": 0,
+    "max": 0
+   },
+   "role": "device_env",
+   "class": "snapshot"
+  },
+  "image_formats": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 111,
+     "rate": 1.0
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "<list>",
+   "value_len": {
+    "min": 3,
+    "max": 4
+   },
+   "role": "device_env",
+   "class": "snapshot"
+  },
+  "keyword": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:cjk-text": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:cjk-text",
+   "example": "合成样本",
+   "value_len": {
+    "min": 3,
+    "max": 4
+   },
+   "role": "keyword",
+   "class": "scenario_param"
+  },
+  "message_id": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 23,
+     "rate": 0.6216
+    },
+    "str:empty": {
+     "count": 14,
+     "rate": 0.3784
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "sending",
+   "value_len": {
+    "min": 0,
+    "max": 7
+   },
+   "class": "id"
+  },
+  "note_type": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "int": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "int",
+   "example": 0,
+   "class": "snapshot"
+  },
+  "page": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "int": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "int",
+   "example": 1,
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "page_size": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "int": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "int",
+   "example": 20,
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "search_id": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:opaque": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:opaque",
+   "example": "<opaque:len=21>",
+   "value_len": {
+    "min": 21,
+    "max": 43
+   },
+   "role": "pagination",
+   "class": "cursor"
+  },
+  "session_id": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:opaque": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:opaque",
+   "example": "<TOKEN>",
+   "value_len": {
+    "min": 36,
+    "max": 36
+   },
+   "class": "token"
+  },
+  "sort": {
+   "present": 37,
+   "total": 37,
+   "required": true,
+   "observed_types": {
+    "str:ascii-word": {
+     "count": 37,
+     "rate": 1.0
+    }
+   },
+   "type": "str:ascii-word",
+   "example": "general",
+   "value_len": {
+    "min": 7,
+    "max": 7
+   },
+   "class": "snapshot"
+  }
+ },
+ "post_body_kind": {
+  "json": 37
+ },
+ "headers": {
+  "signature_headers_present": {
+   "x-b3-traceid": {
+    "count": 37,
+    "rate": 1.0
+   },
+   "x-rap-param": {
+    "count": 37,
+    "rate": 1.0
+   },
+   "x-s": {
+    "count": 37,
+    "rate": 1.0
+   },
+   "x-s-common": {
+    "count": 37,
+    "rate": 1.0
+   },
+   "x-t": {
+    "count": 37,
+    "rate": 1.0
+   },
+   "x-xray-traceid": {
+    "count": 37,
+    "rate": 1.0
+   }
+  },
+  "cookie_header_rate": 1.0,
+  "cookie_names_observed": [
+   "abRequestId",
+   "xsecappid",
+   "a1",
+   "webId",
+   "gid",
+   "web_session",
+   "id_token",
+   "x-rednote-datactry",
+   "x-rednote-holderctry",
+   "acw_tc",
+   "webBuild",
+   "loadts",
+   "websectiga",
+   "sec_poison_id",
+   "unread",
+   "ets"
+  ],
+  "referer_templates": [
+   "https://www.xiaohongshu.com/"
+  ],
+  "sensitive_response_headers_present": {
+   "xhs-real-ip(redacted)": 37
+  }
+ },
+ "response_schema": {
+  "path": "$",
+  "types": {
+   "object": 37
+  },
+  "class": "snapshot",
+  "object_count": 37,
+  "fields": {
+   "code": {
+    "path": "$.code",
+    "types": {
+     "number": 37
+    },
+    "value_shapes": {
+     "int": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": 0,
+    "class": "snapshot",
+    "present": 37,
+    "rate": 1.0
+   },
+   "data": {
+    "path": "$.data",
+    "types": {
+     "object": 37
+    },
+    "class": "snapshot",
+    "object_count": 37,
+    "fields": {
+     "has_more": {
+      "path": "$.data.has_more",
+      "types": {
+       "bool": 37
+      },
+      "value_shapes": {
+       "bool": {
+        "count": 37,
+        "rate": 1.0
+       }
+      },
+      "example": true,
+      "class": "cursor",
+      "class_reason": "(?i)(^|\\.)(cursor|pcursor|next_cursor|cursor_score|offset|page|page_size|has_more|searchSessionId|search_id|logid|request_id|top_comment_id)($|\\.|\\[\\])",
+      "present": 37,
+      "rate": 1.0
+     },
+     "items": {
+      "path": "$.data.items",
+      "types": {
+       "array": 37
+      },
+      "class": "snapshot",
+      "len": {
+       "min": 21,
+       "max": 26,
+       "avg": 22.14
+      },
+      "items": {
+       "path": "$.data.items[]",
+       "types": {
+        "object": 819
+       },
+       "class": "snapshot",
+       "object_count": 819,
+       "fields": {
+        "hot_query": {
+         "path": "$.data.items[].hot_query",
+         "types": {
+          "object": 74
+         },
+         "class": "snapshot",
+         "object_count": 74,
+         "fields": {
+          "queries": {
+           "path": "$.data.items[].hot_query.queries",
+           "types": {
+            "array": 74
+           },
+           "class": "snapshot",
+           "len": {
+            "min": 4,
+            "max": 4,
+            "avg": 4.0
+           },
+           "items": {
+            "path": "$.data.items[].hot_query.queries[]",
+            "types": {
+             "object": 296
+            },
+            "class": "snapshot",
+            "object_count": 296,
+            "fields": {
+             "cover": {
+              "path": "$.data.items[].hot_query.queries[].cover",
+              "types": {
+               "string": 296
+              },
+              "value_shapes": {
+               "str:empty": {
+                "count": 1,
+                "rate": 0.0034
+               },
+               "str:url": {
+                "count": 295,
+                "rate": 0.9966
+               }
+              },
+              "example": "http://sns-na-i1.xhscdn.com/{af}",
+              "enum": [
+               ""
+              ],
+              "class": "snapshot",
+              "present": 296,
+              "rate": 1.0
+             },
+             "id": {
+              "path": "$.data.items[].hot_query.queries[].id",
+              "types": {
+               "string": 296
+              },
+              "value_shapes": {
+               "str:cjk-text": {
+                "count": 296,
+                "rate": 1.0
+               }
+              },
+              "example": "合成样本数据",
+              "class": "id",
+              "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+              "present": 296,
+              "rate": 1.0
+             },
+             "name": {
+              "path": "$.data.items[].hot_query.queries[].name",
+              "types": {
+               "string": 296
+              },
+              "value_shapes": {
+               "str:cjk-text": {
+                "count": 296,
+                "rate": 1.0
+               }
+              },
+              "example": "合成样本数据",
+              "class": "snapshot",
+              "present": 296,
+              "rate": 1.0
+             },
+             "search_word": {
+              "path": "$.data.items[].hot_query.queries[].search_word",
+              "types": {
+               "string": 296
+              },
+              "value_shapes": {
+               "str:cjk-text": {
+                "count": 296,
+                "rate": 1.0
+               }
+              },
+              "example": "合成样本数据",
+              "class": "scenario_param",
+              "class_reason": "(?i)(^|\\.|\\[\\]\\.|^query\\.)(keyword|searchKey|search_word)$",
+              "present": 296,
+              "rate": 1.0
+             }
+            },
+            "present": 296,
+            "arrays": 74
+           },
+           "present": 74,
+           "rate": 1.0
+          },
+          "source": {
+           "path": "$.data.items[].hot_query.source",
+           "types": {
+            "number": 74
+           },
+           "value_shapes": {
+            "int": {
+             "count": 74,
+             "rate": 1.0
+            }
+           },
+           "example": 2,
+           "class": "snapshot",
+           "present": 74,
+           "rate": 1.0
+          },
+          "title": {
+           "path": "$.data.items[].hot_query.title",
+           "types": {
+            "string": 74
+           },
+           "value_shapes": {
+            "str:cjk-text": {
+             "count": 74,
+             "rate": 1.0
+            }
+           },
+           "example": "合成样本数",
+           "class": "snapshot",
+           "present": 74,
+           "rate": 1.0
+          },
+          "word_request_id": {
+           "path": "$.data.items[].hot_query.word_request_id",
+           "types": {
+            "string": 74
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 74,
+             "rate": 1.0
+            }
+           },
+           "example": "<str:len=50>",
+           "class": "id",
+           "class_reason": "(?i)_id$|_id_|_ids$",
+           "present": 74,
+           "rate": 1.0
+          }
+         },
+         "present": 74,
+         "rate": 0.0904
+        },
+        "id": {
+         "path": "$.data.items[].id",
+         "types": {
+          "string": 819
+         },
+         "value_shapes": {
+          "str:ascii-word": {
+           "count": 74,
+           "rate": 0.0904
+          },
+          "str:digits": {
+           "count": 7,
+           "rate": 0.0085
+          },
+          "str:hex": {
+           "count": 738,
+           "rate": 0.9011
+          }
+         },
+         "example": "<hex:len=24>",
+         "class": "id",
+         "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+         "present": 819,
+         "rate": 1.0
+        },
+        "live_card": {
+         "path": "$.data.items[].live_card",
+         "types": {
+          "object": 7
+         },
+         "class": "snapshot",
+         "object_count": 7,
+         "fields": {
+          "live": {
+           "path": "$.data.items[].live_card.live",
+           "types": {
+            "object": 7
+           },
+           "class": "snapshot",
+           "object_count": 7,
+           "fields": {
+            "cover": {
+             "path": "$.data.items[].live_card.live.cover",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "https://xhslive-image.xhscdn.com/pgst_afysce/{bi}",
+             "class": "snapshot",
+             "present": 7,
+             "rate": 1.0
+            },
+            "cover_info": {
+             "path": "$.data.items[].live_card.live.cover_info",
+             "types": {
+              "object": 7
+             },
+             "class": "snapshot",
+             "object_count": 7,
+             "fields": {
+              "cover_image": {
+               "path": "$.data.items[].live_card.live.cover_info.cover_image",
+               "types": {
+                "string": 7
+               },
+               "value_shapes": {
+                "str:url": {
+                 "count": 7,
+                 "rate": 1.0
+                }
+               },
+               "example": "https://xhslive-image.xhscdn.com/lgea_spmudx/{nz}",
+               "class": "snapshot",
+               "present": 7,
+               "rate": 1.0
+              }
+             },
+             "present": 7,
+             "rate": 1.0
+            },
+            "display_count": {
+             "path": "$.data.items[].live_card.live.display_count",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=2>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 7,
+             "rate": 1.0
+            },
+            "member_count": {
+             "path": "$.data.items[].live_card.live.member_count",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=2>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 7,
+             "rate": 1.0
+            },
+            "name": {
+             "path": "$.data.items[].live_card.live.name",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:cjk-text": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "合成样本数据内容仅供本地测试",
+             "class": "snapshot",
+             "present": 7,
+             "rate": 1.0
+            },
+            "room_extra_info": {
+             "path": "$.data.items[].live_card.live.room_extra_info",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:cjk-text": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "<str:cjk-text:len=932>",
+             "class": "snapshot",
+             "present": 7,
+             "rate": 1.0
+            },
+            "room_id": {
+             "path": "$.data.items[].live_card.live.room_id",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=18>",
+             "class": "id",
+             "class_reason": "(?i)_id$|_id_|_ids$",
+             "present": 7,
+             "rate": 1.0
+            },
+            "uv": {
+             "path": "$.data.items[].live_card.live.uv",
+             "types": {
+              "number": 7
+             },
+             "value_shapes": {
+              "int": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "example": 6630,
+             "class": "snapshot",
+             "present": 7,
+             "rate": 1.0
+            },
+            "xsec_token": {
+             "path": "$.data.items[].live_card.live.xsec_token",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:opaque": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "class": "token",
+             "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+             "present": 7,
+             "rate": 1.0
+            }
+           },
+           "present": 7,
+           "rate": 1.0
+          },
+          "live_host_info": {
+           "path": "$.data.items[].live_card.live_host_info",
+           "types": {
+            "object": 7
+           },
+           "class": "snapshot",
+           "object_count": 7,
+           "fields": {
+            "avatar": {
+             "path": "$.data.items[].live_card.live_host_info.avatar",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "class": "pii",
+             "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+             "present": 7,
+             "rate": 1.0
+            },
+            "nickname": {
+             "path": "$.data.items[].live_card.live_host_info.nickname",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 2,
+               "rate": 0.2857
+              },
+              "str:cjk-text": {
+               "count": 5,
+               "rate": 0.7143
+              }
+             },
+             "class": "pii",
+             "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+             "present": 7,
+             "rate": 1.0
+            },
+            "user_id": {
+             "path": "$.data.items[].live_card.live_host_info.user_id",
+             "types": {
+              "string": 7
+             },
+             "value_shapes": {
+              "str:hex": {
+               "count": 7,
+               "rate": 1.0
+              }
+             },
+             "class": "id",
+             "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+             "present": 7,
+             "rate": 1.0
+            }
+           },
+           "present": 7,
+           "rate": 1.0
+          },
+          "type": {
+           "path": "$.data.items[].live_card.type",
+           "types": {
+            "string": 7
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 7,
+             "rate": 1.0
+            }
+           },
+           "example": "live",
+           "enum": [
+            "live"
+           ],
+           "class": "snapshot",
+           "present": 7,
+           "rate": 1.0
+          }
+         },
+         "present": 7,
+         "rate": 0.0085
+        },
+        "model_type": {
+         "path": "$.data.items[].model_type",
+         "types": {
+          "string": 819
+         },
+         "value_shapes": {
+          "str:ascii-word": {
+           "count": 819,
+           "rate": 1.0
+          }
+         },
+         "example": "note",
+         "enum": [
+          "note",
+          "hot_query",
+          "live_v2"
+         ],
+         "class": "snapshot",
+         "present": 819,
+         "rate": 1.0
+        },
+        "note_card": {
+         "path": "$.data.items[].note_card",
+         "types": {
+          "object": 738
+         },
+         "class": "snapshot",
+         "object_count": 738,
+         "fields": {
+          "corner_tag_info": {
+           "path": "$.data.items[].note_card.corner_tag_info",
+           "types": {
+            "array": 738
+           },
+           "class": "snapshot",
+           "len": {
+            "min": 1,
+            "max": 1,
+            "avg": 1.0
+           },
+           "items": {
+            "path": "$.data.items[].note_card.corner_tag_info[]",
+            "types": {
+             "object": 738
+            },
+            "class": "snapshot",
+            "object_count": 738,
+            "fields": {
+             "text": {
+              "path": "$.data.items[].note_card.corner_tag_info[].text",
+              "types": {
+               "string": 738
+              },
+              "value_shapes": {
+               "str:ascii-word": {
+                "count": 418,
+                "rate": 0.5664
+               },
+               "str:cjk-text": {
+                "count": 320,
+                "rate": 0.4336
+               }
+              },
+              "example": "03-27",
+              "enum": [
+               "03-27",
+               "07-23",
+               "05-13",
+               "08-07",
+               "03-02",
+               "06-22",
+               "06-19",
+               "03-22",
+               "…"
+              ],
+              "class": "snapshot",
+              "present": 738,
+              "rate": 1.0
+             },
+             "type": {
+              "path": "$.data.items[].note_card.corner_tag_info[].type",
+              "types": {
+               "string": 738
+              },
+              "value_shapes": {
+               "str:ascii-word": {
+                "count": 738,
+                "rate": 1.0
+               }
+              },
+              "example": "publish_time",
+              "enum": [
+               "publish_time"
+              ],
+              "class": "snapshot",
+              "present": 738,
+              "rate": 1.0
+             }
+            },
+            "present": 738,
+            "arrays": 738
+           },
+           "present": 738,
+           "rate": 1.0
+          },
+          "cover": {
+           "path": "$.data.items[].note_card.cover",
+           "types": {
+            "object": 738
+           },
+           "class": "snapshot",
+           "object_count": 738,
+           "fields": {
+            "height": {
+             "path": "$.data.items[].note_card.cover.height",
+             "types": {
+              "number": 738
+             },
+             "value_shapes": {
+              "int": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": 4406,
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            },
+            "url_default": {
+             "path": "$.data.items[].note_card.cover.url_default",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "http://sns-webpic-qc.xhscdn.com/{pv}/{aw9}/ytcju_vtp_yntv/{ercd}",
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            },
+            "url_pre": {
+             "path": "$.data.items[].note_card.cover.url_pre",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "http://sns-webpic-qc.xhscdn.com/{kg}/{ld7}/eijne_xaw_yeau/{gets}",
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            },
+            "width": {
+             "path": "$.data.items[].note_card.cover.width",
+             "types": {
+              "number": 738
+             },
+             "value_shapes": {
+              "int": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": 2478,
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            }
+           },
+           "present": 738,
+           "rate": 1.0
+          },
+          "display_title": {
+           "path": "$.data.items[].note_card.display_title",
+           "types": {
+            "string": 670
+           },
+           "value_shapes": {
+            "str:cjk-text": {
+             "count": 659,
+             "rate": 0.9836
+            },
+            "str:empty": {
+             "count": 9,
+             "rate": 0.0134
+            },
+            "str:text": {
+             "count": 2,
+             "rate": 0.003
+            }
+           },
+           "example": "合成样本数",
+           "enum": [
+            ""
+           ],
+           "class": "snapshot",
+           "present": 670,
+           "rate": 0.9079
+          },
+          "image_list": {
+           "path": "$.data.items[].note_card.image_list",
+           "types": {
+            "array": 738
+           },
+           "class": "snapshot",
+           "len": {
+            "min": 1,
+            "max": 31,
+            "avg": 5.29
+           },
+           "items": {
+            "path": "$.data.items[].note_card.image_list[]",
+            "types": {
+             "object": 3907
+            },
+            "class": "snapshot",
+            "object_count": 3907,
+            "fields": {
+             "height": {
+              "path": "$.data.items[].note_card.image_list[].height",
+              "types": {
+               "number": 3907
+              },
+              "value_shapes": {
+               "int": {
+                "count": 3907,
+                "rate": 1.0
+               }
+              },
+              "example": 4406,
+              "class": "snapshot",
+              "present": 3907,
+              "rate": 1.0
+             },
+             "info_list": {
+              "path": "$.data.items[].note_card.image_list[].info_list",
+              "types": {
+               "array": 3907
+              },
+              "class": "snapshot",
+              "len": {
+               "min": 2,
+               "max": 2,
+               "avg": 2.0
+              },
+              "items": {
+               "path": "$.data.items[].note_card.image_list[].info_list[]",
+               "types": {
+                "object": 7814
+               },
+               "class": "snapshot",
+               "object_count": 7814,
+               "fields": {
+                "image_scene": {
+                 "path": "$.data.items[].note_card.image_list[].info_list[].image_scene",
+                 "types": {
+                  "string": 7814
+                 },
+                 "value_shapes": {
+                  "str:ascii-word": {
+                   "count": 7814,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "WB_DFT",
+                 "enum": [
+                  "WB_DFT",
+                  "WB_PRV"
+                 ],
+                 "class": "snapshot",
+                 "present": 7814,
+                 "rate": 1.0
+                },
+                "url": {
+                 "path": "$.data.items[].note_card.image_list[].info_list[].url",
+                 "types": {
+                  "string": 7814
+                 },
+                 "value_shapes": {
+                  "str:url": {
+                   "count": 7814,
+                   "rate": 1.0
+                  }
+                 },
+                 "example": "http://sns-webpic-qc.xhscdn.com/{jy}/{lw7}/ghqpf_ntz_mjpg/{ywnl}",
+                 "class": "snapshot",
+                 "present": 7814,
+                 "rate": 1.0
+                }
+               },
+               "present": 7814,
+               "arrays": 3907
+              },
+              "present": 3907,
+              "rate": 1.0
+             },
+             "width": {
+              "path": "$.data.items[].note_card.image_list[].width",
+              "types": {
+               "number": 3907
+              },
+              "value_shapes": {
+               "int": {
+                "count": 3907,
+                "rate": 1.0
+               }
+              },
+              "example": 2478,
+              "class": "snapshot",
+              "present": 3907,
+              "rate": 1.0
+             }
+            },
+            "present": 3907,
+            "arrays": 738
+           },
+           "present": 738,
+           "rate": 1.0
+          },
+          "interact_info": {
+           "path": "$.data.items[].note_card.interact_info",
+           "types": {
+            "object": 738
+           },
+           "class": "snapshot",
+           "object_count": 738,
+           "fields": {
+            "collected": {
+             "path": "$.data.items[].note_card.interact_info.collected",
+             "types": {
+              "bool": 738
+             },
+             "value_shapes": {
+              "bool": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": false,
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            },
+            "collected_count": {
+             "path": "$.data.items[].note_card.interact_info.collected_count",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=2>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 738,
+             "rate": 1.0
+            },
+            "comment_count": {
+             "path": "$.data.items[].note_card.interact_info.comment_count",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=2>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 738,
+             "rate": 1.0
+            },
+            "liked": {
+             "path": "$.data.items[].note_card.interact_info.liked",
+             "types": {
+              "bool": 738
+             },
+             "value_shapes": {
+              "bool": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": false,
+             "class": "snapshot",
+             "present": 738,
+             "rate": 1.0
+            },
+            "liked_count": {
+             "path": "$.data.items[].note_card.interact_info.liked_count",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=3>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 738,
+             "rate": 1.0
+            },
+            "shared_count": {
+             "path": "$.data.items[].note_card.interact_info.shared_count",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=2>",
+             "class": "count",
+             "class_reason": "(?i)_count$|_counts$|(^|\\.)(counts?|num)$|_cnt$",
+             "present": 738,
+             "rate": 1.0
+            }
+           },
+           "present": 738,
+           "rate": 1.0
+          },
+          "recommend": {
+           "path": "$.data.items[].note_card.recommend",
+           "types": {
+            "object": 1
+           },
+           "class": "snapshot",
+           "object_count": 1,
+           "fields": {
+            "desc": {
+             "path": "$.data.items[].note_card.recommend.desc",
+             "types": {
+              "string": 1
+             },
+             "value_shapes": {
+              "str:cjk-text": {
+               "count": 1,
+               "rate": 1.0
+              }
+             },
+             "example": "合成",
+             "class": "snapshot",
+             "present": 1,
+             "rate": 1.0
+            },
+            "doc_id": {
+             "path": "$.data.items[].note_card.recommend.doc_id",
+             "types": {
+              "string": 1
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 1,
+               "rate": 1.0
+              }
+             },
+             "example": "<digits:len=19>",
+             "class": "id",
+             "class_reason": "(?i)_id$|_id_|_ids$",
+             "present": 1,
+             "rate": 1.0
+            },
+            "icon": {
+             "path": "$.data.items[].note_card.recommend.icon",
+             "types": {
+              "string": 1
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 1,
+               "rate": 1.0
+              }
+             },
+             "example": "https://fe-platform.xhscdn.com/vmjjnvox/{yw}",
+             "class": "snapshot",
+             "present": 1,
+             "rate": 1.0
+            },
+            "icon_dark": {
+             "path": "$.data.items[].note_card.recommend.icon_dark",
+             "types": {
+              "string": 1
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 1,
+               "rate": 1.0
+              }
+             },
+             "example": "https://fe-platform.xhscdn.com/hhhjjlck/{qr}",
+             "class": "snapshot",
+             "present": 1,
+             "rate": 1.0
+            },
+            "type": {
+             "path": "$.data.items[].note_card.recommend.type",
+             "types": {
+              "string": 1
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 1,
+               "rate": 1.0
+              }
+             },
+             "example": "doc",
+             "enum": [
+              "doc"
+             ],
+             "class": "snapshot",
+             "present": 1,
+             "rate": 1.0
+            }
+           },
+           "present": 1,
+           "rate": 0.0014
+          },
+          "type": {
+           "path": "$.data.items[].note_card.type",
+           "types": {
+            "string": 738
+           },
+           "value_shapes": {
+            "str:ascii-word": {
+             "count": 738,
+             "rate": 1.0
+            }
+           },
+           "example": "normal",
+           "enum": [
+            "normal",
+            "video"
+           ],
+           "class": "snapshot",
+           "present": 738,
+           "rate": 1.0
+          },
+          "user": {
+           "path": "$.data.items[].note_card.user",
+           "types": {
+            "object": 738
+           },
+           "class": "snapshot",
+           "object_count": 738,
+           "fields": {
+            "avatar": {
+             "path": "$.data.items[].note_card.user.avatar",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:url": {
+               "count": 738,
+               "rate": 1.0
+              }
+             },
+             "class": "pii",
+             "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+             "present": 738,
+             "rate": 1.0
+            },
+            "nick_name": {
+             "path": "$.data.items[].note_card.user.nick_name",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 74,
+               "rate": 0.1003
+              },
+              "str:cjk-text": {
+               "count": 660,
+               "rate": 0.8943
+              },
+              "str:digits": {
+               "count": 1,
+               "rate": 0.0014
+              },
+              "str:hex": {
+               "count": 1,
+               "rate": 0.0014
+              },
+              "str:text": {
+               "count": 2,
+               "rate": 0.0027
+              }
+             },
+             "class": "pii",
+             "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+             "present": 738,
+             "rate": 1.0
+            },
+            "nickname": {
+             "path": "$.data.items[].note_card.user.nickname",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 74,
+               "rate": 0.1003
+              },
+              "str:cjk-text": {
+               "count": 660,
+               "rate": 0.8943
+              },
+              "str:digits": {
+               "count": 1,
+               "rate": 0.0014
+              },
+              "str:hex": {
+               "count": 1,
+               "rate": 0.0014
+              },
+              "str:text": {
+               "count": 2,
+               "rate": 0.0027
+              }
+             },
+             "class": "pii",
+             "class_reason": "(?i)(nickname|nick_name|author\\.(name|user_name)$|user_name$|headurl|head_url|avatar|portrait|user_desc)",
+             "present": 738,
+             "rate": 1.0
+            },
+            "user_id": {
+             "path": "$.data.items[].note_card.user.user_id",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:digits": {
+               "count": 3,
+               "rate": 0.0041
+              },
+              "str:hex": {
+               "count": 735,
+               "rate": 0.9959
+              }
+             },
+             "class": "id",
+             "class_reason": "(?i)(^|\\.)(id|ids|mid|uid|sec_uid|root_id|target_id|note_id|aweme_id|photo_id|comment_id|user_id|mix_id|owner_id|author_id|cid|oid|eid|object_id|entity_id|trace_id|llsid)(($|\\.|\\[\\])|_str$)",
+             "present": 738,
+             "rate": 1.0
+            },
+            "xsec_token": {
+             "path": "$.data.items[].note_card.user.xsec_token",
+             "types": {
+              "string": 738
+             },
+             "value_shapes": {
+              "str:ascii-word": {
+               "count": 1,
+               "rate": 0.0014
+              },
+              "str:opaque": {
+               "count": 737,
+               "rate": 0.9986
+              }
+             },
+             "class": "token",
+             "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+             "present": 738,
+             "rate": 1.0
+            }
+           },
+           "present": 738,
+           "rate": 1.0
+          }
+         },
+         "present": 738,
+         "rate": 0.9011
+        },
+        "xsec_token": {
+         "path": "$.data.items[].xsec_token",
+         "types": {
+          "string": 819
+         },
+         "value_shapes": {
+          "str:opaque": {
+           "count": 819,
+           "rate": 1.0
+          }
+         },
+         "class": "token",
+         "class_reason": "(?i)(token|xsec|signature|nonce|sectoken|sec_uid$|webid|uifid|a_bogus|mstoken|hxfalcon|session)",
+         "present": 819,
+         "rate": 1.0
+        }
+       },
+       "present": 819,
+       "arrays": 37
+      },
+      "present": 37,
+      "rate": 1.0
+     },
+     "request_dqa_instant": {
+      "path": "$.data.request_dqa_instant",
+      "types": {
+       "bool": 37
+      },
+      "value_shapes": {
+       "bool": {
+        "count": 37,
+        "rate": 1.0
+       }
+      },
+      "example": true,
+      "class": "snapshot",
+      "present": 37,
+      "rate": 1.0
+     }
+    },
+    "present": 37,
+    "rate": 1.0
+   },
+   "msg": {
+    "path": "$.msg",
+    "types": {
+     "string": 37
+    },
+    "value_shapes": {
+     "str:cjk-text": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": "合成",
+    "class": "snapshot",
+    "present": 37,
+    "rate": 1.0
+   },
+   "success": {
+    "path": "$.success",
+    "types": {
+     "bool": 37
+    },
+    "value_shapes": {
+     "bool": {
+      "count": 37,
+      "rate": 1.0
+     }
+    },
+    "example": true,
+    "class": "snapshot",
+    "present": 37,
+    "rate": 1.0
+   }
+  }
+ },
+ "response_parse": {
+  "json": 37
+ },
+ "pagination": {
+  "request_cursor_params": {
+   "page": {
+    "observed": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     6
+    ],
+    "n_obs": 37
+   },
+   "page_size": {
+    "observed": [
+     20
+    ],
+    "n_obs": 37
+   },
+   "search_id": {
+    "observed": [
+     "<opaque:len=21>",
+     "<opaque:len=43>"
+    ],
+    "n_obs": 37
+   }
+  },
+  "response_cursor_fields": {
+   "$.data.has_more": {
+    "observed": [
+     true
+    ],
+    "n_obs": 37
+   }
+  }
+ },
+ "field_stats": {
+  "total": 78,
+  "must_vary": 23,
+  "must_vary_by_class": {
+   "count": 6,
+   "cursor": 1,
+   "id": 7,
+   "pii": 5,
+   "scenario_param": 1,
+   "token": 3
+  }
+ }
+}

@@ -20,10 +20,12 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
 )
 
@@ -150,8 +152,35 @@ func nodeProvider(script string) Provider {
 	}
 }
 
+// stubHeaderDecls maps contract name -> the header-carried signature values
+// its contract declares (signature.headers, e.g. xhs x-s / x-s-common).
+// Loaded once from the adapt contracts dir so the stub can also feed
+// header-signature contracts in dev (report item 10 / FC7: the old stub only
+// produced a_bogus, so xhs-style contracts fail-closed even in dev).
+var stubHeaderDecls = loadStubHeaderDecls()
+
+func loadStubHeaderDecls() map[string][]string {
+	dir := os.Getenv("MEDIAMON_ADAPT_DIR")
+	if dir == "" {
+		dir = "adapt"
+	}
+	out := map[string][]string{}
+	reg := contracts.NewRegistry()
+	if err := contracts.LoadDir(reg, filepath.Join(dir, "contracts")); err != nil {
+		return out
+	}
+	for _, name := range reg.List() {
+		if c, ok := reg.Get(name); ok && len(c.Signature.Headers) > 0 {
+			out[name] = append([]string(nil), c.Signature.Headers...)
+		}
+	}
+	return out
+}
+
 // stubProvider is dev-only: it appends a deterministic marker parameter and
-// must never reach production (docs/HARDENING.md M3).
+// must never reach production (docs/HARDENING.md M3). It also emits stub
+// values for every header the contract routes through signature.headers so
+// dev environments can exercise xhs-style header-signed contracts.
 func stubProvider(_ context.Context, req signRequest) (map[string]string, error) {
 	out := make(map[string]string, len(req.Params)+1)
 	for k, v := range req.Params {
@@ -159,5 +188,10 @@ func stubProvider(_ context.Context, req signRequest) (map[string]string, error)
 	}
 	sum := md5.Sum([]byte(req.Contract + "|" + req.URL))
 	out["a_bogus"] = "stub-" + hex.EncodeToString(sum[:6])
+	for _, h := range stubHeaderDecls[req.Contract] {
+		if out[h] == "" {
+			out[h] = "stub-" + hex.EncodeToString(sum[:8])
+		}
+	}
 	return out, nil
 }
