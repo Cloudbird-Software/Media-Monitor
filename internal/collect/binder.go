@@ -238,6 +238,112 @@ func fieldBool(c *contracts.Contract, name string, rec map[string]any, defaults 
 	return false
 }
 
+// resolveAll resolves a field to EVERY reachable value (wildcards collect
+// all leaves), unlike resolveValue's first-hit semantics. The declared path
+// wins; otherwise the default candidate families are tried in order and the
+// first that yields values supplies the list. Empty strings are dropped.
+func resolveAll(c *contracts.Contract, declared string, rec map[string]any, defaults []string) []string {
+	var paths []string
+	if declared != "" {
+		paths = []string{declared}
+	} else {
+		paths = defaults
+	}
+	for _, raw := range paths {
+		segs, err := parseRel(raw)
+		if err != nil {
+			continue
+		}
+		segs = stripBinding(segs, bindingSegs(c))
+		vs := selectAllSegs(rec, segs)
+		if len(vs) == 0 {
+			continue
+		}
+		out := make([]string, 0, len(vs))
+		for _, v := range vs {
+			if s := asStr(v); s != "" {
+				out = append(out, s)
+			}
+		}
+		if len(out) > 0 {
+			return out
+		}
+	}
+	return nil
+}
+
+// selectAllSegs walks rel and collects every reachable leaf — the
+// select-all counterpart of resolveSegs' first-hit walk (same segment
+// semantics: keys, indexes and wildcards).
+func selectAllSegs(rec map[string]any, rel []relSeg) []any {
+	rel = dropLeadingStars(rel)
+	if len(rel) == 0 {
+		return []any{rec}
+	}
+	cur := []any{rec}
+	for _, s := range rel {
+		var next []any
+		for _, v := range cur {
+			switch {
+			case s.star:
+				switch t := v.(type) {
+				case []any:
+					next = append(next, t...)
+				case map[string]any:
+					for _, vv := range t {
+						next = append(next, vv)
+					}
+				}
+			case s.indexed:
+				if s.key == "" {
+					if arr, ok := v.([]any); ok {
+						i := s.index
+						if i < 0 {
+							i += len(arr)
+						}
+						if i >= 0 && i < len(arr) {
+							next = append(next, arr[i])
+						}
+					}
+					continue
+				}
+				if m, ok := v.(map[string]any); ok {
+					sub, ok := m[s.key]
+					if !ok {
+						continue
+					}
+					arr, ok := sub.([]any)
+					if !ok {
+						continue
+					}
+					i := s.index
+					if i < 0 {
+						i += len(arr)
+					}
+					if i >= 0 && i < len(arr) {
+						next = append(next, arr[i])
+					}
+				}
+			case s.index >= 0:
+				if arr, ok := v.([]any); ok && s.index < len(arr) {
+					next = append(next, arr[s.index])
+				}
+			default:
+				if m, ok := v.(map[string]any); ok {
+					if vv, ok := m[s.key]; ok {
+						next = append(next, vv)
+					}
+				}
+			}
+		}
+		cur = next
+		if len(cur) == 0 {
+			return nil
+		}
+	}
+	return cur
+}
+
 // extraFields captures contract fields named "extra.<key>" into the output
 // struct's Extra map (best-effort, values passed through as-is).
 func extraFields(c *contracts.Contract, rec map[string]any) map[string]any {

@@ -17,7 +17,9 @@
     "items": "$.data",
     "fields": {
       "extra.mix_id": "$.aweme_info.mix_info.mix_id",
-      "extra.series_id": "$.aweme_info.series_info.series_id"
+      "extra.series_id": "$.aweme_info.series_info.series_id",
+      "topic.tags": "$.aweme_info.text_extra[*].hashtag_name",
+      "topic.tag_id": "$.aweme_info.text_extra[*].hashtag_id"
     }
   },
   "paging": {"cursor_param": "offset", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}

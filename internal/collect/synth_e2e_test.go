@@ -106,6 +106,19 @@ func synthE2EEngine(t *testing.T) *Engine {
 				bd, _ := c["binding"].(map[string]any)
 				bd["items"] = "$.data.items"
 				delete(c, "paging") // page 语义单页，多页断点如实记录
+			case "kuaishou-search": // 合成站 graphql 未实现 visionSearchPhoto：
+				// 重映射到 REST search/feed（oracle adapt_synth 同款口径）
+				tr["path"] = "/rest/v/search/feed"
+				tr["method"] = "POST"
+				tr["body"] = map[string]any{"page": "search", "webPageArea": ""}
+				bd, _ := c["binding"].(map[string]any)
+				bd["items"] = "$.feeds"
+				c["binding"] = bd
+				c["paging"] = map[string]any{
+					"cursor_param": "pcursor", "count_param": "page_size",
+					"count_default": 20, "has_more_path": "$.pcursor",
+					"next_cursor_path": "$.pcursor",
+				}
 			}
 			c["transport"] = tr
 		}
@@ -198,6 +211,7 @@ func TestSynthE2ENewCapabilities(t *testing.T) {
 	t.Run("E_related_graph_douyin", func(t *testing.T) { synthE2ERelated(t, e) })
 	t.Run("F_batch_detail_douyin", func(t *testing.T) { synthE2EBatchDetail(t, e) })
 	t.Run("G_series_chain_douyin", func(t *testing.T) { synthE2ESeriesChain(t, e) })
+	t.Run("H_topic_feed", func(t *testing.T) { synthE2ETopicFeed(t, e) })
 }
 
 // synthE2EDossierDouyin: 5 作者全量回溯（proposal A 基线 26/20/23/1/21、
@@ -651,4 +665,55 @@ func synthE2ESeriesChain(t *testing.T, e *Engine) {
 	t.Logf("series chain: mix 13 eps/3 pages (map 1..13), series 33 eps/6 pages (walk-order 1..33); cards carrying mix/series = %d/%d, discovered mix %s closed at %d eps",
 		mixCards, seriesCards, mixID, dm.TotalEpisodes)
 	_ = seriesID
+}
+
+// synthE2ETopicFeed: 三站话题腿——dy text_extra 锚文本（话题词 3 页 60 条、
+// 锚定>0、hashtag_id 19 位、复走确定性）；ks tags 话题流（2 页 40 条、锚定>0、
+// 无 id）；xhs 无标签面（内容清单照收、元数据缺位如实报告）。
+func synthE2ETopicFeed(t *testing.T, e *Engine) {
+	// dy: hashtag pool word as the topic (probe baseline: 60 walked / 60
+	// unique / 13 anchored over 3 pages).
+	dy, err := e.TopicFeed(context.Background(), "douyin", "#露营装备", TopicOptions{Limit: 60})
+	if err != nil {
+		t.Fatalf("dy topic feed: %v", err)
+	}
+	if len(dy.Items) != 60 || dy.Pages != 3 || dy.AnchoredItems < 1 {
+		t.Fatalf("dy topic walk = items:%d pages:%d anchored:%d, want 60/3/>=1", len(dy.Items), dy.Pages, dy.AnchoredItems)
+	}
+	if dy.Meta.AnchorFace != "contract" || len(dy.Meta.HashtagID) != 19 {
+		t.Fatalf("dy topic meta wrong: %+v (want hashtag_id 19-digit challenge id)", dy.Meta)
+	}
+	dy2, err := e.TopicFeed(context.Background(), "douyin", "#露营装备", TopicOptions{Limit: 60})
+	if err != nil {
+		t.Fatalf("dy topic feed repeat: %v", err)
+	}
+	for i := range dy.Items {
+		if dy.Items[i].ID != dy2.Items[i].ID {
+			t.Fatalf("dy topic walk not deterministic at %d", i)
+		}
+	}
+	// ks: the search topic stream with record-level tags (probe: 40 walked /
+	// 40 unique / 8 anchored over 2 pages; tags carry no ids).
+	ks, err := e.TopicFeed(context.Background(), "kuaishou", "快手小剧场", TopicOptions{Limit: 40})
+	if err != nil {
+		t.Fatalf("ks topic feed: %v", err)
+	}
+	if len(ks.Items) != 40 || ks.Pages != 2 || ks.AnchoredItems < 1 {
+		t.Fatalf("ks topic walk = items:%d pages:%d anchored:%d, want 40/2/>=1", len(ks.Items), ks.Pages, ks.AnchoredItems)
+	}
+	if ks.Meta.AnchorFace != "contract" || ks.Meta.HashtagID != "" {
+		t.Fatalf("ks topic meta wrong: %+v (tag face carries no ids)", ks.Meta)
+	}
+	// xhs: no tag face on the synth oracle — the content list still collects
+	// through search while the metadata reports the face absent.
+	xhs, err := e.TopicFeed(context.Background(), "xhs", "露营", TopicOptions{})
+	if err != nil {
+		t.Fatalf("xhs topic feed: %v", err)
+	}
+	if len(xhs.Items) < 20 || xhs.AnchoredItems != 0 || xhs.Meta.AnchorFace != "" {
+		t.Fatalf("xhs topic leg wrong: items:%d anchored:%d face:%q (absent face must report empty metadata)",
+			len(xhs.Items), xhs.AnchoredItems, xhs.Meta.AnchorFace)
+	}
+	t.Logf("topic feed: dy 60 items/3 pages anchored=%d id=%s; ks 40 items/2 pages anchored=%d (no id face); xhs %d items, tag face absent",
+		dy.AnchoredItems, dy.Meta.HashtagID, ks.AnchoredItems, len(xhs.Items))
 }
