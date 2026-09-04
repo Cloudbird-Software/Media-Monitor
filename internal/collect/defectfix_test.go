@@ -193,3 +193,26 @@ func TestCursorSentinelExplicit(t *testing.T) {
 		t.Fatalf("cursor value should be preserved for resume bookkeeping: %+v", cur.Source)
 	}
 }
+
+// TestAsBoolScientificNotationCursor: has_more paths that ride the next
+// cursor field must treat scientific-notation numeric strings as truthy —
+// the ks profile/feed pcursor form ("1.742011156E12") used to parse as 0
+// and silently truncate the walk to one page (capability A ks leg).
+func TestAsBoolScientificNotationCursor(t *testing.T) {
+	cases := map[string]bool{
+		"1.742011156E12": true,
+		"2.5e-3":         true,
+		"0.0":            false,
+		"0":              false,
+		"1":              true,
+		"true":           true,
+		"no_more":        false,
+		"":               false,
+		"abc":            false,
+	}
+	for in, want := range cases {
+		if got := asBool(in); got != want {
+			t.Fatalf("asBool(%q) = %v, want %v", in, got, want)
+		}
+	}
+}

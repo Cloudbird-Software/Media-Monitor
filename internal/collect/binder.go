@@ -553,7 +553,15 @@ func asBool(v any) bool {
 		case "false", "0", "":
 			return false
 		}
-		return asInt(v) != 0
+		if n, err := strconv.ParseInt(strings.TrimSpace(t), 10, 64); err == nil {
+			return n != 0
+		}
+		// Scientific-notation cursor strings ("1.742011156E12", the ks
+		// profile/feed pcursor form) are numeric-truthy for has_more paths.
+		if f, err := strconv.ParseFloat(strings.TrimSpace(t), 64); err == nil {
+			return f != 0
+		}
+		return false
 	case jsonNumber:
 		n, _ := t.Int64()
 		return n != 0
