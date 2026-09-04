@@ -197,6 +197,7 @@ func TestSynthE2ENewCapabilities(t *testing.T) {
 	t.Run("D_suggest_words", func(t *testing.T) { synthE2ESuggest(t, e) })
 	t.Run("E_related_graph_douyin", func(t *testing.T) { synthE2ERelated(t, e) })
 	t.Run("F_batch_detail_douyin", func(t *testing.T) { synthE2EBatchDetail(t, e) })
+	t.Run("G_series_chain_douyin", func(t *testing.T) { synthE2ESeriesChain(t, e) })
 }
 
 // synthE2EDossierDouyin: 5 作者全量回溯（proposal A 基线 26/20/23/1/21、
@@ -563,4 +564,91 @@ func synthE2EBatchDetail(t *testing.T, e *Engine) {
 	}
 	t.Logf("batch detail: 21->20 (bogus silently omitted, 20+1 batches), 45 ids -> %d batches, batch==single on digg=%d",
 		res3.Batches, wantDigg)
+}
+
+// synthE2ESeriesChain: mix 13 集/3 页、episode 映射 1..13；series 33 集/6 页
+// 游标闭合（proposal 基线复现，探针固定 id）；搜索卡被动发现 id 的发现腿闭
+// 合断言；复走确定性。
+func synthE2ESeriesChain(t *testing.T, e *Engine) {
+	// Probe baseline legs (the probe's fixed chain id — the synth derives the
+	// deterministic window from the id, so 13/33 and 3/6 pages are stable).
+	mix, err := e.SeriesChain(context.Background(), "douyin", "mix", "7001234567890123456", SeriesOptions{})
+	if err != nil {
+		t.Fatalf("mix chain: %v", err)
+	}
+	if mix.TotalEpisodes != 13 || mix.Pages != 3 || mix.UniqueIDs != 13 || mix.Dupes != 0 {
+		t.Fatalf("mix baseline = %+v, want 13 episodes / 3 pages / 0 dupes (probe)", mix)
+	}
+	if mix.EpisodeSource != "item_id_to_episode" {
+		t.Fatalf("mix episode source = %q", mix.EpisodeSource)
+	}
+	eps := sortedEpisodeNumbers(mix.Episodes)
+	for i, ep := range eps {
+		if ep != i+1 {
+			t.Fatalf("mix episode numbers = %v, want contiguous 1..13", eps)
+		}
+	}
+	if len(mix.MissingEps) != 0 || mix.HasMore {
+		t.Fatalf("mix chain not closed: missing=%v has_more=%v", mix.MissingEps, mix.HasMore)
+	}
+	ser, err := e.SeriesChain(context.Background(), "douyin", "series", "7001234567890123456", SeriesOptions{})
+	if err != nil {
+		t.Fatalf("series chain: %v", err)
+	}
+	if ser.TotalEpisodes != 33 || ser.Pages != 6 || ser.UniqueIDs != 33 || ser.Dupes != 0 {
+		t.Fatalf("series baseline = %+v, want 33 episodes / 6 pages / 0 dupes (probe)", ser)
+	}
+	if ser.EpisodeSource != "walk_order" {
+		t.Fatalf("series episode source = %q", ser.EpisodeSource)
+	}
+	for i, ep := range sortedEpisodeNumbers(ser.Episodes) {
+		if ep != i+1 {
+			t.Fatalf("series walk-order episodes not contiguous 1..33")
+		}
+	}
+	// Determinism: repeat the mix walk -> identical episode ids/order.
+	mix2, err := e.SeriesChain(context.Background(), "douyin", "mix", "7001234567890123456", SeriesOptions{})
+	if err != nil {
+		t.Fatalf("mix chain repeat: %v", err)
+	}
+	for i := range mix.Episodes {
+		if mix.Episodes[i].Item.ID != mix2.Episodes[i].Item.ID {
+			t.Fatalf("mix repeat walk differs at episode %d", mix.Episodes[i].Episode)
+		}
+	}
+	// Discovery leg: the chain id arrives passively on search cards
+	// (mix_info.mix_id / series_info.series_id — probe: 8/20 and 5/20 cards).
+	items, _, err := e.SearchItems(context.Background(), "douyin", synthKeyword, "", model.Cursor{}, 20)
+	if err != nil || len(items) == 0 {
+		t.Fatalf("dy card discovery: %v", err)
+	}
+	var mixCards, seriesCards int
+	var mixID, seriesID string
+	for _, it := range items {
+		if v, _ := it.Extra["mix_id"].(string); v != "" {
+			mixCards++
+			if mixID == "" {
+				mixID = v
+			}
+		}
+		if v, _ := it.Extra["series_id"].(string); v != "" {
+			seriesCards++
+			if seriesID == "" {
+				seriesID = v
+			}
+		}
+	}
+	if mixID == "" {
+		t.Fatal("no search card carried mix_info.mix_id (probe: 8/20)")
+	}
+	dm, err := e.SeriesChain(context.Background(), "douyin", "mix", mixID, SeriesOptions{})
+	if err != nil {
+		t.Fatalf("discovered mix chain: %v", err)
+	}
+	if dm.TotalEpisodes < 1 || dm.TotalEpisodes != dm.UniqueIDs || dm.HasMore || len(dm.MissingEps) != 0 {
+		t.Fatalf("discovered mix chain not closed: %+v", dm)
+	}
+	t.Logf("series chain: mix 13 eps/3 pages (map 1..13), series 33 eps/6 pages (walk-order 1..33); cards carrying mix/series = %d/%d, discovered mix %s closed at %d eps",
+		mixCards, seriesCards, mixID, dm.TotalEpisodes)
+	_ = seriesID
 }

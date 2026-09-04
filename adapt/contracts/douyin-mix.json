@@ -1,0 +1,21 @@
+{
+  "name": "douyin-mix",
+  "platform": "douyin",
+  "category": "mix",
+  "version": "1",
+  "doc": "mix (curated collection) episode list (capability G SeriesChain / proposals H, P2): the completeness/follow-update face for series content — episode mapping, missing-episode detection, update cursor. Evidence: corpus GET /aweme/v1/web/mix/aweme/?mix_id=...&cursor=...&count=... (f2 MIX_AWEME / E0 fetch_user_mix_videos, corpus request shape cursor=49&count=6 -> 6 items, next cursor 55, has_more=1) -> {aweme_list[full detail aweme], cursor:<next page start>, has_more, item_id_to_episode:'<JSON string id->ep>', log_pb, status_code}; oracle probe: full chain 3 pages 13 episodes, episode map 13 entries with values exactly 1..N, unique ids, repeat-walk deterministic. The mix_id is discovered passively from detail/search cards' mix_info.mix_id (probe: 8/20 search cards carry it). Episode map binding is document-level (a JSON-string map on the envelope, not per item).",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/mix/aweme/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["mix_id"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "items": "$.aweme_list",
+    "fields": {"episode_map": "$.item_id_to_episode"}
+  },
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 6, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+}
