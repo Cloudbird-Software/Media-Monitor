@@ -217,28 +217,62 @@ func maxPagesLimit() int {
 // predicate application is skipped entirely and the loop is the original
 // fetchPages logic.
 func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, baseQuery map[string]string, cur model.Cursor, limit int, pred *stopPredicate) ([]map[string]any, model.Cursor, error) {
+	o, err := e.fetchPagesCore(ctx, name, pathParams, baseQuery, cur, limit, pred, nil)
+	return o.records, o.cursor, err
+}
+
+// walkOutcome is the full result of one pagination walk: the (deduped)
+// records, the resume cursor, and the pagination-depth accounting the new
+// aggregate atoms surface in their output schemas.
+type walkOutcome struct {
+	records []map[string]any
+	cursor  model.Cursor
+	pages   int // page fetches issued
+	fetched int // records seen on the wire (before dedup)
+	dupes   int // records dropped by the dedup key (0 without keyOf)
+}
+
+// fetchPagesDedup is fetchPagesWith plus record-level deduplication: keyOf
+// extracts the identity of one raw record (e.g. aweme_id / user_id); records
+// whose key was already emitted are dropped, and a page that yields ZERO new
+// records stops the walk. This is the termination guard for cursor faces
+// that rewind (dy aweme/post pre-fix shape, ks search/user's "1" loop):
+// "dedupe by id + stop after a page with no new records" (capability-proposal
+// A/B regression point).
+func (e *Engine) fetchPagesDedup(ctx context.Context, name string, pathParams, baseQuery map[string]string, cur model.Cursor, limit int, keyOf func(map[string]any) string) (walkOutcome, error) {
+	return e.fetchPagesCore(ctx, name, pathParams, baseQuery, cur, limit, nil, keyOf)
+}
+
+// fetchPagesCore is the shared pagination loop: cursor/count params per page
+// (limit -> count), has_more driven continuation, final limit truncation,
+// optional backtrack predicate and optional record dedup (keyOf != nil).
+func (e *Engine) fetchPagesCore(ctx context.Context, name string, pathParams, baseQuery map[string]string, cur model.Cursor, limit int, pred *stopPredicate, keyOf func(map[string]any) string) (walkOutcome, error) {
+	var out walkOutcome
+	out.cursor = cur
 	c, ok := e.reg.Get(name)
 	if !ok {
-		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
+		return out, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	_, raw := mainBindingRaw(c)
 	if raw == "" {
-		return nil, cur, fmt.Errorf("collect %s: no list binding (items/comments/users/members) declared", name)
+		return out, fmt.Errorf("collect %s: no list binding (items/comments/users/members) declared", name)
 	}
 	bp, err := contracts.ParsePath(raw)
 	if err != nil {
-		return nil, cur, fmt.Errorf("collect %s: bad binding %q: %w", name, raw, err)
+		return out, fmt.Errorf("collect %s: bad binding %q: %w", name, raw, err)
 	}
-	var out []map[string]any
+	var seen map[string]bool
+	if keyOf != nil {
+		seen = map[string]bool{}
+	}
 	ccur := cur
-	pages := 0
 	st := &walkState{}
 	paging := pacingFor(e.pacing, c.Paging.PageSleepMS)
 	fe := e // fetch engine; rotated clones replace it under auto mode
 	if fe.isAutoAccount() {
 		bound, aerr := fe.bindInitial(name)
 		if aerr != nil {
-			return nil, cur, aerr
+			return out, aerr
 		}
 		fe = bound
 	}
@@ -246,7 +280,7 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 		st.tried = map[string]bool{}
 	}
 	for {
-		if limit > 0 && len(out) >= limit {
+		if limit > 0 && len(out.records) >= limit {
 			break
 		}
 		query := make(map[string]string, len(baseQuery)+2)
@@ -275,28 +309,54 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 				// page (cursor untouched — the walk never restarts).
 				nfe, rerr := fe.rotateOn(name, err, st.tried, &st.rotations)
 				if rerr != nil {
-					return truncate(out, limit), ccur, rerr
+					out.records = truncate(out.records, limit)
+					return out, rerr
 				}
 				fe = nfe
 				continue
 			}
-			return truncate(out, limit), ccur, err
+			out.records = truncate(out.records, limit)
+			return out, err
 		}
 		if id := fe.currentAccount(); id != "" && fe.accounts != nil {
 			_ = fe.accounts.MarkSuccess(id)
 		}
 		page := selectRecords(bp, doc)
+		out.fetched += len(page)
 		stop := false
 		if pred != nil {
 			page, stop = pred.apply(c, page, st)
 		}
-		out = append(out, page...)
-		next := e.nextCursor(c, doc, ccur)
-		pages++
-		if stop || !next.HasMore || c.Paging.NextCursorPath == "" {
-			return truncate(out, limit), next, nil
+		if keyOf != nil {
+			// Dedup pass (capability proposals A/B): drop records whose key
+			// was already emitted; a page with zero NEW records means the
+			// cursor rewound — stop instead of re-fetching the same window.
+			fresh := page[:0]
+			for _, rec := range page {
+				k := keyOf(rec)
+				if k != "" && seen[k] {
+					out.dupes++
+					continue
+				}
+				if k != "" {
+					seen[k] = true
+				}
+				fresh = append(fresh, rec)
+			}
+			page = fresh
+			if out.pages > 0 && len(page) == 0 {
+				stop = true
+			}
 		}
-		if pages >= maxPagesLimit() {
+		out.records = append(out.records, page...)
+		next := e.nextCursor(c, doc, ccur)
+		out.pages++
+		if stop || !next.HasMore || c.Paging.NextCursorPath == "" {
+			out.records = truncate(out.records, limit)
+			out.cursor = next
+			return out, nil
+		}
+		if out.pages >= maxPagesLimit() {
 			// Report item 8 / t03: hitting the page ceiling used to discard
 			// ~1980 collected records and return nil. Instead: keep the data,
 			// surface the live cursor so the caller can resume, and stop
@@ -305,7 +365,9 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 			if e.obs != nil {
 				e.obs.Inc("collect.maxpages_hit", 1)
 			}
-			return truncate(out, limit), next, nil
+			out.records = truncate(out.records, limit)
+			out.cursor = next
+			return out, nil
 		}
 		// Human pacing (report item 1/A1): think time between consecutive
 		// pages, log-normal + clamped; disabled by MEDIAMON_EMERGENCY /
@@ -313,5 +375,7 @@ func (e *Engine) fetchPagesWith(ctx context.Context, name string, pathParams, ba
 		fe.pageThink(ctx, paging)
 		ccur = next
 	}
-	return truncate(out, limit), ccur, nil
+	out.records = truncate(out.records, limit)
+	out.cursor = ccur
+	return out, nil
 }
