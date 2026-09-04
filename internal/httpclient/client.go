@@ -8,6 +8,7 @@ package httpclient
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -259,7 +260,25 @@ func (c *Client) doOnce(ctx context.Context, method, rawURL string, headers map[
 		return 0, nil, 0, err
 	}
 	defer resp.Body.Close()
-	rb, err := io.ReadAll(resp.Body)
+	var rdr io.Reader = resp.Body
+	// gzip answers to a manually-set Accept-Encoding: when the caller (or
+	// the merged browser header sets) declares Accept-Encoding, Go's
+	// transport passes it verbatim and does NOT transparently decompress —
+	// yet the xhs/ks surfaces answer gzip to exactly that offer (corpus
+	// truth; the synth data face models it, final-audit P3 e2e alignment
+	// exposed it). The transport strips Content-Encoding when it decompressed
+	// by itself, so the header's presence is the precise manual case. Only
+	// gzip is handled; anything else stays raw and fails loud at the parse
+	// boundary (no silent wrong data). DoStream (media bytes) is untouched.
+	if strings.EqualFold(resp.Header.Get("Content-Encoding"), "gzip") {
+		zr, zerr := gzip.NewReader(resp.Body)
+		if zerr != nil {
+			return 0, nil, 0, fmt.Errorf("httpclient: gzip body: %w", zerr)
+		}
+		defer zr.Close()
+		rdr = zr
+	}
+	rb, err := io.ReadAll(rdr)
 	if err != nil {
 		return 0, nil, 0, fmt.Errorf("httpclient: read body: %w", err)
 	}
