@@ -8,8 +8,10 @@
 // contract (AGENTS.md / IR-MM-0001 AC-19) therefore requires combining the
 // comment payload with the platform's user-enrichment face. After a comment
 // walk completes, the engine enriches each UNIQUE author once through the
-// platform's user contract and merges the result fill-forward (enrichment
-// never overwrites payload-bound values; it only fills empty/zero fields).
+// platform's user contract and merges the result fill-forward onto EVERY
+// row by that author (one fetch per unique author, shared across all their
+// rows; enrichment never overwrites payload-bound values; it only fills
+// empty/zero fields).
 //
 // Silent discipline: enrich requests ride the exact same machinery as the
 // walk itself — contract-declared URL/headers (browser header sets), the
@@ -43,12 +45,14 @@ import (
 
 // enrichPassState carries the per-collection-call enrichment bookkeeping.
 type enrichPassState struct {
-	seen     map[string]bool // enrich keys already completed/skipped
-	fails    int             // consecutive failures (circuit breaker)
-	enriched int
-	skipped  int
-	capped   int
-	fetched  bool // any fetch issued yet (paces only between requests)
+	seen        map[string]bool              // enrich keys already attempted (fetched/failed/capped)
+	profs       map[string]model.UserProfile // fetched profiles, shared per author key
+	fails       int                          // consecutive failures (circuit breaker)
+	enriched    int
+	skipped     int
+	capped      int
+	circuitOpen bool
+	fetched     bool // any fetch issued yet (paces only between requests)
 }
 
 // commentEnrichEnabled resolves MEDIAMON_COMMENT_ENRICH (default ON).
@@ -98,25 +102,44 @@ func (e *Engine) enrichCommenters(ctx context.Context, platform string, cmts []m
 		return
 	}
 	pacing := pacingFor(e.pacing, uc.Paging.PageSleepMS)
-	st := &enrichPassState{seen: map[string]bool{}}
+	st := &enrichPassState{
+		seen:  map[string]bool{},
+		profs: map[string]model.UserProfile{},
+	}
 	maxKeys := commentEnrichMax()
 	for i := range cmts {
 		u := &cmts[i].User
 		key := enrichKey(*u)
-		if key == "" || st.seen[key] {
+		if key == "" {
 			continue
+		}
+		// Per-row backfill: every row of an already-enriched author merges
+		// the SAME fetched profile (the pass result is shared, not consumed
+		// by the first row — final-audit P1: 762−577=185 payload rows used
+		// to stay bare). Cache hits issue no request and need no pacing.
+		if prof, ok := st.profs[key]; ok {
+			mergeUserProfile(u, prof)
+			continue
+		}
+		if st.seen[key] {
+			continue // already attempted (failed or capped): no retry
 		}
 		st.seen[key] = true
 		if maxKeys > 0 && st.enriched >= maxKeys {
 			st.capped++
 			continue
 		}
-		if st.fails >= 3 {
+		if st.fails >= 3 && !st.circuitOpen {
 			// Circuit breaker: the enrich face is absent or down; stop
-			// hammering it for the rest of this collection.
+			// hammering it for the rest of this collection (already-fetched
+			// profiles still merge — an open circuit forbids requests,
+			// not free backfills).
+			st.circuitOpen = true
 			e.obsInc("collect.comment_enrich_circuit_open", 1)
-			st.capped += len(cmts) - i
-			break
+		}
+		if st.circuitOpen {
+			st.capped++
+			continue
 		}
 		if st.fetched {
 			e.pageThink(ctx, pacing) // same human think time as page walks
@@ -135,6 +158,7 @@ func (e *Engine) enrichCommenters(ctx context.Context, platform string, cmts []m
 		st.fails = 0
 		st.enriched++
 		e.obsInc("collect.comment_enrich", 1)
+		st.profs[key] = prof
 		mergeUserProfile(u, prof)
 	}
 }

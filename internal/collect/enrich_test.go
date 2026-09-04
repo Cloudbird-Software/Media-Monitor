@@ -123,8 +123,21 @@ func TestCommentEnrichCombination(t *testing.T) {
 		u.AwemeCount != 45 || u.TotalFavorited != 99000 {
 		t.Fatalf("enrich must fill signature/counts, got %+v", u)
 	}
+	// Per-row backfill (final-audit P1): the SECOND row by the same author
+	// must merge the same shared enrich result — it used to stay bare.
+	u2 := cmts[1].User
+	if u2.Nickname != "payload-nick" || u2.IPLabel != "四川" {
+		t.Fatalf("row 2 payload-bound fields must win, got %+v", u2)
+	}
+	if u2.Signature != "bio" || u2.FollowerCount != 1200 || u2.FollowingCount != 88 ||
+		u2.AwemeCount != 45 || u2.TotalFavorited != 99000 {
+		t.Fatalf("row 2 must share the enrich pass result, got %+v", u2)
+	}
 	if got := o.Get("collect.comment_enrich"); got != 1 {
 		t.Fatalf("obs collect.comment_enrich = %d, want 1", got)
+	}
+	if n := atomic.LoadInt64(&fx.userReqs); n != 1 {
+		t.Fatalf("per-row backfill must not add requests, got %d", n)
 	}
 }
 
