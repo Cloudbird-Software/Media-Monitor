@@ -145,7 +145,10 @@ func (e *Engine) clientFor(proxy string) *httpclient.Client {
 }
 
 // categorySuffix maps collect category names to the conventional
-// "<platform>-<suffix>" contract naming fallback.
+// "<platform>-<suffix>" contract naming fallback. Categories whose contract
+// names differ per platform (suggest: douyin-suggest-words vs
+// xhs-search-recommend) are wired explicitly through the platform Names
+// maps and deliberately carry no fallback suffix.
 var categorySuffix = map[string]string{
 	"search":          "search",
 	"comments":        "comments",
@@ -158,6 +161,9 @@ var categorySuffix = map[string]string{
 	"collects_videos": "collects-videos",
 	"im_unread":       "im-unread",
 	"user_posts":      "user-posts",
+	"profile":         "profile",
+	"user_search":     "user-search",
+	"related":         "related",
 }
 
 // resolveName finds the contract name for a platform collect category,
