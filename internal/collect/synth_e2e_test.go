@@ -568,6 +568,16 @@ func synthE2EBatchDetail(t *testing.T, e *Engine) {
 		t.Fatalf("batch/single mismatch: %s digg=%d, single digg=%d",
 			res.Items[0].ID, res.Items[0].Stats.Digg, wantDigg)
 	}
+	// Single-detail play_url binding resolves through the contract path
+	// ($.aweme_detail.video.play_addr.url_list[0] — the key[index] JSONPath
+	// form fixed per report G4); matrix row #7 closure evidence.
+	meta, err := e.ResolveVideo(context.Background(), "douyin", ids[0])
+	if err != nil {
+		t.Fatalf("ResolveVideo: %v", err)
+	}
+	if meta.URL == "" || meta.AwemeID != ids[0] {
+		t.Fatalf("single-detail play_url binding empty or mismatched: %+v", meta)
+	}
 	// Chunking under the count-clamp batch discipline: 45 ids -> 20/20/5.
 	res3, err := e.BatchDetails(context.Background(), "douyin", ids, BatchDetailOptions{})
 	if err != nil {
@@ -576,8 +586,8 @@ func synthE2EBatchDetail(t *testing.T, e *Engine) {
 	if res3.Batches != 3 || res3.Returned != 45 || len(res3.Missing) != 0 {
 		t.Fatalf("45-id chunking = %+v, want 3 batches / 45 returned / 0 missing", res3)
 	}
-	t.Logf("batch detail: 21->20 (bogus silently omitted, 20+1 batches), 45 ids -> %d batches, batch==single on digg=%d",
-		res3.Batches, wantDigg)
+	t.Logf("batch detail: 21->20 (bogus silently omitted, 20+1 batches), 45 ids -> %d batches, batch==single on digg=%d, play_url=%s...",
+		res3.Batches, wantDigg, meta.URL[:48])
 }
 
 // synthE2ESeriesChain: mix 13 集/3 页、episode 映射 1..13；series 33 集/6 页
