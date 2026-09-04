@@ -24,7 +24,9 @@
     "comments": "$.comments",
     "fields": {
       "user.avatar_url": "$.user.avatar_thumb.url_list[0]",
-      "user.ip_label": "$.ip_label"
+      "user.ip_label": "$.ip_label",
+      "reply_count": "$.reply_comment_total",
+      "extra.item_comment_total": "$.item_comment_total"
     }
   },
   "paging": {
