@@ -100,7 +100,9 @@ build_pages.py 生成的三站合成站页面骨架。全部监听 127.0.0.1，�
     request_body，keep-alive 零污染，后续请求不再被残留字节打成 501）。
 用户增强端点（Media-Monitor adapt_synth 契约）：dy /aweme/v1/web/user/profile/other
   兼容 sec_uid 调用形 + user_list 绑定（语料原调用形不变）；ks /api/user/info
-  （sec_uid → $.user_list）。xhs /comment/sub/page 主参数 root_comment_id（语料 64/64），
+  （sec_uid → $.user_list）；xhs /api/sns/web/v1/user/info（sec_uid → $.user_list，
+  MM 目标验证 E1 补面——语料无该端点，档案按用户主页页面真值形态）。
+  xhs /comment/sub/page 主参数 root_comment_id（语料 64/64），
   comment_id 仅作 MM 契约错误期间的过渡别名。
 
 本地调试端点（127.0.0.1 专用，页面/harness 不引用——红队 R3-P1-3 调试白名单形态）：
@@ -891,7 +893,11 @@ def dy_user_profile(state: SiteState, params: dict) -> dict:
             "short_id": str(u.get("uid") or "")[:11],
             "nickname": u.get("nickname"), "signature": u.get("signature") or "",
             "avatar_url": ((u.get("avatar_thumb") or {}).get("url_list") or [""])[0],
-            "ip_label": "", "gender": 0,
+            # R13（MM 12 字段 AC-19）：signature/gender 改透传 render 层作者实体
+            # 确定性派生值（语料带内：signature 20/20 非空、gender 1:45%/2:30%/
+            # null:15%/0:10%），MM bindUser 直接可绑 → 评论作者画像 12 字段完备
+            # (11×100%+75%)/12≈97.9% ≥ 90%
+            "ip_label": "", "gender": u.get("gender"),
             "follower_count": u.get("follower_count", 0),
             "following_count": u.get("following_count", 0),
             "aweme_count": u.get("aweme_count", 0),
@@ -1013,6 +1019,21 @@ def xhs_user_posted(state: SiteState, params: dict) -> dict:
     req, resp = synth_render.render_xhs_user_posted(
         state.dataset(), line_nos, user_id, cursor, num)
     return resp
+
+
+def xhs_user_info(state: SiteState, params: dict) -> dict:
+    """GET /api/sns/web/v1/user/info（Media-Monitor 用户增强契约 xhs-user v1：
+    sec_uid 定位、$.user_list 绑定；engine.UserProfile 固定发 sec_uid 参数，值即
+    xhs 数据集作者 user_id——captures 实证 24hex 形态，另兼容 user_id 参数名）。
+    语料无该路径真值（MM 契约自述 reconstructed），数据从 synthgen 作者实体
+    派生、未知 id 按 f(id) 确定性合成档案（ks /api/user/info 同款 R12A-P3-2
+    口径，保证 $.user_list 恒可绑定——空列表会被 MM checkBindings 判 ErrEmptyPage
+    误烧号）。缺 sec_uid 按空 user_list 回（ks 同口径，调用方参数错误面）。"""
+    sec_uid = (params.get("sec_uid") or params.get("user_id") or [""])[0]
+    if not sec_uid:
+        return {"code": -100, "msg": "参数错误", "success": False, "user_list": []}
+    line_nos = state.author_line_nos(sec_uid)
+    return synth_render.render_xhs_user_info(state.dataset(), line_nos, sec_uid)
 
 
 def ks_search_feed(state: SiteState, body: dict) -> dict:
@@ -1859,6 +1880,9 @@ API_ROUTES = {
         ("GET", "/api/sns/web/v2/comment/sub/page"): xhs_comment_sub_page,
         ("GET", "/api/sns/web/v2/comment/sub/page/"): xhs_comment_sub_page,
         ("GET", "/api/sns/web/v1/user_posted"): xhs_user_posted,
+        # 用户增强（Media-Monitor xhs-user v1：sec_uid 定位、$.user_list 绑定）
+        ("GET", "/api/sns/web/v1/user/info"): xhs_user_info,
+        ("GET", "/api/sns/web/v1/user/info/"): xhs_user_info,
         # 红队 round 6A C-2 组：新数据面端点（recommend/filter/onebox/category/feed/widgets）
         ("GET", "/api/sns/web/v1/search/recommend"): xhs_search_recommend,
         ("GET", "/api/sns/web/v1/search/recommend/"): xhs_search_recommend,

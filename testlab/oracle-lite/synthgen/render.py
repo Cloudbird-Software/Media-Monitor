@@ -2245,6 +2245,25 @@ def render_xhs_feed_note_card(rec: dict) -> dict:
     return nc
 
 
+def _xhs_note_time_ms(rec: dict) -> int:
+    """xhs note 发布时间毫秒（语料真值形态修复：MM 目标验证 E2）。
+
+    语料 xhs_user_profile user_posted 真值 1678 note：time 为毫秒 epoch，其中
+    1080 条恰等于 note_id 内嵌时间戳×1000、余为正向偏移（重发布）、0 负值——
+    note_id 即 ids.xhs_ts_hex_id 结构 hex(unix_ts)(8)+'0'*8+hex(8)，发布秒可从
+    id 前缀精确回收。旧版取记录顶层 create_time，xhs 数据集记录无该字段（仅
+    comments[].create_time）→ time 恒 0，MM window_months 在 xhs 无声放行。
+    id 异常形态兜底回 create_time（秒→毫秒），不产生 0。"""
+    nid = str(rec.get("id") or "")
+    try:
+        ts = int(nid[:8], 16)
+        if ts > 10**9:   # 2001 年以后，防非时间前缀 id 误译
+            return ts * 1000
+    except ValueError:
+        pass
+    return int(rec.get("create_time") or 0) * 1000
+
+
 def render_xhs_user_posted(dataset: DatasetReader, line_nos: list,
                            user_id: str, cursor: str = "", num: int = 30
                            ) -> tuple[dict, dict]:
@@ -2253,6 +2272,8 @@ def render_xhs_user_posted(dataset: DatasetReader, line_nos: list,
     语料形态：query num/cursor/user_id/image_formats/xsec_token/xsec_source；
     data{cursor, has_more, notes:[{type, display_title, user, cover, interact_info,
     note_id, time, xsec_token}]}。数据源 = 数据集该作者的全部作品（index.author_id）。
+    time = 发布毫秒（_xhs_note_time_ms，从 note_id 内嵌时间戳派生，语料真值
+    形态——MM xhs-user-notes 契约 create_time→$.data.notes.time）。
     """
     recs = [dataset.read(i) for i in line_nos]
     notes = []
@@ -2268,7 +2289,7 @@ def render_xhs_user_posted(dataset: DatasetReader, line_nos: list,
                                      "width": 720, "height": 960, "image_scene_dict": {}}]},
             "interact_info": nc.get("interact_info") or {},
             "note_id": r.get("id"),
-            "time": int(r.get("create_time") or 0),
+            "time": _xhs_note_time_ms(r),
             "xsec_token": r.get("xsec_token") or "",
         })
     start = 0
@@ -2292,6 +2313,58 @@ def render_xhs_user_posted(dataset: DatasetReader, line_nos: list,
         "code": 0, "msg": "成功", "success": True,
         "data": {"notes": page, "cursor": next_cursor, "has_more": has_more},
     }
+
+
+def render_xhs_user_info(dataset: DatasetReader, line_nos: list, sec_uid: str) -> dict:
+    """GET /api/sns/web/v1/user/info（Media-Monitor 用户增强契约 xhs-user v1，
+    MM 目标验证 E1 补面）。
+
+    契约口径：sec_uid 定位单个作者、绑定 $.user_list（engine.UserProfile 固定发
+    sec_uid 参数，值即 xhs 数据集作者 user_id——captures 实证 24hex 形态）。
+    语料无该路径真值（MM 契约自述 reconstructed，xhs_user_profile 样本 20/20
+    用户档案走 /user/profile/{id} 页面 userPageData，无独立 JSON 端点），信封取
+    xhs API code/success/msg 族 + 顶层 user_list 数组（绑定路径要求）。档案字段
+    形态按语料用户主页真值（basicInfo：nickname/images(redId)/gender/ipLocation/
+    desc + interactions：follows/fans/获赞与收藏），键名同时覆盖 MM bindUser
+    全部默认路径（user_id/sec_uid/nickname/avatar/signature/ip_location/gender/
+    fans/follows/notes_count/total_favorited）。数据从 synthgen 作者实体
+    （note_card.user）派生 + rng 种子 f(sec_uid) 确定性合成计数字段，跨请求
+    稳定；未知 id 按 f(id) 确定性合成档案（ks /api/user/info 同款 R12A-P3-2
+    口径——本端点语料无错误形态真值、MM checkBindings 对空 $.user_list 判
+    ErrEmptyPage 会误烧号，故保证恒可绑定）。"""
+    rng = _page_rng(dataset, f"xhs-uinfo-{sec_uid}")
+    rec = dataset.read(line_nos[0]) if line_nos else None
+    author = ((rec or {}).get("note_card") or {}).get("user") or {}
+    uid = str(author.get("user_id") or sec_uid)
+    name = author.get("nickname") or author.get("nick_name") or "小红书用户"
+    fans = int(rng.integers(6, 200000))
+    follows = int(rng.integers(1, 800))
+    user = {
+        "user_id": uid, "sec_uid": sec_uid,
+        "red_id": ids.digits_str(rng, 10),          # 语料 basicInfo.redId（数字串）
+        "nickname": name, "nick_name": name,
+        "avatar": author.get("avatar") or "",
+        "desc": ids.pick(rng, _XHS_PROFILE_BIO),    # 语料 19/20 非空简介
+        "signature": ids.pick(rng, _XHS_PROFILE_BIO),
+        "ip_location": ids.pick(rng, _XHS_CMT_IP),  # 语料 basicInfo.ipLocation 省级形态
+        "gender": int(rng.integers(0, 3)),          # 语料 {0,1,2}
+        "fans": fans, "follower_count": fans,
+        "follows": follows, "following_count": follows,
+        "notes_count": len(line_nos),
+        "total_favorited": int(rng.integers(0, 5000000)),
+    }
+    return {"code": 0, "success": True, "msg": "成功", "user_list": [user]}
+
+
+# 语料 basicInfo.desc 形态池（xhs_user_profile 20 样本 19 非空，多行短简介；
+# 池值按语料样板改写，保持「类目自述 + 更新约定」语型）
+_XHS_PROFILE_BIO = [
+    "美食｜旅行｜生活方式分享\n感谢关注，每周三更新",
+    "野生摄影爱好者\n在人间捡故事，也在记录生活",
+    "一只爱探店的干饭人\n好吃不贵才是真本事",
+    "健身第四年，分享训练和饮食日常\n一起变成更好的人",
+    "家居好物研究员\n理性种草，只推自己回购的",
+]
 # R12A-P3-3：ks feed 可选 authorStatement——语料携带率 search/feed 108/706=15.3%、
 # profile/feed 196/403=48.6%（photo 级属性：同人作品页非 0/100 二值）；文案取语料
 # 5 变体按频次加权池（AI 155 / 虚构 73 / 转载 57 / 观点 11 / 危险 8）。
@@ -3022,15 +3095,63 @@ def render_douyin_related(dataset: DatasetReader, line_no: int, count: int = 10)
     }
 
 
+# MM 12 字段补全（IR-MM-0001 AC-19 评论作者画像，2026-09 MM 评审差 signature/gender）：
+# 真值取自 dy_user_profile_tabs 语料 profile/other 20 用户——signature 键 20/20
+# 且全部非空（多行「类目自述 + 更新/商务约定」语型，池值按语料样板改写，同
+# _XHS_PROFILE_BIO 口径）；gender 键 20/20，取值带内分布 1:9/20=45%、2:6/20=30%、
+# null:3/20=15%、0:2/20=10%。synthgen 数据集 author 无 signature/gender 键
+# （signature 0/100000 非空），不重生成数据集，改 render 层按作者实体（sec_uid）
+# 确定性派生：同人恒同值、跨请求/翻页稳定；携带率/分布对齐语料带内。
+# MM audit（audit_comments.go）gender 只认 1|2 ⇒ 带内完备 75%，12 字段综合
+# (11×100% + 75%)/12 ≈ 97.9% ≥ 90%（AC-19 达标线）。
+_DY_PROFILE_SIGNATURE = [
+    "好好干饭，天天开心！\n分享一日三餐的家常做法\n喜欢的点个关注，一起长胖～",
+    "📷独立摄影师｜人文｜旅拍｜复古电影感\n用镜头收集他乡的烟火气\n约拍合作请私信备注来意",
+    "二胎全职妈妈的厨房日记\n记录两枚小夹克的一日三餐\n是分享不是教程，偶尔也翻车",
+    "健身第六年，训练干货+减脂餐都在主页\n每周三晚八点直播答疑\n一起变成更好的人",
+    "🐈‍⬛铲屎官｜猫咪日常｜养宠避坑\n两只橘猫的吃喝拉撒观察日记\n好物只推自己回购的",
+    "城市考古｜咖啡馆地图｜街拍\n一街一巷记录这座城市的新角落\n📍常驻：上海",
+    "✨穿搭博主｜小个子显高手册\n通勤/约会/出游三套公式\n每周更新，感谢每一个关注💕",
+    "数码爱好者，装机二十年\n手机/笔记本/外设真实测评\n不恰烂饭，缺点优点都说",
+]
+
+
+def _dy_profile_signature(sec_uid: str) -> str:
+    """作者简介：语料形态池 × 作者实体哈希确定性选取（同人恒同值）。"""
+    return _DY_PROFILE_SIGNATURE[_stable_hash("dy-sig::%s" % sec_uid)
+                                 % len(_DY_PROFILE_SIGNATURE)]
+
+
+def _dy_profile_gender(sec_uid: str):
+    """作者性别：语料带内分布 1:45% / 2:30% / null:15% / 0:10%（千分位确定性，
+    与 _maybe_at_prefix 同款纯哈希口径，翻页/换端点稳定）。"""
+    h = _stable_hash("dy-gender::%s" % sec_uid) % 1000
+    if h < 450:
+        return 1
+    if h < 750:
+        return 2
+    if h < 900:
+        return None   # 语料 3/20 JSON null 形态（web 未公开性别）
+    return 0
+
+
 def render_douyin_user_profile(rec: dict) -> dict:
-    """/aweme/v1/web/user/profile/other/（作者主页头部；user 块以数据集 author 为核心）。"""
+    """/aweme/v1/web/user/profile/other/（作者主页头部；user 块以数据集 author 为核心）。
+
+    MM 12 字段（AC-19）：数据集 author 无 signature/gender → 按作者实体确定性
+    派生（_DY_PROFILE_SIGNATURE 池 / 语料带内性别分布），携带率对齐语料：
+    signature 20/20 非空、gender 45/30/15/10（1/2/null/0）。"""
     rng = np.random.default_rng([_stable_hash("dy-uprofile::%s" % (rec.get("author") or {}).get("uid", "")) & 0x7FFFFFFF, 3])
     a = rec.get("author") or {}
     logid = ids.dy_logid(rng)
     avatar_uri = ((a.get("avatar_thumb") or {}).get("url_list") or [""])[0].rsplit("/", 1)[-1]
+    sec_key = str(a.get("sec_uid") or a.get("uid") or "")
     user = {
         "uid": a.get("uid"), "sec_uid": a.get("sec_uid"),
-        "nickname": a.get("nickname"), "signature": a.get("signature") or "",
+        "nickname": a.get("nickname"),
+        # 数据集优先（未来重生成带真值时透传），缺省按作者实体派生（语料 20/20 非空）
+        "signature": a.get("signature") or _dy_profile_signature(sec_key),
+        "gender": a["gender"] if "gender" in a else _dy_profile_gender(sec_key),
         "avatar_thumb": a.get("avatar_thumb"),
         "avatar_168x168": {"uri": avatar_uri, "url_list": (a.get("avatar_thumb") or {}).get("url_list"), "width": 720, "height": 720},
         "avatar_300x300": {"uri": avatar_uri, "url_list": (a.get("avatar_thumb") or {}).get("url_list"), "width": 720, "height": 720},
