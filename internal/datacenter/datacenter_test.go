@@ -2,6 +2,8 @@ package datacenter
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -253,13 +255,145 @@ func TestPushFailClosedQueuesRetry(t *testing.T) {
 	if pushes.Load() != 1 {
 		t.Fatalf("pushes = %d, want 1", pushes.Load())
 	}
-	// Retry queue should hold the record.
-	failing, err := h.RetryFailed(context.Background())
+	// Retry queue should hold the record; the endpoint is still failing, so
+	// the record stays queued.
+	outcome, err := h.RetryFailed(context.Background())
 	if err != nil {
 		t.Fatalf("RetryFailed: %v", err)
 	}
-	if failing != 1 {
-		t.Fatalf("still-failing = %d, want 1 (re-enqueued)", failing)
+	if outcome.Queued != 1 || outcome.Repushed != 0 || outcome.StillFailing != 1 {
+		t.Fatalf("outcome = %+v, want queued=1 repushed=0 stillFailing=1", outcome)
+	}
+	if h.RetryQueueLen() != 1 {
+		t.Fatalf("retry queue len = %d, want 1", h.RetryQueueLen())
+	}
+}
+
+// TestPersistenceReadbackCrossProcess: the report-S2 defects — a second
+// process over the same store dir must see the persisted rows (export CSV
+//恒 0 行) and cross-process dedup must hold (re-adding a stored key is a
+// duplicate, new keys append).
+func TestPersistenceReadbackCrossProcess(t *testing.T) {
+	dir := t.TempDir()
+	h1, err := New(Config{Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 5; i++ {
+		if _, err := h1.Add(Record{Platform: "douyin", UserKey: fmt.Sprintf("u%d", i), Nickname: fmt.Sprintf("用户%d", i)}); err != nil {
+			t.Fatalf("Add: %v", err)
+		}
+	}
+	if err := h1.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Second process/hub over the same dir: rows read back.
+	h2, err := New(Config{Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h2.Close()
+	if all := h2.List(nil, false); len(all) != 5 {
+		t.Fatalf("second process sees %d records, want 5 (export read path)", len(all))
+	}
+	// Cross-process dedup: stored key rejected, new key appended.
+	if added, _ := h2.Add(Record{Platform: "douyin", UserKey: "u0", Nickname: "dup"}); added {
+		t.Fatal("cross-process dedup failed: stored key re-added")
+	}
+	if added, err := h2.Add(Record{Platform: "douyin", UserKey: "u9", Nickname: "新"}); err != nil || !added {
+		t.Fatalf("Add new key: added=%v err=%v", added, err)
+	}
+	if all := h2.List(nil, false); len(all) != 6 {
+		t.Fatalf("records after cross-process add = %d, want 6", len(all))
+	}
+
+	// CSV export of the reloaded hub carries the persisted rows.
+	var buf strings.Builder
+	if err := WriteCSV(&buf, h2.List(nil, false), nil, false); err != nil {
+		t.Fatalf("WriteCSV: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 7 { // header + 6 rows
+		t.Fatalf("csv = %d lines, want 7", len(lines))
+	}
+}
+
+// TestRetryQueueSuccessRemovesRows: records delivered by a retry pass leave
+// the queue (atomically rewritten); still-failing ones stay. A later
+// successful full Push clears the queue entirely (no full re-send).
+func TestRetryQueueSuccessRemovesRows(t *testing.T) {
+	var ok bool
+	var hits atomic.Int64
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if ok {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	dir := t.TempDir()
+	h, err := New(Config{Dir: dir, WebhookURL: srv.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	for _, k := range []string{"a", "b"} {
+		if _, err := h.Add(Record{Platform: "douyin", UserKey: k, Nickname: k}); err != nil {
+			t.Fatalf("Add: %v", err)
+		}
+	}
+	if err := h.Push(context.Background()); err == nil {
+		t.Fatal("expected push failure")
+	}
+	// Two consecutive failed pushes must not duplicate the queue.
+	if err := h.Push(context.Background()); err == nil {
+		t.Fatal("expected second push failure")
+	}
+	if h.RetryQueueLen() != 2 {
+		t.Fatalf("retry queue len = %d, want 2 (enqueue dedup)", h.RetryQueueLen())
+	}
+
+	// Endpoint recovers: one retry pass delivers both and empties the queue.
+	ok = true
+	before := hits.Load()
+	outcome, err := h.RetryFailed(context.Background())
+	if err != nil {
+		t.Fatalf("RetryFailed: %v", err)
+	}
+	if outcome.Queued != 2 || outcome.Repushed != 2 || outcome.StillFailing != 0 {
+		t.Fatalf("outcome = %+v, want queued=2 repushed=2 failing=0", outcome)
+	}
+	if h.RetryQueueLen() != 0 {
+		t.Fatalf("retry queue len after success = %d, want 0", h.RetryQueueLen())
+	}
+	// A second retry pass has nothing to do and sends nothing.
+	outcome, err = h.RetryFailed(context.Background())
+	if err != nil || outcome.Queued != 0 || hits.Load() != before+2 {
+		t.Fatalf("second pass: outcome=%+v err=%v hits=%d", outcome, err, hits.Load())
+	}
+}
+
+// TestRetryFailedWithoutWebhookIsObservable: retry without a configured
+// webhook URL must fail explicitly (the CLI used to report "0 records still
+// failing" while doing nothing).
+func TestRetryFailedWithoutWebhookIsObservable(t *testing.T) {
+	dir := t.TempDir()
+	h, err := New(Config{Dir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	if _, err := h.Add(Record{Platform: "douyin", UserKey: "q", Nickname: "q"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.RetryFailed(context.Background()); err == nil {
+		t.Fatal("RetryFailed without webhook URL must return an explicit error")
+	} else if !errors.Is(err, ErrNoWebhook) {
+		t.Fatalf("RetryFailed error = %v, want ErrNoWebhook", err)
 	}
 }
 

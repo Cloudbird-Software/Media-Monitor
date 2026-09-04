@@ -228,3 +228,59 @@ func TestPropertyAppendScanInvariant(t *testing.T) {
 	}
 	testkit.Run(t, 20260825, 60, []testkit.Prop{prop})
 }
+
+// TestReplaceRewritesAtomically: Replace swaps the collection content for
+// exactly the given rows; a subsequent Append continues on the new file.
+func TestReplaceRewritesAtomically(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, k := range []string{"a", "b", "c"} {
+		if err := s.Append("coll", map[string]string{"k": k}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.Replace("coll", []any{map[string]string{"k": "b"}}); err != nil {
+		t.Fatalf("Replace: %v", err)
+	}
+	var got []string
+	if err := s.Scan("coll", func(raw []byte) error {
+		var m map[string]string
+		if err := json.Unmarshal(raw, &m); err != nil {
+			return err
+		}
+		got = append(got, m["k"])
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "b" {
+		t.Fatalf("after Replace = %v, want [b]", got)
+	}
+	// Append after Replace lands on the rewritten file.
+	if err := s.Append("coll", map[string]string{"k": "d"}); err != nil {
+		t.Fatal(err)
+	}
+	got = nil
+	_ = s.Scan("coll", func(raw []byte) error {
+		var m map[string]string
+		json.Unmarshal(raw, &m)
+		got = append(got, m["k"])
+		return nil
+	})
+	if len(got) != 2 || got[0] != "b" || got[1] != "d" {
+		t.Fatalf("append-after-replace = %v, want [b d]", got)
+	}
+	// Replace with an empty set empties the collection.
+	if err := s.Replace("coll", nil); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	_ = s.Scan("coll", func([]byte) error { n++; return nil })
+	if n != 0 {
+		t.Fatalf("empty Replace left %d rows", n)
+	}
+}

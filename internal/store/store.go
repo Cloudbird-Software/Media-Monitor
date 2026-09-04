@@ -85,6 +85,57 @@ func (s *Store) Append(collection string, rec any) error {
 	return nil
 }
 
+// Replace atomically rewrites a collection with exactly rows (in order):
+// the new content is written to <collection>.jsonl.tmp and renamed over the
+// live file, and any cached append handle is closed first so the swap is
+// observed whole. An empty rows slice removes the collection's contents.
+// Replace enables compaction-style maintenance (e.g. the datacenter retry
+// queue dropping records that have since been delivered) without ever
+// exposing a half-written file to concurrent scans.
+func (s *Store) Replace(collection string, rows []any) error {
+	if !collectionRe.MatchString(collection) {
+		return fmt.Errorf("store: invalid collection name %q", collection)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if f, ok := s.files[collection]; ok {
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("store: replace %q: close old handle: %w", collection, err)
+		}
+		delete(s.files, collection)
+	}
+	tmp := filepath.Join(s.dir, collection+".jsonl.tmp")
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("store: replace %q: open tmp: %w", collection, err)
+	}
+	bw := bufio.NewWriter(f)
+	for _, rec := range rows {
+		row, err := json.Marshal(rec)
+		if err != nil {
+			f.Close()
+			os.Remove(tmp)
+			return fmt.Errorf("store: replace %q: marshal: %w", collection, err)
+		}
+		bw.Write(row)
+		bw.WriteByte('\n')
+	}
+	if err := bw.Flush(); err != nil {
+		f.Close()
+		os.Remove(tmp)
+		return fmt.Errorf("store: replace %q: flush: %w", collection, err)
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmp)
+		return fmt.Errorf("store: replace %q: close tmp: %w", collection, err)
+	}
+	if err := os.Rename(tmp, filepath.Join(s.dir, collection+".jsonl")); err != nil {
+		os.Remove(tmp)
+		return fmt.Errorf("store: replace %q: rename: %w", collection, err)
+	}
+	return nil
+}
+
 // Scan streams every row of collection to fn as raw bytes (without the
 // trailing newline). Scan uses its own read-only handle, so it is safe to
 // call while Appends are in flight. A missing collection yields no rows and
