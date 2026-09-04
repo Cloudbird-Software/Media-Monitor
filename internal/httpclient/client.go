@@ -135,13 +135,21 @@ func (c *Client) WithContract(name string) *Client {
 // persist within the session and never leak across identities. Caller-set
 // Cookie headers are still honored — jar cookies are appended after them.
 func (c *Client) Session() *Client {
-	nc := *c
+	// Field-wise clone: a plain struct copy would duplicate the atomic UA
+	// counter by value (go vet: assignment copies lock value); the session
+	// starts its own rotation instead.
+	nc := &Client{
+		cfg:      c.cfg,
+		signer:   c.signer,
+		contract: c.contract,
+		uaPool:   c.uaPool,
+	}
 	base := &http.Client{Timeout: c.hc.Timeout, Transport: c.hc.Transport}
 	if jar, err := cookiejar.New(nil); err == nil {
 		base.Jar = jar
 	}
 	nc.hc = base
-	return &nc
+	return nc
 }
 
 // UA returns the next User-Agent in the pool (round-robin rotation).

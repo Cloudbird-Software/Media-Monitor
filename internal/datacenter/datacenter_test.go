@@ -271,7 +271,7 @@ func TestPushFailClosedQueuesRetry(t *testing.T) {
 
 // TestPersistenceReadbackCrossProcess: the report-S2 defects — a second
 // process over the same store dir must see the persisted rows (export CSV
-//恒 0 行) and cross-process dedup must hold (re-adding a stored key is a
+// 恒 0 行) and cross-process dedup must hold (re-adding a stored key is a
 // duplicate, new keys append).
 func TestPersistenceReadbackCrossProcess(t *testing.T) {
 	dir := t.TempDir()
