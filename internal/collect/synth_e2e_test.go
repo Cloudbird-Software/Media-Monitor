@@ -42,6 +42,9 @@ import (
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/model"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/obs"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/kuaishou"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/testkit"
 )
 
@@ -159,6 +162,14 @@ func synthE2EEngine(t *testing.T) *Engine {
 			"douyin":   "ttwid=synth-e2e",
 			"kuaishou": "did=synth-e2e",
 			"xhs":      "web_session=synth-e2e",
+		},
+		// 测试装配对齐生产（final-audit P3）：与 mediactl wiring.go /
+		// mediad main.go 同款 BrowserHeaders，e2e 请求链与生产头集纪律
+		// 一致（引擎在契约头之下合并浏览器默认头；仅测试面改动）。
+		BrowserHeaders: map[string]map[string]string{
+			douyin.Platform:   douyin.BrowserHeaders(),
+			kuaishou.Platform: kuaishou.BrowserHeaders(),
+			xhs.Platform:      xhs.BrowserHeaders(),
 		},
 		Names: names,
 		Pacing: &PacingConfig{
