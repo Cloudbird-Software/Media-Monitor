@@ -456,7 +456,11 @@ func mainBindingRaw(c *contracts.Contract) (kind, raw string) {
 }
 
 // checkBindings fails closed when the contract's primary binding is missing
-// or resolves to an empty list.
+// or resolves to a non-list value. A JSON null binding (douyin's zero-comment
+// shape, `{"comments": null}`) and an empty list are both VALID zero-record
+// pages: the walk ends cleanly instead of surfacing ErrEmptyPage — that error
+// is a rotation trigger under auto account mode, and a genuinely comment-less
+// item must never burn accounts (report G3).
 func checkBindings(c *contracts.Contract, doc map[string]any) error {
 	kind, raw := mainBindingRaw(c)
 	if raw == "" {
@@ -469,6 +473,9 @@ func checkBindings(c *contracts.Contract, doc map[string]any) error {
 	vs := p.Select(doc)
 	if len(vs) == 0 {
 		return fmt.Errorf("%s binding %q missing from response", kind, raw)
+	}
+	if vs[0] == nil {
+		return nil // explicit null = clean empty page (zero comments/items)
 	}
 	if _, ok := vs[0].([]any); !ok {
 		return fmt.Errorf("%s binding %q is not a list", kind, raw)
@@ -625,6 +632,9 @@ func (e *Engine) ItemComments(ctx context.Context, platform, itemID string, cur 
 	if err != nil {
 		return cmts, nxt, err // partial data + error (flush-before-exit)
 	}
+	// Payload + user-enrich combination (capability #2): complete each
+	// unique author's twelve-field profile through the platform user face.
+	e.enrichCommenters(ctx, platform, cmts)
 	return cmts, nxt, nil
 }
 
@@ -651,6 +661,8 @@ func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid strin
 	if err != nil {
 		return cmts, nxt, err // partial data + error (flush-before-exit)
 	}
+	// Replies carry the same twelve-field author contract as comments.
+	e.enrichCommenters(ctx, platform, cmts)
 	return cmts, nxt, nil
 }
 
