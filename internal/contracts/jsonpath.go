@@ -1,6 +1,7 @@
 // Package contracts — JSONPath-lite walker used by contract binding and
 // drift detection. Grammar: "$.a.b[0].c" — root "$", dot segments, integer
-// indexes; the token "*" matches any object value or array element.
+// indexes (negative counts from the end, "[-1]" = last); the token "*"
+// matches any object value or array element.
 package contracts
 
 import (
@@ -16,12 +17,13 @@ type Path struct {
 }
 
 type seg struct {
-	key   string
-	index int
-	star  bool // "*"
+	key     string
+	index   int
+	star    bool // "*"
+	indexed bool // "key[0]" / "key[-1]" form (index is meaningful, may be < 0)
 }
 
-// ParsePath parses "$.a.b[3].*".
+// ParsePath parses "$.a.b[3].*" / "$.a.b[-1]".
 func ParsePath(raw string) (Path, error) {
 	p := Path{raw: raw}
 	if raw == "" {
@@ -47,7 +49,6 @@ func ParsePath(raw string) (Path, error) {
 			continue
 		}
 		key := part
-		idx := -1
 		if i := strings.IndexByte(part, '['); i >= 0 && strings.HasSuffix(part, "]") {
 			key = part[:i]
 			inner := part[i+1 : len(part)-1]
@@ -62,9 +63,10 @@ func ParsePath(raw string) (Path, error) {
 			if err != nil {
 				return p, fmt.Errorf("path %q: bad index %q", raw, part)
 			}
-			idx = n
+			p.segs = append(p.segs, seg{key: key, index: n, indexed: true})
+			continue
 		}
-		p.segs = append(p.segs, seg{key: key, index: idx})
+		p.segs = append(p.segs, seg{key: key, index: -1})
 	}
 	return p, nil
 }
@@ -108,9 +110,15 @@ func (s seg) apply(v any) []any {
 		}
 		switch t := x.(type) {
 		case []any:
-			if s.index >= 0 && s.index < len(t) {
-				out = append(out, t[s.index])
-			} else if s.index < 0 && s.key != "" {
+			if s.indexed {
+				i := s.index
+				if i < 0 {
+					i += len(t)
+				}
+				if i >= 0 && i < len(t) {
+					out = append(out, t[i])
+				}
+			} else if s.key != "" {
 				// key against array: collect matching object fields
 				for _, e := range t {
 					if m, ok := e.(map[string]any); ok {
@@ -121,13 +129,19 @@ func (s seg) apply(v any) []any {
 				}
 			}
 		case map[string]any:
-			if s.index >= 0 {
+			if s.indexed {
 				// Key + index on an object: "a[1]" resolves key "a" then
-				// indexes into the resulting array.
+				// indexes into the resulting array (negative from the end).
 				if s.key != "" {
 					if sub, ok := t[s.key]; ok {
-						if arr, ok := sub.([]any); ok && s.index < len(arr) {
-							out = append(out, arr[s.index])
+						if arr, ok := sub.([]any); ok {
+							i := s.index
+							if i < 0 {
+								i += len(arr)
+							}
+							if i >= 0 && i < len(arr) {
+								out = append(out, arr[i])
+							}
 						}
 					}
 				}

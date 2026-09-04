@@ -17,17 +17,20 @@ import (
 // relSeg is one parsed segment of a record-relative field path. Exactly one
 // of key/index/star is meaningful: star selects every element of an array or
 // every value of an object, index addresses one element, key addresses one
-// object field.
+// object field. A segment parsed from the "key[index]" form carries both key
+// and indexed=true (the walker descends the key first, then indexes into the
+// resulting array; a negative index counts from the end, "[-1]" = last).
 type relSeg struct {
-	key   string
-	index int
-	star  bool
+	key     string
+	index   int
+	star    bool
+	indexed bool // "key[0]" / "key[-1]" form (index is meaningful, may be < 0)
 }
 
 // parseRel parses a record-relative binding path. Accepted forms: "uid",
-// "user.uid", "a[0].b", "a[].b", "a[*].b", "*.b", "$.uid", "$.data[].uid".
-// "[]" and "[*]" are array wildcards (same semantics as the contracts
-// JSONPath extension).
+// "user.uid", "a[0].b", "a[-1].b", "a[].b", "a[*].b", "*.b", "$.uid",
+// "$.data[].uid". "[]" and "[*]" are array wildcards (same semantics as the
+// contracts JSONPath extension). Negative indexes count from the end.
 func parseRel(raw string) ([]relSeg, error) {
 	s := strings.TrimSpace(raw)
 	s = strings.TrimPrefix(s, "$")
@@ -46,7 +49,6 @@ func parseRel(raw string) ([]relSeg, error) {
 			continue
 		}
 		key := part
-		idx := -1
 		if i := strings.IndexByte(part, '['); i >= 0 && strings.HasSuffix(part, "]") {
 			key = part[:i]
 			inner := part[i+1 : len(part)-1]
@@ -59,10 +61,11 @@ func parseRel(raw string) ([]relSeg, error) {
 				if err != nil {
 					return nil, fmt.Errorf("field path %q: bad index %q", raw, part)
 				}
-				idx = n
+				out = append(out, relSeg{key: key, index: n, indexed: true})
+				continue
 			}
 		}
-		out = append(out, relSeg{key: key, index: idx})
+		out = append(out, relSeg{key: key, index: -1})
 	}
 	return out, nil
 }
@@ -114,6 +117,35 @@ func resolveSegs(rec map[string]any, rel []relSeg) any {
 					for _, vv := range t {
 						next = append(next, vv)
 					}
+				}
+			}
+		case s.indexed:
+			// "key[0]" / "key[-1]": descend the key first (when present),
+			// then index into the resulting array. A negative index counts
+			// from the end. (Report G4: the old index branch never descended
+			// the key, so "avatar_thumb.url_list[0]" always missed on maps.)
+			for _, v := range cur {
+				if s.key != "" {
+					m, ok := v.(map[string]any)
+					if !ok {
+						continue
+					}
+					vv, ok := m[s.key]
+					if !ok {
+						continue
+					}
+					v = vv
+				}
+				arr, ok := v.([]any)
+				if !ok {
+					continue
+				}
+				i := s.index
+				if i < 0 {
+					i += len(arr)
+				}
+				if i >= 0 && i < len(arr) {
+					next = append(next, arr[i])
 				}
 			}
 		case s.index >= 0:
@@ -305,7 +337,7 @@ func bindUserFrom(c *contracts.Contract, rec map[string]any, aliases []string, u
 	set("avatar_url", []string{"avatar_url", "avatar", "avatarUrl", "head_url", "headUrl", "photo_url"}, asAnyStr, func(v any) { u.AvatarURL = v.(string) })
 	set("signature", []string{"signature", "profile_bio"}, asAnyStr, func(v any) { u.Signature = v.(string) })
 	set("ip_label", []string{"ip_label", "ip_location", "ipLocation"}, asAnyStr, func(v any) { u.IPLabel = v.(string) })
-	set("gender", []string{"gender"}, asAnyInt, func(v any) { u.Gender = int(v.(int64)) })
+	set("gender", []string{"gender"}, asAnyGender, func(v any) { u.Gender = v.(int) })
 	set("follower_count", []string{"follower_count", "fans_count", "fans"}, asAnyInt, func(v any) { u.FollowerCount = v.(int64) })
 	set("following_count", []string{"following_count", "follow_count", "follows"}, asAnyInt, func(v any) { u.FollowingCount = v.(int64) })
 	set("aweme_count", []string{"aweme_count", "notes_count", "note_count"}, asAnyInt, func(v any) { u.AwemeCount = v.(int64) })
@@ -317,6 +349,25 @@ func bindUserFrom(c *contracts.Contract, rec map[string]any, aliases []string, u
 func asAnyStr(v any) any { return asStr(v) }
 
 func asAnyInt(v any) any { return asInt(v) }
+
+// asAnyGender adapts genderFrom to the set() plumbing above.
+func asAnyGender(v any) any { return genderFrom(v) }
+
+// genderFrom normalizes platform gender values into the model convention
+// (0 unknown, 1 male, 2 female). Numbers pass through; kuaishou faces render
+// gender as "M"/"F" strings (corpus /rest/v/profile/get "sex":"M"), and the
+// common word/CJK forms map too. Unmappable values stay 0 (unknown).
+func genderFrom(v any) int {
+	if s, ok := v.(string); ok {
+		switch strings.ToLower(strings.TrimSpace(s)) {
+		case "m", "male", "男":
+			return 1
+		case "f", "female", "女":
+			return 2
+		}
+	}
+	return int(asInt(v))
+}
 
 // bindUser binds a top-level user/profile record (users binding).
 func bindUser(c *contracts.Contract, rec map[string]any) model.UserProfile {
