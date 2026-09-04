@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -146,8 +145,12 @@ func TestSilentMockChainReport(t *testing.T) {
 		if x.ua != ev[0].ua || x.ua == "fallback" {
 			uaStable = false
 		}
-		if !strings.Contains(x.chUA, `"Google Chrome"`) || !strings.Contains(x.chUA, `"Chromium"`) {
-			t.Fatalf("sec-ch-ua missing/mismatched on the wire: %q", x.chUA)
+		// Client hints must be derived from the SAME UA string on the wire
+		// (session-pinned). The bundled pool legitimately carries Edge-brand
+		// UAs ("Edg/15x" — sec-ch-ua then carries "Microsoft Edge", not
+		// "Google Chrome"), so assert hint/UA consistency, not a fixed brand.
+		if want := deriveClientHints(x.ua)["Sec-Ch-Ua"]; x.chUA == "" || (want != "" && x.chUA != want) {
+			t.Fatalf("sec-ch-ua missing/mismatched on the wire: %q (ua %q, want %q)", x.chUA, x.ua, want)
 		}
 		if x.refer != "https://www.douyin.com/" {
 			t.Fatalf("referer missing: %q", x.refer)
