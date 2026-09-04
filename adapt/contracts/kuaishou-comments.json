@@ -10,7 +10,21 @@
     "method": "GET",
     "placeholders": ["photo_id"]
   },
-  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
-  "binding": {"comments": "$.comment_list"},
-  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20}
+  "cookie": {
+    "required": ["did"],
+    "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"
+  },
+  "binding": {
+    "comments": "$.comment_list",
+    "fields": {
+      "uid": "$.author_id",
+      "nickname": "$.author_name",
+      "avatar_url": "$.headurl"
+    }
+  },
+  "paging": {
+    "cursor_param": "cursor",
+    "count_param": "count",
+    "count_default": 20
+  }
 }

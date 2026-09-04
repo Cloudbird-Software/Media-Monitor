@@ -8,11 +8,30 @@
     "base_url": "https://www.douyin.com",
     "path": "/aweme/v1/web/comment/list/",
     "method": "GET",
-    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "query": {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web"
+    },
     "placeholders": ["aweme_id"]
   },
   "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
-  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
-  "binding": {"comments": "$.comments"},
-  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 20, "has_more_path": "$.has_more", "next_cursor_path": "$.cursor"}
+  "cookie": {
+    "required": ["ttwid"],
+    "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"
+  },
+  "binding": {
+    "comments": "$.comments",
+    "fields": {
+      "user.avatar_url": "$.user.avatar_thumb.url_list[0]",
+      "user.ip_label": "$.ip_label"
+    }
+  },
+  "paging": {
+    "cursor_param": "cursor",
+    "count_param": "count",
+    "count_default": 20,
+    "has_more_path": "$.has_more",
+    "next_cursor_path": "$.cursor"
+  }
 }

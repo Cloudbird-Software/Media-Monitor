@@ -10,8 +10,17 @@
     "method": "GET",
     "placeholders": ["root_comment_id"]
   },
-  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
-  "binding": {"comments": "$.data.comments"},
+  "cookie": {
+    "required": ["web_session"],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {
+    "comments": "$.data.comments",
+    "fields": {
+      "user_info.avatar_url": "$.user_info.image",
+      "user_info.ip_label": "$.ip_location"
+    }
+  },
   "paging": {
     "cursor_param": "cursor",
     "count_default": 20,

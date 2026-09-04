@@ -11,6 +11,12 @@
     "query": {"device_platform": "webapp", "aid": "1967"},
     "placeholders": ["sec_uid"]
   },
-  "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
-  "binding": {"users": "$.user_list"}
+  "cookie": {
+    "required": ["did"],
+    "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"
+  },
+  "binding": {
+    "users": "$.user_list",
+    "fields": {"signature": "$.user_text", "gender": "$.gender"}
+  }
 }

@@ -10,7 +10,21 @@
     "method": "GET",
     "placeholders": ["note_id"]
   },
-  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
-  "binding": {"comments": "$.data.comments"},
-  "paging": {"cursor_param": "cursor", "count_default": 20, "has_more_path": "$.data.has_more", "next_cursor_path": "$.data.cursor"}
+  "cookie": {
+    "required": ["web_session"],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {
+    "comments": "$.data.comments",
+    "fields": {
+      "user_info.avatar_url": "$.user_info.image",
+      "user_info.ip_label": "$.ip_location"
+    }
+  },
+  "paging": {
+    "cursor_param": "cursor",
+    "count_default": 20,
+    "has_more_path": "$.data.has_more",
+    "next_cursor_path": "$.data.cursor"
+  }
 }
