@@ -196,6 +196,7 @@ func TestSynthE2ENewCapabilities(t *testing.T) {
 	t.Run("C_comment_thread_douyin", func(t *testing.T) { synthE2ECommentThread(t, e) })
 	t.Run("D_suggest_words", func(t *testing.T) { synthE2ESuggest(t, e) })
 	t.Run("E_related_graph_douyin", func(t *testing.T) { synthE2ERelated(t, e) })
+	t.Run("F_batch_detail_douyin", func(t *testing.T) { synthE2EBatchDetail(t, e) })
 }
 
 // synthE2EDossierDouyin: 5 作者全量回溯（proposal A 基线 26/20/23/1/21、
@@ -506,4 +507,60 @@ func synthE2ERelated(t *testing.T, e *Engine) {
 	}
 	t.Logf("related: single-seed K2 nodes=%d edges=%d avg=%.1f; pooled 5+3 expansions nodes=%d edges=%d",
 		g.Stats.NNodes, g.Stats.NEdges, g.Stats.AvgOutDegree, len(pooled), edges)
+}
+
+// synthE2EBatchDetail: 20 real + 1 bogus → 1 批返回 20（未知 id 静默省略）、
+// 批/单核心字段一致（aweme_id + digg_count）、45 id → 3 批分批钳制。
+func synthE2EBatchDetail(t *testing.T, e *Engine) {
+	items, _, err := e.SearchItems(context.Background(), "douyin", synthKeyword, "", model.Cursor{}, 60)
+	if err != nil || len(items) < 45 {
+		t.Fatalf("dy seed discovery (need 45 unique ids): %v (%d items)", err, len(items))
+	}
+	var ids []string
+	seen := map[string]bool{}
+	for _, it := range items {
+		if it.ID != "" && !seen[it.ID] {
+			seen[it.ID] = true
+			ids = append(ids, it.ID)
+			if len(ids) == 45 {
+				break
+			}
+		}
+	}
+	// Probe shape: 20 real + 1 nonexistent id — the unknown id is silently
+	// omitted (no partial failure); under the endpoint's 20-id batch cap the
+	// atom splits 21 ids into 2 requests (20 + 1) and returns the 20 hits.
+	batch := append(append([]string{}, ids[:20]...), "9999999999999999999")
+	res, err := e.BatchDetails(context.Background(), "douyin", batch, BatchDetailOptions{})
+	if err != nil {
+		t.Fatalf("BatchDetails: %v", err)
+	}
+	if res.Requested != 21 || res.Returned != 20 || res.Batches != 2 {
+		t.Fatalf("batch outcome = %+v, want 21 requested -> 20 returned in 20+1 batches (silent omission)", res)
+	}
+	if len(res.Missing) != 1 || res.Missing[0] != "9999999999999999999" {
+		t.Fatalf("missing = %v, want the bogus id silently omitted", res.Missing)
+	}
+	// Batch/single core-field consistency (probe: core_matches_single).
+	doc, err := e.Fetch(context.Background(), "douyin-video-download",
+		map[string]string{"aweme_id": ids[0]}, nil)
+	if err != nil {
+		t.Fatalf("single detail: %v", err)
+	}
+	sd, _ := doc["aweme_detail"].(map[string]any)
+	wantDigg := asInt(((sd["statistics"].(map[string]any))["digg_count"]))
+	if res.Items[0].ID != ids[0] || res.Items[0].Stats.Digg != wantDigg {
+		t.Fatalf("batch/single mismatch: %s digg=%d, single digg=%d",
+			res.Items[0].ID, res.Items[0].Stats.Digg, wantDigg)
+	}
+	// Chunking under the count-clamp batch discipline: 45 ids -> 20/20/5.
+	res3, err := e.BatchDetails(context.Background(), "douyin", ids, BatchDetailOptions{})
+	if err != nil {
+		t.Fatalf("BatchDetails(45): %v", err)
+	}
+	if res3.Batches != 3 || res3.Returned != 45 || len(res3.Missing) != 0 {
+		t.Fatalf("45-id chunking = %+v, want 3 batches / 45 returned / 0 missing", res3)
+	}
+	t.Logf("batch detail: 21->20 (bogus silently omitted, 20+1 batches), 45 ids -> %d batches, batch==single on digg=%d",
+		res3.Batches, wantDigg)
 }

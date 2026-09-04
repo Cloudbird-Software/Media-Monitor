@@ -164,6 +164,9 @@ var categorySuffix = map[string]string{
 	"profile":         "profile",
 	"user_search":     "user-search",
 	"related":         "related",
+	"multi_detail":    "multi-detail",
+	"mix":             "mix",
+	"series":          "series",
 }
 
 // resolveName finds the contract name for a platform collect category,

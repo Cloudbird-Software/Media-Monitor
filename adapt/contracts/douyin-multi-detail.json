@@ -1,0 +1,21 @@
+{
+  "name": "douyin-multi-detail",
+  "platform": "douyin",
+  "category": "multi_detail",
+  "version": "1",
+  "doc": "batch item-detail enrichment (capability F BatchDetail / proposals G, P2): one request resolves up to 20 item details — the metric-refresh face of monitored items at 1/20th the request volume (the silence goal served directly). Evidence: corpus/f2 14 req POST /aweme/v1/web/multi/aweme/detail/ with form body aweme_ids=[\"id\",...]&origin_type=... (the value is a URL-encoded JSON array STRING — the engine sends the same JSON-array string in the body slot); oracle probe: request 20 -> aweme_details[20] with the full detail aweme shape, one unknown id mixed in is SILENTLY OMITTED (no partial failure, returned = hit count), envelope {aweme_details, emoji_list:null, filter_list:null, verification_filter_list:null, extra, log_pb, status_code:0}, core fields (aweme_id, statistics.digg_count) byte-equal to the single-shot detail face. Batch ceiling 20 per request (probe/f2 evidence); the engine chunks larger id lists and clamps the batch size to the per-request count cap discipline. Real-site adaptation note: the corpus call is x-www-form-urlencoded; the synth oracle accepts both (JSON first, form fallback) — a strict real-site bump may route the slot body-only.",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/multi/aweme/detail/",
+    "method": "POST",
+    "body": {"origin_type": "unicode"},
+    "placeholders": [],
+    "query": {"aweme_ids": ""}
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "items": "$.aweme_details",
+    "fields": {"extra.play": "$.statistics.play_count"}
+  }
+}
