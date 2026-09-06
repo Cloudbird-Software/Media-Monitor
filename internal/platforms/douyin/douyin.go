@@ -68,6 +68,14 @@ func Defaults(contractsDir string) (*Assembly, *contracts.Registry, error) {
 			"group":        "douyin-group-members",
 			"send_message": "douyin-send-message",
 			"user_posts":   "douyin-user-posts",
+			// capability A claimed face (author chain), D suggest words,
+			// E related graph, F batch detail, G mix/series chains
+			"profile":      "douyin-profile",
+			"suggest":      "douyin-suggest-words",
+			"related":      "douyin-related",
+			"multi_detail": "douyin-multi-detail",
+			"mix":          "douyin-mix",
+			"series":       "douyin-series",
 		},
 	}, reg, nil
 }

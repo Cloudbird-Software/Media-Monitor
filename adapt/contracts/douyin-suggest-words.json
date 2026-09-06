@@ -1,0 +1,40 @@
+{
+  "name": "douyin-suggest-words",
+  "platform": "douyin",
+  "category": "suggest",
+  "version": "1",
+  "doc": "search suggestion words (capability D SuggestWords, query-recall expansion). Evidence: corpus 88 req GET /aweme/v1/web/api/suggest_words (f2 SUGGEST_WORDS business_id=30068 param table) -> 7-key envelope {StabilityStatistics, data, errno, extra, log_id, msg, real_log_id}; data = list of groups; with query=related_search: 10 prefix-related words (word items {id(19-digit), params{challenge_id, extra_info}, word}, channel_id=94349538563); without query: source/type=inbox, 9 hot words constant across calls. Signing family: a_bogus (same family as search), no paging.",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/api/suggest_words",
+    "method": "GET",
+    "query": {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "query": ""
+    },
+    "placeholders": []
+  },
+  "signature": {
+    "params": [
+      "a_bogus",
+      "msToken"
+    ],
+    "required": [
+      "a_bogus"
+    ]
+  },
+  "cookie": {
+    "required": [
+      "ttwid"
+    ],
+    "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"
+  },
+  "binding": {
+    "items": "$.data",
+    "fields": {
+      "extra.source": "$.source",
+      "extra.channel_id": "$.params.channel_id"
+    }
+  }
+}

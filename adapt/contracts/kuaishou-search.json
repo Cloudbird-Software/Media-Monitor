@@ -12,5 +12,10 @@
     "placeholders": []
   },
   "cookie": {"required": ["did"], "source": "browser profile import or env MEDIAMON_KUAISHOU_COOKIES"},
-  "binding": {"items": "$.data.visionSearchPhotoResult.feeds"}
+  "binding": {
+    "items": "$.data.visionSearchPhotoResult.feeds",
+    "fields": {
+      "topic.tags": "$.tags[*].name"
+    }
+  }
 }

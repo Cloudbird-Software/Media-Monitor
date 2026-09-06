@@ -121,8 +121,8 @@ func TestUserPostsMatrixRowsOffline(t *testing.T) {
 	if names["up-douyin-cursor-resume-once"] != vClean {
 		t.Fatalf("resume row not clean")
 	}
-	if names["fc-up-kuaishou-not-declared"] != vFailClosed {
-		t.Fatalf("not-declared row must be fail_closed")
+	if names["fc-up-shipinhao-not-declared"] != vFailClosed {
+		t.Fatalf("shipinhao not-declared row must be fail_closed")
 	}
 	// Specific behavioral metrics prove the backtrack params reached the
 	// engine rather than being swallowed.
@@ -136,7 +136,7 @@ func TestUserPostsMatrixRowsOffline(t *testing.T) {
 			if m(r, "items_emitted") != float64(2) || m(r, "requests") != float64(1) {
 				t.Fatalf("early-stop metrics wrong: %v", r.Metrics)
 			}
-		case "fc-up-kuaishou-not-declared":
+		case "fc-up-shipinhao-not-declared":
 			if r.Code != codeNotDeclared {
 				t.Fatalf("not-declared code = %q", r.Code)
 			}

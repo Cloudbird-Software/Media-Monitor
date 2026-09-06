@@ -6,6 +6,9 @@ import (
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/httpclient"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/douyin"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/kuaishou"
+	"github.com/Cloudbird-Software/Media-Monitor/internal/platforms/xhs"
 )
 
 // wiring.go — shared cmd-layer wiring: account-pool injection, the UA
@@ -24,6 +27,12 @@ func accountPoolFor(platform, id string) (*accounts.Pool, error) {
 	pool, err := accounts.Open(accountsDir())
 	if err != nil {
 		return nil, err
+	}
+	// Silent-scraping fix (report §3 附带): "auto" selects accounts by health
+	// inside the engine — it must pass through instead of failing the
+	// not-found check (auto mode was reachable only via mediad REST before).
+	if id == "auto" {
+		return pool, nil
 	}
 	a, ok := pool.Get(id)
 	if !ok {
@@ -61,6 +70,33 @@ func uaPoolUserAgents() []string {
 
 // sharedHTTPClient builds the HTTP client shared by the collect/send/live
 // engines, with the UA pool injected when available.
+// sharedHTTPClient builds the HTTP client shared by the collect/send/live
+// engines, with the UA pool injected when available and the silent-scraping
+// retry budget (MaxRetries default 2, MEDIAMON_MAX_RETRIES override — report
+// item 5 / E: the collector used to fire a single attempt).
 func sharedHTTPClient() *httpclient.Client {
-	return httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()})
+	return httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents(), MaxRetries: httpclient.MaxRetriesFromEnv()})
+}
+
+// browserHeaderDefaults assembles the per-platform browser-grade header sets
+// (silent-scraping B1): referer/accept/accept-language/sec-fetch-*/priority
+// defaults the engine merges under every request; contract transport.headers
+// can still override each value.
+func browserHeaderDefaults() map[string]map[string]string {
+	return map[string]map[string]string{
+		douyin.Platform:   douyin.BrowserHeaders(),
+		kuaishou.Platform: kuaishou.BrowserHeaders(),
+		xhs.Platform:      xhs.BrowserHeaders(),
+	}
+}
+
+// sessionUAPool loads the UA pool for engine session pinning (one UA per
+// cookie lifetime, report B2/B3). Not a gate: nil falls back to a
+// deterministic real-Chrome UA inside the engine.
+func sessionUAPool() *accounts.UAPool {
+	pool, err := accounts.LoadUAPoolDefault(os.Getenv("MEDIAMON_UA_POOL"))
+	if err != nil || pool == nil {
+		return nil
+	}
+	return pool
 }

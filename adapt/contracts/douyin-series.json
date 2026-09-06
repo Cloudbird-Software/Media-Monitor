@@ -1,0 +1,20 @@
+{
+  "name": "douyin-series",
+  "platform": "douyin",
+  "category": "series",
+  "version": "1",
+  "doc": "short-drama series episode list (capability G SeriesChain / proposals H, P2): same completeness/follow-update face as the mix chain on the series id. Evidence: corpus GET /aweme/v1/web/series/aweme/?series_id=...&pull_type=0&cursor=...&count=... (f2 pull_type: int, initially 0) -> {aweme_list[full detail aweme], extra, has_more, log_pb, max_cursor, min_cursor, related_item_tag:-1, selection_panel_conf, status_code:0, status_msg, watch_histories:null} — a max_cursor chain (NOT the mix's plain index cursor) and NO item_id_to_episode map, so episode numbers derive from walk order (page position); oracle probe: full chain 6 pages 33 episodes, cursor closure, unique ids, repeat-walk deterministic. The series_id is discovered passively from detail/search cards' series_info.series_id (probe: 5/20 search cards carry it).",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/series/aweme/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "pc_web", "pull_type": "0"},
+    "placeholders": ["series_id"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "items": "$.aweme_list"
+  },
+  "paging": {"cursor_param": "cursor", "count_param": "count", "count_default": 6, "has_more_path": "$.has_more", "next_cursor_path": "$.max_cursor"}
+}

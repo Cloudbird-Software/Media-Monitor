@@ -1,0 +1,26 @@
+{
+  "name": "douyin-related",
+  "platform": "douyin",
+  "category": "related",
+  "version": "1",
+  "doc": "related-recommendations of one item (capability E RelatedGraph — the only graph-shaped face, 1-hop adjacency). Evidence: corpus/f2 POST_RELATED param table (note the camelCase awemePcRecRawData unlike the snake_case family) GET /aweme/v1/web/aweme/related?aweme_id=... -> 6-key envelope {aweme_list, chime_video_list, filter_infos, has_more, log_pb, status_code}, aweme_list = 10 items with full author/statistics/video/create_time; has_more=1 but NO pagination cursor — single-page semantics (10 per hop) on both synth oracle and real site (f2 evidence). The K-hop walk, node/edge budget and cycle guard live in the engine atom, not the contract.",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/aweme/related/",
+    "method": "GET",
+    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
+    "placeholders": ["aweme_id"]
+  },
+  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
+  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "binding": {
+    "items": "$.aweme_list",
+    "fields": {
+      "id": "$.aweme_list[].aweme_id",
+      "create_time": "$.aweme_list[].create_time",
+      "stats.digg": "$.aweme_list[].statistics.digg_count",
+      "author.sec_uid": "$.aweme_list[].author.sec_uid",
+      "author.nickname": "$.aweme_list[].author.nickname"
+    }
+  }
+}

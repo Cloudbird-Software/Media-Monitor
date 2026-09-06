@@ -24,6 +24,10 @@ done <<<"$mains"
 STDLIB=$(go list std | tr '\n' ' ')
 imports=$(go list -f '{{range .Imports}}{{.}} {{end}}' ./... | tr ' \n' '\n\n' | grep -v '^$' || true)
 bad_external=""
+# ADR-0100 exception: TLS/H2 fingerprint impersonation transport
+# (bogdanfinn/tls-client + fhttp + utls + their transitives) is the single
+# authorized stdlib-only exception; everything else still fails closed.
+ADR_EXCEPTION='^(github\.com/bogdanfinn/.*|github\.com/andybalholm/brotli.*|github\.com/bdandy/.*|github\.com/quic-go/.*|github\.com/cloudflare/circl.*|github\.com/klauspost/compress.*|github\.com/jordanlewis/gcassert.*|github\.com/tam7t/hpkp.*|github\.com/xyproto/randomstring.*|github\.com/bwesterb/go-ristretto.*|go\.uber\.org/mock.*|github\.com/google/uuid.*|github\.com/stretchr/testify.*|github\.com/davecgh/go-spew.*|github\.com/pmezard/go-difflib.*|github\.com/rogpeppe/go-internal.*|github\.com/kr/.*|gopkg\.in/(check|yaml)\..*|golang\.org/x/.*)$'
 while IFS= read -r imp; do
   [ -z "$imp" ] && continue
   case "$imp" in
@@ -32,22 +36,36 @@ while IFS= read -r imp; do
   if [[ " $STDLIB " == *" $imp "* ]]; then
     continue
   fi
+  if echo "$imp" | grep -qE "$ADR_EXCEPTION"; then
+    continue
+  fi
   bad_external="$bad_external $imp"
 done <<<"$imports"
 if [ -n "$bad_external" ]; then
   echo "arch: non-module, non-stdlib imports found:$bad_external" >&2
+  echo "arch: (stdlib-only policy as amended by ADR-0100; new exceptions need their own ADR)" >&2
   fail=1
 fi
 
-# 3) stdlib-only module graph（依赖边界 lint）
+# 3) module graph policy（依赖边界 lint，ADR-0100 修订）：go.mod 依赖必须全部
+#    落在 ADR-0100 例外集合内；出现集合外模块即失败。
 if grep -qE '^require ' go.mod; then
-  echo "arch: go.mod has a require block (stdlib-only policy)" >&2
-  fail=1
-fi
-mods=$(go list -m all | tail -n +2)
-if [ -n "$mods" ]; then
-  echo "arch: non-empty module graph: $(echo "$mods" | tr '\n' ' ')" >&2
-  fail=1
+  bad_mods=""
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    modpath=$(echo "$line" | awk '{print $1}')
+    case "$modpath" in
+      "$MOD") continue ;;
+    esac
+    if echo "$modpath" | grep -qE "$ADR_EXCEPTION"; then
+      continue
+    fi
+    bad_mods="$bad_mods $modpath"
+  done <<<"$(go list -m all | tail -n +2)"
+  if [ -n "$bad_mods" ]; then
+    echo "arch: go.mod modules outside the ADR-0100 exception set:$bad_mods" >&2
+    fail=1
+  fi
 fi
 
 # 4) internal/ must never import upstream/ (INV-3: submodules are diffable

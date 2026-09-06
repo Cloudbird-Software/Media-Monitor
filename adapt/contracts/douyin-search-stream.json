@@ -1,0 +1,50 @@
+{
+  "name": "douyin-search-stream",
+  "platform": "douyin",
+  "category": "search_stream",
+  "version": "1",
+  "doc": "真站搜索第一页（2026-09-06 真站实证）：/general/search/stream/ 返回 NDJSON 帧流（非标准 chunk 帧），extra 的 logid 经 search_id 参数回传给后续 single 翻页。引擎 SearchItems 对 douyin 自动先走本契约，失败回落 single。",
+  "transport": {
+    "base_url": "https://www.douyin.com",
+    "path": "/aweme/v1/web/general/search/stream/",
+    "method": "GET",
+    "query": {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web",
+      "search_channel": "aweme_general"
+    },
+    "placeholders": []
+  },
+  "signature": {
+    "params": [
+      "a_bogus",
+      "msToken"
+    ],
+    "required": [
+      "a_bogus"
+    ]
+  },
+  "cookie": {
+    "required": [
+      "ttwid"
+    ],
+    "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"
+  },
+  "binding": {
+    "items": "$.data",
+    "fields": {
+      "extra.mix_id": "$.aweme_info.mix_info.mix_id",
+      "extra.series_id": "$.aweme_info.series_info.series_id",
+      "topic.tags": "$.aweme_info.text_extra[*].hashtag_name",
+      "topic.tag_id": "$.aweme_info.text_extra[*].hashtag_id"
+    }
+  },
+  "paging": {
+    "cursor_param": "offset",
+    "count_param": "count",
+    "count_default": 20,
+    "has_more_path": "$.has_more",
+    "next_cursor_path": "$.cursor"
+  }
+}

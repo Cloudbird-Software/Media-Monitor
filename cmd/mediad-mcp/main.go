@@ -182,12 +182,18 @@ func newApp(adaptDir, dataDir string) (*app, error) {
 	}
 	baseCtx := collect.Context{
 		Registry: reg,
-		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents()}),
+		HTTP:     httpclient.New(httpclient.Config{UserAgents: uaPoolUserAgents(), MaxRetries: httpclient.MaxRetriesFromEnv()}),
 		Obs:      obsMap,
 		Signers:  signers,
 		Cookies:  cookies,
 		Names:    names,
 		Accounts: pool,
+		BrowserHeaders: map[string]map[string]string{
+			douyin.Platform:   douyin.BrowserHeaders(),
+			kuaishou.Platform: kuaishou.BrowserHeaders(),
+			xhs.Platform:      xhs.BrowserHeaders(),
+		},
+		UAPool: sessionUAPool(),
 	}
 	return &app{
 		reg:      reg,

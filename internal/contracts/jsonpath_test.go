@@ -76,3 +76,42 @@ func TestParsePathIntegerIndexUnchanged(t *testing.T) {
 		t.Fatal("ParsePath($.a[zz]) succeeded, want error")
 	}
 }
+
+// TestParsePathKeyIndexOnMap: "key[0]" must descend the key and then index
+// into the resulting array — the report-G4 shape ("avatar_thumb.url_list[0]"
+// style). Negative indexes count from the end.
+func TestParsePathKeyIndexOnMap(t *testing.T) {
+	doc := map[string]any{
+		"avatar_thumb": map[string]any{
+			"url_list": []any{"u0", "u1", "u2"},
+		},
+	}
+	p, err := ParsePath("$.avatar_thumb.url_list[0]")
+	if err != nil {
+		t.Fatalf("ParsePath: %v", err)
+	}
+	if v := p.First(doc); v != "u0" {
+		t.Fatalf("First($.avatar_thumb.url_list[0]) = %v, want u0", v)
+	}
+
+	pn, err := ParsePath("$.avatar_thumb.url_list[-1]")
+	if err != nil {
+		t.Fatalf("ParsePath(-1): %v", err)
+	}
+	if v := pn.First(doc); v != "u2" {
+		t.Fatalf("First($..url_list[-1]) = %v, want u2", v)
+	}
+
+	// Out-of-range negative index selects nothing (no panic).
+	poob, _ := ParsePath("$.avatar_thumb.url_list[-4]")
+	if vs := poob.Select(doc); len(vs) != 0 {
+		t.Fatalf("Select(-4) = %v, want none", vs)
+	}
+
+	// A plain key path must NOT be treated as an index form (regression for
+	// the parseRel/plain-key distinction).
+	pp, _ := ParsePath("$.avatar_thumb.url_list")
+	if v := pp.First(doc); v == nil {
+		t.Fatal("First($.avatar_thumb.url_list) = nil, want the array")
+	}
+}

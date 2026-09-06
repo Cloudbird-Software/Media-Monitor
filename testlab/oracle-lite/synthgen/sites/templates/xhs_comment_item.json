@@ -1,0 +1,104 @@
+{
+ "family": "xhs_comment_item",
+ "source_endpoints": [
+  "edith.xiaohongshu.com/api/sns/web/v2/comment/page"
+ ],
+ "n_samples": 247,
+ "min_parent_rate": 0.5,
+ "keep_paths": 66,
+ "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地",
+ "template": {
+  "sub_comments": [
+   {
+    "liked": false,
+    "user_info": {
+     "user_id": "aac728289b924a6bf3fd5b63",
+     "nickname": "momo",
+     "image": "https://sns-avatar-qc.xhscdn.com/rhmkky/7121n5ga12xe4pp9l7g109m1je4sk8uvwdvw2pi6?dgnlhIuad0/7/u/845/mormlo/lkk",
+     "ai_agent": false,
+     "xsec_token": "SMnnniQt2ReA46EOO80iTD6PgUf6fdu--dn_1wX1JYxS2="
+    },
+    "show_tags": [
+     "is_author"
+    ],
+    "ip_location": "合成",
+    "target_comment": {
+     "id": "27b4eb09326233b4ea5f1ee4",
+     "user_info": {
+      "xsec_token": "ukGeWd1rvFujFdGtVoz-p1OCNsvxAGXO8xy92ZzyaFyUm=",
+      "user_id": "a24803d8b583d60b4e6d1721",
+      "nickname": "momo",
+      "image": "https://sns-avatar-qc.xhscdn.com/ugypwv/569d870892v14xk9i1waf4i2.yag?ogfwiSaio4/9/g/904/zrcayf/aiw",
+      "ai_agent": false
+     }
+    },
+    "id": "20337bbc6f0d893da832cbd9",
+    "content": "",
+    "like_count": "0",
+    "create_time": 3000469389519,
+    "pictures": [
+     {
+      "width": 1920,
+      "url_pre": "http://sns-webpic-qc.xhscdn.com/483826935458/67g7q3t6d79sc523ec5055mc48k939x2/utaosyk/4650d2x50568uepz51d5200ef8njd0wt8tb15tj9!ez_q_fdvh_bg_8",
+      "url_default": "http://sns-webpic-qc.xhscdn.com/165620852221/363570y5ue6w6t5453860el183q5r4d4/kcooscx/9662p6p82696wtcw60l7831he8zpd7us7ao19ul3!xz_ntfu14_sjdq_pz_3",
+      "info_list": [
+       {
+        "image_scene": "WB_PRV",
+        "url": "http://sns-webpic-qc.xhscdn.com/611988102852/50w8z8k1p35qn771or6830hb13g792k8/gpdghrp/5607k5w19910yiab84w2038ar7got9um6wl52gt2!rq_n_mpnd_lb_5"
+       }
+      ],
+      "height": 2560
+     }
+    ],
+    "invalid": false,
+    "note_id": "8315b2e130ca3a125a9ed8a8",
+    "status": 0,
+    "at_users": []
+   }
+  ],
+  "note_id": "c6a44ea5aaf9025b1e3415e4",
+  "status": 0,
+  "content": "合成",
+  "liked": false,
+  "like_count": "0",
+  "sub_comment_cursor": "",
+  "pictures": [
+   {
+    "info_list": [
+     {
+      "image_scene": "WB_PRV",
+      "url": "http://sns-webpic-qc.xhscdn.com/513853963099/hvv6lhl3c7tijh2x25qo8466496w087a/fzxyyhr/6251e9v5913jecso2lk027xjusef1244mqupg8i3!gr_o_yffq_dt_2"
+     }
+    ],
+    "height": 2560,
+    "width": 1920,
+    "url_pre": "http://sns-webpic-qc.xhscdn.com/512351671795/cph7ahh1r6ortv8j24or1357202d239g/otwadvb/4675t4g2248chulw8dc044vuadkj3234jyuzq2t7!ba_j_ubkz_ws_6",
+    "url_default": "http://sns-webpic-qc.xhscdn.com/713536756859/uu4z59173xr38v54iw5ntwjf51738vt0/ctzyfun/9549q9m1853xhdcw8cu366ubcxqq0572hswbi2t6!ln_xyev71_znlf_ia_9"
+   }
+  ],
+  "id": "f4e8a333a106b18efb3bdaea",
+  "user_info": {
+   "image": "https://sns-avatar-qc.xhscdn.com/kisvcc/734p552697l79wg2c6fps9b5.tsl?ogtunEsek8/0/g/139/lbptvt/oqa",
+   "ai_agent": false,
+   "xsec_token": "X4aXngGLuIwtxUTA_1L5daTxALCloCpDhPB7SJDIMThL5=",
+   "user_id": "afc716f40c91021616c5f749",
+   "nickname": "momo"
+  },
+  "show_tags": [
+   "is_author"
+  ],
+  "ip_location": "合成",
+  "at_users": [
+   {
+    "user_id": "6f2123e9d0b2acb5128fc673",
+    "nickname": "合成",
+    "ai_agent": false,
+    "xsec_token": "2Fq1N5d4cNMAsZt_T5H4Qw4K12zfZUVBr98KxAK7d3cGi="
+   }
+  ],
+  "create_time": 2448274462864,
+  "sub_comment_count": "0",
+  "sub_comment_has_more": false,
+  "invalid": false
+ }
+}

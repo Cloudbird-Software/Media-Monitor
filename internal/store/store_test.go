@@ -228,3 +228,101 @@ func TestPropertyAppendScanInvariant(t *testing.T) {
 	}
 	testkit.Run(t, 20260825, 60, []testkit.Prop{prop})
 }
+
+// TestReplaceRewritesAtomically: Replace swaps the collection content for
+// exactly the given rows; a subsequent Append continues on the new file.
+func TestReplaceRewritesAtomically(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	for _, k := range []string{"a", "b", "c"} {
+		if err := s.Append("coll", map[string]string{"k": k}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.Replace("coll", []any{map[string]string{"k": "b"}}); err != nil {
+		t.Fatalf("Replace: %v", err)
+	}
+	var got []string
+	if err := s.Scan("coll", func(raw []byte) error {
+		var m map[string]string
+		if err := json.Unmarshal(raw, &m); err != nil {
+			return err
+		}
+		got = append(got, m["k"])
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "b" {
+		t.Fatalf("after Replace = %v, want [b]", got)
+	}
+	// Append after Replace lands on the rewritten file.
+	if err := s.Append("coll", map[string]string{"k": "d"}); err != nil {
+		t.Fatal(err)
+	}
+	got = nil
+	_ = s.Scan("coll", func(raw []byte) error {
+		var m map[string]string
+		json.Unmarshal(raw, &m)
+		got = append(got, m["k"])
+		return nil
+	})
+	if len(got) != 2 || got[0] != "b" || got[1] != "d" {
+		t.Fatalf("append-after-replace = %v, want [b d]", got)
+	}
+	// Replace with an empty set empties the collection.
+	if err := s.Replace("coll", nil); err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	_ = s.Scan("coll", func([]byte) error { n++; return nil })
+	if n != 0 {
+		t.Fatalf("empty Replace left %d rows", n)
+	}
+}
+
+// TestReplaceWithExternalHandleHeld: on Windows a concurrent process (or this
+// process's own append handle, as a stand-in) holding the collection open
+// must not break Replace — the rename path degrades to an in-place rewrite.
+func TestReplaceWithExternalHandleHeld(t *testing.T) {
+	dir := t.TempDir()
+	s, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	if err := s.Append("coll", map[string]string{"k": "old"}); err != nil {
+		t.Fatal(err)
+	}
+	// Hold an append handle on the live file, like a second mediad would.
+	h, err := os.OpenFile(filepath.Join(dir, "coll.jsonl"), os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer h.Close()
+	if err := s.Replace("coll", []any{map[string]string{"k": "new"}}); err != nil {
+		t.Fatalf("Replace with held handle: %v", err)
+	}
+	var got []string
+	if err := s.Scan("coll", func(raw []byte) error {
+		var m map[string]string
+		if err := json.Unmarshal(raw, &m); err != nil {
+			return err
+		}
+		got = append(got, m["k"])
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != "new" {
+		t.Fatalf("after Replace = %v, want [new]", got)
+	}
+	// No tmp residue.
+	if _, err := os.Stat(filepath.Join(dir, "coll.jsonl.tmp")); !os.IsNotExist(err) {
+		t.Fatalf("tmp residue left behind: %v", err)
+	}
+}

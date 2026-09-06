@@ -11,6 +11,9 @@
     "query": {"device_platform": "webapp", "aid": "1967"},
     "placeholders": ["sec_uid"]
   },
-  "cookie": {"required": ["web_session"], "source": "browser profile import or env MEDIAMON_XHS_COOKIES"},
-  "binding": {"users": "$.user_list"}
+  "cookie": {
+    "required": ["web_session"],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {"users": "$.user_list", "fields": {"short_id": "$.red_id"}}
 }

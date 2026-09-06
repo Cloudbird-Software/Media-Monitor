@@ -41,9 +41,9 @@ func TestDouyinCommentsRealContract(t *testing.T) {
 		if calls.Add(1) == 1 {
 			_, _ = w.Write([]byte(`{
 				"comments": [
-					{"cid":"7660010000000000000001","aweme_id":"7660000000000000001","text":"示例评论一","create_time":1780001001,"digg_count":626,"reply_count":7,"sticky":false,
+					{"cid":"7660010000000000000001","aweme_id":"7660000000000000001","text":"示例评论一","create_time":1780001001,"digg_count":626,"reply_comment_total":7,"item_comment_total":42,"sticky":false,
 					 "user":{"uid":"1000000001","sec_uid":"MS4wLjABAAAA-c1","short_id":"100001","nickname":"示例用户一","avatar_url":"https://example.invalid/a1.jpg","signature":"个签一","ip_label":"陕西","gender":2,"follower_count":1200,"following_count":88,"aweme_count":45,"total_favorited":99000}},
-					{"cid":"7660010000000000000002","aweme_id":"7660000000000000001","text":"示例评论二","create_time":1780001002,"digg_count":14,"reply_count":3,"sticky":false,
+					{"cid":"7660010000000000000002","aweme_id":"7660000000000000001","text":"示例评论二","create_time":1780001002,"digg_count":14,"reply_comment_total":3,"item_comment_total":42,"sticky":false,
 					 "user":{"uid":"1000000002","sec_uid":"MS4wLjABAAAA-c2","nickname":"示例用户二","avatar_url":"https://example.invalid/a2.jpg","ip_label":"浙江","gender":1}}
 				],
 				"cursor": 2, "has_more": true

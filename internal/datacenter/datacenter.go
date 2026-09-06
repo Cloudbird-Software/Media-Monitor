@@ -66,8 +66,9 @@ type Config struct {
 type Hub struct {
 	cfg      Config
 	mu       sync.Mutex
-	records  *list.List               // oldest -> newest
-	index    map[string]*list.Element // key -> element
+	records  *list.List               // oldest -> newest (visible window)
+	index    map[string]*list.Element // key -> element (visible window only)
+	seen     map[string]bool          // every persisted key ever (dedup truth)
 	st       *store.Store
 	http     *httpclient.Client
 	lastPush time.Time
@@ -76,8 +77,16 @@ type Hub struct {
 }
 
 // New builds a Hub over a store dir. The store collection "datacenter" holds
-// the records (one JSON row each); "datacenter_dedup" holds seen hashes;
-// "datacenter_retry" holds failed pushes.
+// the records (one JSON row each); "datacenter_retry" holds failed pushes.
+//
+// Persistence is read-back: New() replays the "datacenter" collection so a
+// restarted process (or a second CLI invocation) sees the rows previously
+// written — List/export read the real store, and the in-memory dedup index
+// is rebuilt from EVERY persisted key (cross-process dedup: re-adding a key
+// that a previous process already stored is still rejected). The visible
+// record list is capped to the newest MaxRecords rows; the dedup index
+// intentionally covers all history (a key evicted from the visible window
+// must not silently re-enter).
 func New(cfg Config) (*Hub, error) {
 	if cfg.Dir == "" {
 		return nil, errors.New("datacenter: Dir is required")
@@ -90,6 +99,7 @@ func New(cfg Config) (*Hub, error) {
 		cfg:     cfg,
 		records: list.New(),
 		index:   map[string]*list.Element{},
+		seen:    map[string]bool{},
 		st:      st,
 		now:     time.Now,
 	}
@@ -98,7 +108,50 @@ func New(cfg Config) (*Hub, error) {
 	} else {
 		h.http = httpclient.New(httpclient.Config{})
 	}
+	if err := h.reloadLocked(); err != nil {
+		st.Close()
+		return nil, err
+	}
 	return h, nil
+}
+
+// reloadLocked rebuilds the in-memory state from the persisted records.
+// Malformed rows are skipped (never fail the whole hub on one bad line);
+// duplicate keys collapse to their newest occurrence. Every persisted key
+// enters the dedup set even when the visible window is capped.
+func (h *Hub) reloadLocked() error {
+	type entry struct {
+		rec   Record
+		elem  *list.Element
+		order int
+	}
+	var rows []Record
+	_ = h.st.Scan("datacenter", func(raw []byte) error {
+		var r Record
+		if err := json.Unmarshal(raw, &r); err == nil && r.UserKey != "" {
+			rows = append(rows, r)
+		}
+		return nil
+	})
+	latest := map[string]entry{}
+	order := 0
+	for _, r := range rows {
+		key := r.Key()
+		h.seen[key] = true
+		if prev, dup := latest[key]; dup {
+			h.removeElement(prev.elem)
+		}
+		elem := h.records.PushBack(r)
+		latest[key] = entry{rec: r, elem: elem, order: order}
+		order++
+	}
+	// Trim the visible list to the cap; keys stay in the dedup set.
+	if h.cfg.MaxRecords > 0 {
+		for h.records.Len() > h.cfg.MaxRecords {
+			h.removeElement(h.records.Front())
+		}
+	}
+	return nil
 }
 
 // SetClock overrides the hub clock (tests inject a fake; no real time).
@@ -113,7 +166,8 @@ func (h *Hub) Close() error {
 	return h.st.Close()
 }
 
-// Add ingests a record: dedup by key, evict oldest if over cap, persist.
+// Add ingests a record: dedup by key (against ALL persisted keys, including
+// rows written by previous processes), evict oldest if over cap, persist.
 // Returns false if the record was a duplicate (not added).
 func (h *Hub) Add(rec Record) (bool, error) {
 	h.mu.Lock()
@@ -124,12 +178,15 @@ func (h *Hub) Add(rec Record) (bool, error) {
 	if rec.UserKey == "" {
 		return false, nil // fail-closed: no key = not a usable lead
 	}
-	if _, dup := h.index[rec.Key()]; dup {
+	if h.seen[rec.Key()] {
 		return false, nil
 	}
 	elem := h.records.PushBack(rec)
 	h.index[rec.Key()] = elem
+	h.seen[rec.Key()] = true
 	if err := h.st.Append("datacenter", rec); err != nil {
+		h.removeElement(elem)
+		delete(h.seen, rec.Key())
 		return false, fmt.Errorf("datacenter: persist: %w", err)
 	}
 	// Evict oldest beyond cap.
@@ -249,6 +306,10 @@ func (h *Hub) push(ctx context.Context, force bool) error {
 	h.lastPush = h.now()
 	h.pushed = true
 	h.mu.Unlock()
+	// A successful full push delivers every record — including any that were
+	// waiting in the retry queue from an earlier failure. Clear the queue so
+	// RetryFailed never re-sends already-delivered rows (full-re-send fix).
+	_ = h.st.Replace("datacenter_retry", nil)
 	return nil
 }
 
@@ -262,42 +323,105 @@ func (h *Hub) TestWebhook(ctx context.Context) error {
 	return err
 }
 
+// enqueueRetry appends records to the retry queue, skipping rows whose
+// content is already queued (repeated push failures used to duplicate the
+// whole batch into the queue on every attempt).
 func (h *Hub) enqueueRetry(records []Record) {
+	queued := map[string]bool{}
+	_ = h.st.Scan("datacenter_retry", func(raw []byte) error {
+		var r Record
+		if err := json.Unmarshal(raw, &r); err == nil {
+			queued[r.Hash()] = true
+		}
+		return nil
+	})
 	for _, r := range records {
+		if queued[r.Hash()] {
+			continue
+		}
 		_ = h.st.Append("datacenter_retry", r)
 	}
 }
 
-// RetryFailed re-attempts pushing records from the retry queue. Returns the
-// number still failing (re-enqueued).
-func (h *Hub) RetryFailed(ctx context.Context) (int, error) {
-	if h.cfg.WebhookURL == "" {
-		return 0, nil
-	}
-	var failing []Record
-	var stillFail int
+// ErrNoWebhook marks retry/test operations attempted without a configured
+// webhook URL — an explicit, observable failure (the CLI used to print
+// "0 records still failing" while silently doing nothing).
+var ErrNoWebhook = errors.New("datacenter: no webhook url configured")
+
+// RetryOutcome reports what a retry pass actually did.
+type RetryOutcome struct {
+	Queued       int // distinct records found in the retry queue
+	Repushed     int // records re-pushed successfully this pass
+	StillFailing int // records that failed again (kept in the queue)
+}
+
+// RetryQueueLen returns the number of distinct records currently waiting in
+// the retry queue.
+func (h *Hub) RetryQueueLen() int {
+	n := 0
 	_ = h.st.Scan("datacenter_retry", func(raw []byte) error {
-		var r Record
-		if err := json.Unmarshal(raw, &r); err == nil {
-			failing = append(failing, r)
-		}
+		n++
 		return nil
 	})
-	if len(failing) == 0 {
-		return 0, nil
+	return n
+}
+
+// RetryFailed re-attempts pushing the retry queue: records that succeed are
+// REMOVED from the queue (atomically rewritten); records that fail again
+// stay queued. Records are re-pushed individually and de-duplicated by
+// content hash, so a record is never re-sent twice in one pass and past
+// successes are never re-sent.
+func (h *Hub) RetryFailed(ctx context.Context) (RetryOutcome, error) {
+	if h.cfg.WebhookURL == "" {
+		return RetryOutcome{}, ErrNoWebhook
 	}
-	for _, r := range failing {
+	seen := map[string]bool{}
+	var pending []Record
+	_ = h.st.Scan("datacenter_retry", func(raw []byte) error {
+		var r Record
+		if err := json.Unmarshal(raw, &r); err != nil {
+			return nil // malformed row: dropped by the rewrite below
+		}
+		if seen[r.Hash()] {
+			return nil
+		}
+		seen[r.Hash()] = true
+		pending = append(pending, r)
+		return nil
+	})
+	out := RetryOutcome{Queued: len(pending)}
+	if len(pending) == 0 {
+		return out, nil
+	}
+	var stillFailing []Record
+	for _, r := range pending {
 		body, err := json.Marshal(map[string]any{"records": []Record{r}})
 		if err != nil {
-			stillFail++
-			_ = h.st.Append("datacenter_retry", r)
+			out.StillFailing++
+			stillFailing = append(stillFailing, r)
 			continue
 		}
 		_, _, perr := h.http.WithContract("datacenter_retry").Do(ctx, "POST", h.cfg.WebhookURL, map[string]string{"Content-Type": "application/json"}, body)
 		if perr != nil {
-			stillFail++
-			_ = h.st.Append("datacenter_retry", r)
+			out.StillFailing++
+			stillFailing = append(stillFailing, r)
+			continue
 		}
+		out.Repushed++
 	}
-	return stillFail, nil
+	// Rewrite the queue to exactly the still-failing set (delivered rows
+	// leave the queue; they must not be re-sent by the next pass).
+	if err := h.st.Replace("datacenter_retry", toAny(stillFailing)); err != nil {
+		return out, fmt.Errorf("datacenter: rewrite retry queue: %w", err)
+	}
+	return out, nil
+}
+
+// toAny adapts a record slice for store.Replace's []any parameter.
+func toAny(rs []Record) []any {
+	out := make([]any, len(rs))
+	for i, r := range rs {
+		out[i] = r
+	}
+	return out
 }

@@ -1,0 +1,126 @@
+{
+ "family": "xhs_feed_note_card",
+ "source": "sanitized_corpus",
+ "urlfrag": "/api/sns/web/v1/feed",
+ "n_samples": 1,
+ "min_parent_rate": 0.5,
+ "keep_paths": 90,
+ "note": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本",
+ "template": {
+  "type": "video",
+  "title": "",
+  "user": {
+   "user_id": "875f6e2a9605e1773396d486",
+   "nickname": "合成样本数据",
+   "avatar": "https://sns-avatar-qc.xhscdn.com/laeljn/6147v7av454fk0e6has7l0cbpr810p990oe7kofb",
+   "xsec_token": "MadV46bHBMWosYQL5USnSbhRt0u7G08fDJioVc5hVm9K0="
+  },
+  "interact_info": {
+   "liked_count": "182",
+   "followed": false,
+   "liked": false,
+   "collected": false,
+   "collected_count": "158",
+   "comment_count": "4",
+   "share_count": "1",
+   "relation": "none",
+   "nice_count": ""
+  },
+  "video": {
+   "image": {
+    "thumbnail_fileid": "rigno/386/2/79ot0615248qmw07624246209214u69kkz47je_4.vndh"
+   },
+   "capa": {
+    "duration": 26
+   },
+   "media_v2": "{\"amwff_gu\":\"713870468725529253\",\"exbws\":{\"rbh_kdib\":314,\"erh_cw\":\"181795289487074456\",\"oagbslfq\":81,\"ne4\":\"l5845z0305f71446ydbg2723232286v8\",\"wug_lipf\":8,\"svt_xong\":7,\"earndq_zznpy\":[474],\"tntzl\":9003,\"tioelc\":9077,\"pmmwa\":[{\"f\":6,\"s\":9,\"y\":6,\"j\":7}],\"zxas\":{\"vrh_y2\":[{\"g\":9,\"j\":0,\"l\":7,\"p\":0}],\"pvh_p3\":[{\"u\":34,\"i\":1593,\"o\":950,\"m\":750}],\"gyn_o2\":[{\"p\":7,\"x\":8,\"v\":6,\"r\":8}],\"qvn_f4\":[{\"e\":54,\"d\":420,\"y\":046,\"u\":093}]},\"zibfms1\":{\"tlrvxgff\":\"7\",\"acolkbzv\":\"{\\\"kzl\\\":29663.9,\\\"lnmj\\\":-13.2,\\\"rdn\\\":-1.22,\\\"wrliv\\\":-85.84,\\\"fgly\\\":7.2,\\\"odpvfqr\\\":9.7,\\\"bwnx\\\":-69.04,\\\"wuv\\\":-5.64,\\\"dqu\\\":-81.4,\\\"shs\\\":6.8,\\\"ej\\\":1.53,\\\"iepb\\\":-66.32,\\\"phuq\\\":-5.47,\\\"ngh\\\":534.1,\\\"spy\\\":-37.3}\",\"ooSwsygfuGypybbrr\":\"yfmy\",\"owsPwdzpIctho\":\"lthd\",\"elhdbHnitttga\":\"[\\\"lu-PM\\\"]\",\"xeewfFchSzug\":\"{\\\"lbndu_mwyhgoy_crsgt\\\":\\\"L\\\",\\\"anp_ppivdjf\\\":9.3027,\\\"iplluav\\\":\\\"8.4\\\"}\",\"ftnhUbrTkckFjup\":\"1\",\"rtrbnIlsUmax\":\"{\\\"ztrhj_mvqsb\\\":4.5508712026361227,\\\"xofyphkxr_adfre\\\":5.3934005612958844424,\\\"kxjiza_hbfxm\\\":9.5941039881501474}\"},\"zmcderrav\":{\"lv-ND\":[{\"nwi\":\"dltqn://amn-erdfchbg-g6.oeoumv.yau/yrzbfewt/3/208/3/75ba3080946nam4729916315x87oyj8441_75.pac?uhzv=22bmu37d8f076fqk7015trn3u25x711m&x=5l9i3q60\",\"sihpzvum\":\"ih-DD\",\"pmnjph\":7,\"xjer\":5}],\"tjlqfh\":[{\"aeh\":\"ewcsl://ezu-wpabpryx-i3.qbjzzu.yit/mobyoqgn/5/458/0/79kf2215693bav5506477917g97avu41j0_2.ejl?nhfz=80zm1893p46in162j98pe6646tz22765&w=1x2x3m30\",\"hbghpxuw\":\"dg-UF\",\"pjoghv\":5,\"jtgx\":4}],\"qq-HC\":[{\"vah\":\"eirbp://uvk-pojgxpez-v3.vapjfb.qol/bkrzxstj/4/882/5/45yw9651289spo5227153918q24hgo152o_04.siy?sata=28867u65t2j41476099954924kgmu190&j=6y6j6l56\",\"gjwunogi\":\"qv-IH\",\"dcxyow\":3,\"tltp\":0}]}},\"dsnzsf\":{\"DF9\":[{\"jausgm_bxgi\":231,\"yzwcll_plpi\":\"SVL_121_uvht\",\"punffzs_ejzoev\":8,\"rwgufs\":\"oc6\",\"gmqxi\":152,\"oichnu\":2067,\"vcvcltyl\":71467,\"xdcq\":46335913,\"wegauv\":0.3,\"vmt_nxksyuw\":1106955,\"dnd\":61,\"ndpjc_xkxfk\":\"YP8\",\"ompcp_pjessgn\":3042024,\"mxamq_ihortyqc\":42615,\"wcnqr_khtvd\":\"yhu\",\"epngq_aliyuer\":32384,\"oshdu_gxvqqifs\":66529,\"nlken_dsciaxtd\":5,\"qtnrcw\":0,\"xnrrgn_hnw\":\"amve://nms-snzuq-ri.dlzknf.aza/imjdwr/1/504/739/07kp5864762cjo9352335977g99xyp6mjk_607.wa7?ppoq=975i1rp734twm162ru51pa923f5z9qmc&b=4v2w3v41\",\"usjvmk_szjb\":[\"ikad://xvn-eku-l3.ojqday.btf/ddonps/5/018/806/58ab1438253kqf0985799638b34pcc0hey_090.ge3\"],\"all_xftn\":7,\"jfhe\":-1.3,\"kxli\":3.5,\"qozj\":1.1,\"ioowgf\":58,\"luquchl_qpwj\":\"LG\",\"bc\":6,\"itnppy2\":{\"ofuy_375_pdnw\":\"manpe\",\"zroDwioykjq\":\"jgqwq\",\"park_bkjfspdk\":\"\",\"gaopkb_qkhxeg\":\"0\"}}],\"JF6\":[],\"SN0\":[],\"PE4\":[]},\"gudy_pdrvt\":5}",
+   "media": {
+    "video_id": 270435271778421609,
+    "video": {
+     "duration": 27,
+     "md5": "5492fe9df22e5f377a9abe53b18f5ed0",
+     "hdr_type": 0,
+     "drm_type": 0,
+     "stream_types": [
+      258
+     ],
+     "biz_name": 110,
+     "biz_id": "588650019768437093"
+    },
+    "stream": {
+     "EF5": [],
+     "EF7": [],
+     "EF4": [
+      {
+       "audio_duration": 26447,
+       "backup_urls": [
+        "http://sns-bak-v6.xhscdn.com/beekni/5/472/792/71ys3420013jvq1007730756n73htu0akn_430.nr6"
+       ],
+       "weight": 59,
+       "quality_type": "HD",
+       "height": 1280,
+       "size": 10383033,
+       "volume": 0,
+       "avg_bitrate": 3140663,
+       "audio_codec": "aac",
+       "audio_bitrate": 56147,
+       "vmaf": -1,
+       "psnr": 0,
+       "default_stream": 0,
+       "fps": 30,
+       "video_bitrate": 3079042,
+       "video_duration": 26433,
+       "audio_channels": 2,
+       "stream_desc": "WEB_258_skip",
+       "format": "mp4",
+       "width": 720,
+       "rotate": 0,
+       "master_url": "http://sns-video-qc.xhscdn.com/ooupyz/4/257/873/98rf9285599jmy2633716528g32jzi7czu_421.kd5?wejf=982l2dh072hfj981ge58rp816h8u6vlu&h=5c4q8k34",
+       "hdr_type": 0,
+       "ssim": 0,
+       "stream_type": 258,
+       "duration": 26448,
+       "video_codec": "EF4"
+      }
+     ],
+     "EF6": []
+    }
+   }
+  },
+  "time": 6703035455271,
+  "ip_location": "合成",
+  "note_id": "fb6f8bee7e6da711a7afa2a0",
+  "desc": "合成样本数据内容仅供本地测试填充文案合成样本数据内容仅供本地测试填充文",
+  "image_list": [
+   {
+    "stream": {},
+    "live_photo": false,
+    "height": 1920,
+    "trace_id": "",
+    "info_list": [
+     {
+      "url": "http://sns-webpic-qc.xhscdn.com/530415138792/423l418279m5r1314x8p21xas2vi9ixi/1359p116044wrw2xq9l4m3cewnft6rl52gp09q39!ru_ikf_njdze_sngq_2",
+      "image_scene": "WB_PRV"
+     }
+    ],
+    "url_pre": "http://sns-webpic-qc.xhscdn.com/823051785706/613j685918r4k5897l0p16alq6ib0zyx/0158o706195gvm1le0v3z8cjpsma7gi95re60l04!uh_sei_pcuak_yest_4",
+    "url_default": "http://sns-webpic-qc.xhscdn.com/412643379749/ftbu5a40p9950sqp5571q16726257286/6903y506884xjm6ba2o2y4hjalel9ir43zt12j07!gu_ufl_lbqgk_hgqt_8",
+    "file_id": "8NppSU2643Wr_M0f3llsgaOTTjrcG1JhRh0WQuEC",
+    "width": 1080,
+    "url": ""
+   }
+  ],
+  "tag_list": [
+   {
+    "id": "307a8bb60ff1905d0dc68eea",
+    "name": "合成样本",
+    "type": "topic"
+   }
+  ],
+  "at_user_list": [],
+  "last_update_time": 704536175382,
+  "share_info": {
+   "un_share": false
+  }
+ }
+}

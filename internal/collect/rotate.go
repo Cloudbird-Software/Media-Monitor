@@ -1,13 +1,16 @@
-// Auto account rotation (IR-MM-0001 AC-9): AccountID "auto" picks accounts
-// by health (healthy → degraded → unprobed; expired/banned excluded),
-// rotates on auth walls / empty pages with the cursor preserved, retries
-// bounded at 2 switches, and bans an account after three consecutive
+// rotation.go — auto account rotation (IR-MM-0001 AC-9) with human-shaped
+// pre-rotation backoff (silent-scraping A2/E): AccountID "auto" picks
+// accounts by health (healthy → degraded → unprobed; expired/banned
+// excluded), rotates on auth walls / empty pages with the cursor preserved,
+// retries bounded at 2 switches, and bans an account after three consecutive
 // failures. Rotation and ban events count into /metrics observability.
 package collect
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 )
@@ -43,6 +46,44 @@ func (e *Engine) bindInitial(name string) (*Engine, error) {
 	ne := e.forAccount(a.ID)
 	ne.autoBase = e // keep the "auto" marker so rotation stays armed
 	return ne, nil
+}
+
+// rotationBackoffBase resolves the pre-rotation backoff base:
+// MEDIAMON_ROTATE_BACKOFF_MS (default 1000ms; 0 disables). The report (§4-A2)
+// observed 0-16ms bursts right after auth walls — humans pause.
+func rotationBackoffBase() time.Duration {
+	if n, ok := envInt("MEDIAMON_ROTATE_BACKOFF_MS"); ok {
+		if n < 0 {
+			n = 0
+		}
+		return time.Duration(n) * time.Millisecond
+	}
+	return 1000 * time.Millisecond
+}
+
+// sleepBeforeRotation backs off BEFORE switching accounts: base·2^rotations
+// with ±25% jitter, capped at 30s. Shares the engine's pacing RNG; the
+// pacing sleepHook test seam is deliberately NOT used here (rotation backoff
+// is error-path behavior, not page pacing).
+func (e *Engine) sleepBeforeRotation(ctx context.Context, rotations int) {
+	base := rotationBackoffBase()
+	if base <= 0 {
+		return
+	}
+	e.pacingMu.Lock()
+	f := 0.75 + 0.5*e.pacingRand.Float64()
+	e.pacingMu.Unlock()
+	d := time.Duration(float64(base<<uint(rotations)) * f)
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	if e.obs != nil {
+		e.obs.Inc("collect.rotation_backoff_total_ms", int64(d/time.Millisecond))
+	}
+	select {
+	case <-ctx.Done():
+	case <-time.After(d):
+	}
 }
 
 // rotateOn handles one rotation-eligible failure: the failing account gets
@@ -86,7 +127,9 @@ func (e *Engine) platformFor(name string) string {
 }
 
 // forAccount clones the engine with a specific account selected. The clone
-// keeps rotation armed in auto mode (autoBase marker).
+// keeps rotation armed in auto mode (autoBase marker) and inherits the base
+// engine's pacing config + test sleep hook so think-time behavior survives
+// account switches.
 func (e *Engine) forAccount(accountID string) *Engine {
 	base := e.autoBase
 	ne := New(Context{
@@ -98,8 +141,18 @@ func (e *Engine) forAccount(accountID string) *Engine {
 		Names:     e.names,
 		Accounts:  e.accounts,
 		AccountID: accountID,
+		Pacing:    &e.pacing,
 	})
 	ne.autoBase = base
+	ne.sleepHook = e.sleepHook
+	// Share the browser header table, the cookie-session cache and the UA
+	// pin table with the base engine: rotation clones keep the same header
+	// posture, each account id keeps its own jar AND its own pinned UA
+	// (B1/B2/B3 — a session's UA changes only when the account changes).
+	ne.browserHdrs = e.browserHdrs
+	ne.sess = e.sess
+	ne.uaByPlat = e.uaByPlat
+	ne.uaPool = e.uaPool
 	return ne
 }
 

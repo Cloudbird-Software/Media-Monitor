@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<title>小红书 - 你的生活兴趣社区</title>
+<style>
+:root{--bg:#f5f6f7;--card:#fff;--txt:#222;--sub:#888;--brand:#fe2c55}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--txt)}
+header.site-header{display:flex;align-items:center;gap:16px;padding:14px 28px;background:#fff;border-bottom:1px solid #e8e8e8;position:sticky;top:0;z-index:9}
+.brand{font-size:20px;font-weight:700;color:var(--brand)}
+.nav a{margin-right:14px;color:#555;text-decoration:none}
+.searchbar{display:flex;flex-items:center;gap:8px;flex:1;max-width:560px;position:relative}
+.search-suggest{position:absolute;top:44px;left:0;width:100%;background:#fff;border:1px solid #eee;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:30;overflow:hidden}
+.search-suggest .sug-item{padding:8px 16px;font-size:13px;color:#333;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.search-suggest .sug-item:hover{background:#f7f7f7;color:var(--brand)}
+.searchbar .input-box{flex:1;border:1px solid #ddd;border-radius:18px;padding:8px 16px;background:#fafafa;display:flex;align-items:center;gap:8px}
+.searchbar input{border:0;outline:0;background:transparent;width:100%;font-size:14px}
+.searchbar .search-button{border:0;background:var(--brand);color:#fff;border-radius:18px;padding:8px 22px;cursor:pointer}
+main{max-width:1180px;margin:18px auto;padding:0 20px}
+.page-desc{color:var(--sub);margin:6px 2px 14px;font-size:12px}
+.cards{display:flex;flex-wrap:wrap;gap:14px;list-style:none}
+.cards .search-result-card,.cards .note-item,.cards .card-container{width:216px;background:var(--card);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.08);transition:transform .15s}
+.cards>*:hover{transform:translateY(-3px)}
+.card-link{display:block;text-decoration:none;color:inherit}
+.card-permalink{display:none}  /* R6B-P3-1：卡首隐藏锚 /explore/<id>（语料形态） */
+.cover{position:relative;background:#eee}
+.cover img{width:100%;display:block;aspect-ratio:3/4;object-fit:cover}
+.cover .duration{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:1px 6px;border-radius:4px}
+.card-info{padding:8px 10px 10px}
+.card-info .title{font-size:13px;line-height:1.45;height:2.9em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card-info .author-wrapper{color:var(--sub);font-size:12px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.metrics{display:flex;gap:12px;color:var(--sub);font-size:12px;margin-top:6px}
+.metrics .like-count{color:#e02040}
+.toolbar{display:flex;gap:10px;align-items:center;margin:4px 0 14px}
+.toolbar button.load-more{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer}
+.toolbar button.load-more:disabled{color:#bbb;cursor:default;border-color:#eee}
+.toolbar .status{color:var(--sub);font-size:12px}
+.toolbar .status.retry{color:var(--brand);cursor:pointer;text-decoration:underline}
+.tabs{display:flex;align-items:center;gap:22px;margin:2px 0 14px;border-bottom:1px solid #eee;background:var(--card);border-radius:10px 10px 0 0;padding:0 14px}
+.tabs .tab-item{position:relative;padding:10px 2px;color:#555;cursor:pointer;font-size:14px}
+.tabs .tab-item.active{color:var(--brand);font-weight:600}
+.tabs .tab-item-border{position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--brand);border-radius:2px}
+.filter-tabs{display:flex;gap:10px;margin:2px 0 14px;flex-wrap:wrap}
+.filter-tabs .tab{border:1px solid #e8e8e8;background:#fff;border-radius:14px;padding:4px 14px;font-size:12px;color:#666;cursor:pointer}
+.filter-tabs .tab.active{color:var(--brand);border-color:var(--brand)}
+.channel-list{display:flex;gap:18px;margin:2px 0 14px;list-style:none;flex-wrap:wrap;padding:6px 2px}
+.channel-list li.channel a{color:#666;text-decoration:none;font-size:13px;padding:6px 4px;display:inline-block}
+.channel-list li.channel a.active{color:var(--brand);font-weight:600;border-bottom:2px solid var(--brand)}
+.detail-wrap{display:flex;gap:26px;background:#fff;border-radius:12px;padding:22px;margin-top:6px}
+.detail-cover{width:340px;border-radius:10px;overflow:hidden;flex:none}
+.detail-cover img{width:100%;display:block}
+.detail-main{flex:1}
+.detail-main h1.title{font-size:20px;line-height:1.5;margin-bottom:10px}
+.detail-main .author-wrapper{color:#666;margin-bottom:12px;text-decoration:none;display:inline-block}
+.detail-main .metrics{font-size:15px;color:#444;display:flex;gap:22px;margin:8px 0 14px}
+.detail-main .metrics .like-count{color:#e02040;font-weight:600}
+.comments{margin-top:22px}
+.comments h3{margin:10px 0}
+.comments .comments-count{color:var(--sub);font-size:12px;margin:2px 0 10px}
+.comment-item{background:#fff;border-radius:10px;padding:10px 14px;margin-bottom:10px}
+.comment-item .c-user{color:var(--sub);font-size:12px}
+.comment-item .c-content{margin-top:2px;white-space:pre-wrap}
+.comment-item .c-like{color:var(--sub);font-size:12px;margin-top:4px}
+.sub-comments{margin:8px 0 4px 18px;padding-left:12px;border-left:2px solid #f0f0f0}
+.sub-comments .comment-item{background:#fafafa;padding:8px 12px}
+button.expand-replies{border:0;background:none;color:#1c6ed8;font-size:12px;cursor:pointer;padding:6px 0;margin-top:2px}
+button.load-more-comments{border:1px solid #ddd;background:#fff;border-radius:16px;padding:6px 18px;cursor:pointer;margin:8px 0}
+button.load-more-comments:disabled{color:#bbb;cursor:default;border-color:#eee}
+.user-card{width:100%;background:var(--card);border-radius:10px;padding:14px;display:flex;gap:14px;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.06);text-decoration:none;color:inherit;margin-bottom:12px}
+.user-card .u-avatar{width:64px;height:64px;border-radius:50%;object-fit:cover;background:#eee}
+.user-card .u-name{font-size:16px;font-weight:600}
+.user-card .u-meta{color:var(--sub);font-size:12px;margin-top:4px}
+.user-cards{list-style:none;display:block}
+footer{color:#aaa;text-align:center;padding:26px 0;font-size:12px}
+.note-modal-mask{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;overflow:auto;padding:4vh 0}
+.note-modal{background:#fff;border-radius:14px;max-width:920px;width:92%;display:flex;overflow:hidden;position:relative}
+.note-modal .m-media{width:420px;flex:none;overflow:auto;background:#111}
+.note-modal .m-media img{width:100%;display:block}
+.note-modal .m-main{flex:1;padding:20px 24px;min-width:0}
+.note-modal .m-close{position:absolute;right:12px;top:10px;border:0;background:rgba(0,0,0,.05);border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:14px;color:#666}
+.note-modal .m-title{font-size:19px;line-height:1.5;margin:6px 30px 10px 0}
+.note-modal .m-author{color:#666;font-size:13px;text-decoration:none;display:inline-block;margin-bottom:8px}
+.note-modal .m-metrics{display:flex;gap:18px;color:var(--sub);font-size:13px;margin-bottom:10px}
+.note-modal .m-metrics .like-count{color:#e02040}
+.note-modal .bottom-container{color:var(--sub);font-size:12px;margin:2px 0 10px}
+.note-modal .bottom-container .date{margin-right:10px}
+.comment-item .c-meta{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .comment-item-time{color:var(--sub);font-size:12px;margin-left:8px}
+.comment-item .date{color:var(--sub);font-size:12px;margin-top:2px}
+.comment-item .date .location{margin-left:10px}
+.cards .metrics .ic{display:inline-block;width:14px;height:14px;margin-right:4px;vertical-align:-2px;background:no-repeat center/contain url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23e02040' d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E")}
+.profile-tabs{display:flex;gap:34px;border-bottom:1px solid #eee;margin:6px 0 16px}
+.profile-tabs .p-tab{padding:10px 2px;color:#555;cursor:pointer;font-size:15px;position:relative}
+.profile-tabs .p-tab.active{color:var(--brand);font-weight:600}
+.profile-tabs .p-tab .p-tab-count{color:var(--sub);font-size:12px;margin-left:4px}
+.profile-tabs .p-tab.active:after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--brand)}
+
+.profile-head{display:flex;align-items:center;gap:18px;background:#fff;border-radius:12px;padding:22px;margin-bottom:16px}
+.profile-head .p-name{font-size:20px;font-weight:600}
+.profile-head .p-meta{color:#888;font-size:13px;margin-top:6px}
+.profile-head .p-stats{display:flex;gap:22px;margin-top:8px;font-size:15px}
+.profile-head .p-stats .p-stat b{font-weight:600;margin-left:2px}
+.works{display:flex;flex-wrap:wrap;gap:14px}
+</style>
+<!-- 结构来源：脱敏 DOM 样本缺失(xhs/xhs_search_notes/sample_0001/page_dom.html)，骨架按契约字段生成 -->
+<script>window.__INITIAL_STATE__=/*__STATE__*/null;</script>
+</head>
+<body>
+<header class="site-header">
+  <span class="brand">小红书</span>
+  <nav class="nav"><a href="/">首页</a><a href="/search_result">搜索</a></nav>
+  <!-- R8B-P3-1：作者主页全局搜索框（语料三站 profile DOM 形态，与各自搜索页同 action/参名） -->
+  <form class="searchbar" id="searchForm" action="/search_result" method="get">
+    <div class="input-box"><input id="searchInput" class="search-input" type="text" placeholder="搜索小红书" value="" aria-label="搜索"></div>
+    <button class="search-button" data-e2e="searchbar-button" type="submit">搜索</button>
+  </form>
+</header>
+<main>
+  <div class="profile-head">
+    <div>
+      <div class="p-name">加载中…</div>
+      <!-- R11B-P3-6：作者页 header 统计块 + 站号/IP 属地副行（语料显示面真值） -->
+
+  <div class="p-stats" style="display:none">
+    <span class="p-stat">关注 <b>0</b></span>
+    <span class="p-stat">粉丝 <b>0</b></span>
+    <span class="p-stat">获赞与收藏 <b>0</b></span>
+  </div>
+      <div class="p-meta"></div>
+    </div>
+  </div>
+
+  <p class="page-desc status" id="profileStatus"></p>
+  <div class="works cards"></div>
+</main>
+<footer>小红书 - 你的生活兴趣社区</footer>
+<script>
+
+function enc(s){return encodeURIComponent(s||'')}
+function str(v){return String(v==null?0:v)}
+function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c=='x'?r:(r&0x3|0x8)).toString(16)})}
+function fmt(n){n=parseInt(n||0,10);if(isNaN(n))return '0';if(n>=100000000)return (n/100000000).toFixed(1)+'亿';if(n>=10000){var w=(n/10000).toFixed(1);
+  /* R11B-P3-5：整万形态按站分流——dy 保留 N.0万（语料 47-67 例/场景真值）；
+     xhs/ks 整数万去 .0（两站语料 N.0万 0 例、整数万 21+/30+ 例） */
+  if(typeof SITE_KEY!=='undefined'&&SITE_KEY!=='douyin'&&/\.0$/.test(w))w=w.slice(0,-2);
+  return w+'万'}return String(n)}
+/* R9B-P3-1/P3-2：显示层时间形态（语料：dy「5天前·四川」/xhs「03-27」/ks「2月前」；
+   dy 卡 footer「@作者 · 4天前」）。
+   R10B-P3-1（语法档位，page_dom 全量真值）：周前档补齐（dy 544 例 / ks 68 例），
+   月去「个」（dy 896 + ks 175 例「N月前」、评论 UI 层「个月前」0 例），天数封顶
+   个位（全语料「NN天前」0 例——该区间真站走周/月/年档）：≤6 天「N天前」、
+   7-29 天「N周前」、30 天+「N月前」、年档「N年前」。ts 为秒（xhs 评论为毫秒，
+   调用侧已除）。 */
+function relTime(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function relDay(ts,nowMs){var d=Math.floor(((nowMs||Date.now())/1000)-(ts||0));if(!(d>0))d=1;
+  if(d<7*86400)return Math.max(1,Math.floor(d/86400))+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+function ksRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<3600)return Math.max(1,Math.floor(d/60))+'分钟前';
+  if(d<86400)return Math.floor(d/3600)+'小时前';
+  if(d<7*86400)return Math.floor(d/86400)+'天前';
+  if(d<30*86400)return Math.floor(d/(7*86400))+'周前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+'月前';
+  return Math.floor(d/(365*86400))+'年前'}
+/* R10B-P3-1③：ks 首页卡 footer 独立语法（语料 <a>@馆长严选</a><span
+   class="timestamp"> · 3 天前</span>、 · 2 个月前——@ 前缀 + 数字与单位间空格、
+   该 surface 月带「个」；真站两套语法并存，搜索卡保持无空格族）。
+   R11B-P3-2 勘误（语料逐元素精提 20/20）：该 surface 周档 0 例、天数不封顶
+   （「 · 22 天前」×3、「 · 25 天前」在档，两位数天 7/20 例）——去周档、
+   <30 天恒「N 天前」，≥30 天「N 个月前」，≥年「N 年前」 */
+function ksHomeRel(tsMs,nowMs){var d=Math.floor(((nowMs||Date.now())-(tsMs||0))/1000);if(!(d>0))d=1;
+  if(d<30*86400)return Math.max(1,Math.floor(d/86400))+' 天前';
+  if(d<365*86400)return Math.floor(d/(30*86400))+' 个月前';
+  return Math.floor(d/(365*86400))+' 年前'}
+function mmdd(tsSec){try{var t=new Date((tsSec||0)*1000);var m=t.getMonth()+1,d=t.getDate();
+  return (m<10?'0':'')+m+'-'+(d<10?'0':'')+d}catch(e){return ''}}
+/* R11B-P3-3：时长 badge 分钟两位补零（语料四场景卡时长元素 10 分钟以下
+   补零 2915 : 不补零 0——05:18/00:31/01:28 全两位形态） */
+function fmtDur(ms){var s=Math.round((ms||0)/1000);var m=Math.floor(s/60);s=s%60;
+  return (m<10?'0':'')+m+':'+(s<10?'0':'')+s}
+function coverUrl(seed,label,w,h){return '/sns-webpic/'+enc(seed)+'~c5_'+(w||323)+'x'+(h||430)+'?label='+enc(label||'')}
+function el(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+function contEl(){return document.querySelector('.cards');}
+/* setStatus 收口到 JS_LIB（原仅 home/search 定义——detail 页调用会 ReferenceError）。
+   红队 R5B-P3-3：失败态可点重试（class=retry + role=button，不再渲染 JS 异常原文）。 */
+function setStatus(t,retry){var e=document.getElementById('loadStatus');if(!e)return;
+  e.textContent=t||'';e.className='status'+(retry?' retry':'');e.setAttribute('role',retry?'button':'');
+  if(retry){e.onclick=function(){loadMore&&loadMore();};}else{e.onclick=null;}}
+var state={page:1,cursor:0,searchId:'',pcursor:'',session:'',keyword:"美食探店",loading:false,done:false,seq:0,type:'general'};
+var SEARCH_TYPE='general';   /* dy 搜索页按 ?type= 覆写（R5B-P2-3 频道分流） */
+var SITE_KEY='xhs'; /* R11B-P3-5：显示层按站分流标记（fmt 整万 .0 形态） */
+
+function workNode(w){
+  var d=el('div','card-container work-card');
+  var link=el('a','card-link'); link.href='/explore/'+enc(w.id);
+  var cov=el('div','cover');
+  var img=new Image(); img.alt=w.title; img.loading='lazy';
+  img.width=323; img.height=430;
+  img.src=coverUrl(w.id,(w.title||'').slice(0,2));
+  cov.appendChild(img);
+  var info=el('div','card-info');
+  info.appendChild(el('div','title',w.title||'(无描述)'));
+  var m=el('div','metrics');
+  if(w.like!=null)m.appendChild(el('span','like-count','赞 '+fmt(w.like)));
+  if(w.view)m.appendChild(el('span','play-count',w.view));
+  info.appendChild(m);
+  link.appendChild(cov); link.appendChild(info); d.appendChild(link); return d;
+}
+function renderWorks(list){
+  var box=document.querySelector('.works'); box.innerHTML='';
+  (list||[]).forEach(function(w){box.appendChild(workNode(w));});
+  document.getElementById('profileStatus').textContent='共 '+((list||[]).length)+' 个作品';
+}
+function initProfile(){
+  var st=window.__INITIAL_STATE__;
+  var box=document.querySelector('.works');
+  if(!box)return;
+  if(!(st&&st.author)){ document.getElementById('profileStatus').textContent='用户不存在'; return; }
+  var a=st.author;
+  document.querySelector('.p-name').textContent=a.name||'用户';
+  /* R11B-P3-6：作者页 header 统计块（语料显示面真值）——dy「关注 N/粉丝 N/获赞 N」
+     三块（data-e2e=user-info-follow/fans/like）+「抖音号/IP属地」行；xhs
+     「关注 N 粉丝 N 获赞与收藏」；ks 统计块 +「快手号」行。数据面
+     follower_count/total_favorited 直取，following/站号/IP 属地显示层确定性派生。 */
+  var sBox=document.querySelector('.p-stats');
+  if(sBox){
+    var cells=sBox.querySelectorAll('.p-stat b');
+    var vals=[String(a.following||0),String(a.fans||0),String(a.likes||0)];
+    for(var i=0;i<cells.length&&i<vals.length;i++){cells[i].textContent=vals[i];}
+    sBox.style.display='';
+  }
+  var meta=document.querySelector('.p-meta');
+  if(meta){meta.textContent='作品 '+((st.works||[]).length);}
+  renderWorks(st.works||[]);
+  
+}
+/* R8B-P3-1：作者主页全局搜索框接线（语料三站 profile DOM 均带搜索输入——
+   dy data-e2e=searchbar-input / xhs .search-input / ks .input-mini）。
+   表单块与各自搜索页同 action/参名；提交导航到站内搜索 URL（可填可提交，
+   站内换词旅程不必先退回搜索页）。 */
+function initProfileSearch(){
+  var form=document.getElementById('searchForm');
+  if(!form)return;
+  function go(){
+    var inp=document.getElementById('searchInput')||document.querySelector('input');
+    var v=(inp&&inp.value.trim())||DEFAULT_KW;
+    location.href='/search_result?keyword='+enc(v);
+  }
+  form.addEventListener('submit',function(ev){ev.preventDefault();go();});
+  var btn=form.querySelector('.search-button');
+  if(btn)btn.addEventListener('click',function(ev){ev.preventDefault();go();});
+}
+document.addEventListener('DOMContentLoaded', function(){ initProfile(); initProfileSearch(); });
+</script>
+</body>
+</html>

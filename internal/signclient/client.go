@@ -45,6 +45,7 @@ type signRequest struct {
 	Contract string            `json:"contract"`
 	URL      string            `json:"url"`
 	Params   map[string]string `json:"params"`
+	Body     string            `json:"body,omitempty"` // POST body (a_bogus POST form signs query+body)
 }
 
 type signResponse struct {
@@ -52,13 +53,25 @@ type signResponse struct {
 	Error  string            `json:"error,omitempty"`
 }
 
+// SignWithBody implements httpclient.BodySigner: POST signatures that cover
+// the request body (douyin a_bogus POST form signs query+body).
+func (c *Client) SignWithBody(ctx context.Context, contractName, url string, params map[string]string, body []byte) (map[string]string, error) {
+	return c.sign(ctx, contractName, url, params, string(body))
+}
+
 // Sign implements httpclient.Signer.
 func (c *Client) Sign(ctx context.Context, contractName, url string, params map[string]string) (map[string]string, error) {
-	body, err := json.Marshal(signRequest{Contract: contractName, URL: url, Params: params})
+	return c.sign(ctx, contractName, url, params, "")
+}
+
+// sign is the shared remote-signer call; reqBody carries the POST body when
+// the platform signs query+body (douyin a_bogus POST form).
+func (c *Client) sign(ctx context.Context, contractName, url string, params map[string]string, reqBody string) (map[string]string, error) {
+	signPayload, err := json.Marshal(signRequest{Contract: contractName, URL: url, Params: params, Body: reqBody})
 	if err != nil {
 		return c.degrade(params, fmt.Errorf("signclient: marshal: %w", err))
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.BaseURL+"/sign", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.BaseURL+"/sign", bytes.NewReader(signPayload))
 	if err != nil {
 		return c.degrade(params, fmt.Errorf("signclient: request: %w", err))
 	}

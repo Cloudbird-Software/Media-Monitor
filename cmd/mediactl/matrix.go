@@ -1209,8 +1209,8 @@ func rowsUserPosts() []matrixRow {
 			Run: rowUserPostsResume},
 		{Name: "up-xhs-backtrack-depth3", Source: "TESTING.md#user_posts (parity)",
 			Run: rowUserPostsXHS},
-		{Name: "fc-up-kuaishou-not-declared", Source: "TESTING.md#user_posts: undeclared contract fail-closed",
-			Run: rowUserPostsKuaishouNotDeclared},
+		{Name: "fc-up-shipinhao-not-declared", Source: "TESTING.md#user_posts: undeclared contract fail-closed",
+			Run: rowUserPostsUndeclaredPlatform},
 	}
 }
 
@@ -1436,23 +1436,28 @@ func rowUserPostsXHS(rc *rowCtx) verdict {
 		map[string]any{"items": len(items), "pages": len(keys)})
 }
 
-func rowUserPostsKuaishouNotDeclared(rc *rowCtx) verdict {
-	if _, err := rc.contract(kuaishouP, "user_posts"); err == nil {
-		return errV(errors.New("kuaishou unexpectedly declares user_posts; matrix premise stale"))
+// rowUserPostsUndeclaredPlatform exercises the undeclared fail-closed extreme
+// on shipinhao (a repo platform with flow contracts but no collect contracts).
+// The row's original subject was kuaishou; capability batch 1 filled that gap
+// with kuaishou-profile-feed (see internal/collect/synth_e2e_test.go
+// A_dossier_kuaishou for the live synth verification of the ks leg).
+func rowUserPostsUndeclaredPlatform(rc *rowCtx) verdict {
+	if _, err := rc.contract("shipinhao", "user_posts"); err == nil {
+		return errV(errors.New("shipinhao unexpectedly declares user_posts; matrix premise stale"))
 	}
-	eng, err := rc.engineFor(kuaishouP)
+	eng, err := rc.engineFor("shipinhao")
 	if err != nil {
 		return errV(err)
 	}
-	_, _, err = eng.UserPosts(rc.ctx, kuaishouP, "whatever", model.Cursor{}, 0, collect.BacktrackOptions{})
+	_, _, err = eng.UserPosts(rc.ctx, "shipinhao", "whatever", model.Cursor{}, 0, collect.BacktrackOptions{})
 	if err == nil {
-		return errV(errors.New("kuaishou user_posts succeeded though undeclared — silent-capability violation"))
+		return errV(errors.New("shipinhao user_posts succeeded though undeclared — silent-capability violation"))
 	}
 	if !strings.Contains(err.Error(), "not declared") {
 		return failClosedV("", "undeclared-platform failure lacks the explicit not-declared marker: "+err.Error())
 	}
 	return failClosedV(codeNotDeclared,
-		"kuaishou declares no user_posts contract: engine fails closed with the explicit error — the third legal extreme-row ending, exercised")
+		"shipinhao declares no user_posts contract: engine fails closed with the explicit error — the third legal extreme-row ending, exercised")
 }
 
 // cmdLabMatrix wires CLI flags onto runMatrixGroup and prints the summary

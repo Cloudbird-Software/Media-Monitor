@@ -85,6 +85,73 @@ func (s *Store) Append(collection string, rec any) error {
 	return nil
 }
 
+// Replace atomically rewrites a collection with exactly rows (in order).
+// Preferred path: write <collection>.jsonl.tmp and rename over the live file
+// (atomic on POSIX). On Windows a concurrent process holding the collection
+// open for append (e.g. a second mediad over the same store dir — the
+// cross-process deployment shape) makes the rename fail with a sharing
+// violation; in that case Replace falls back to truncating and rewriting the
+// live file in place. The fallback is not atomic across processes, but scans
+// already tolerate torn trailing rows (JSONL readers skip malformed lines),
+// and the retry-queue rewrite it serves is re-derivable from the main store.
+// An empty rows slice empties the collection's contents.
+func (s *Store) Replace(collection string, rows []any) error {
+	if !collectionRe.MatchString(collection) {
+		return fmt.Errorf("store: invalid collection name %q", collection)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	live := filepath.Join(s.dir, collection+".jsonl")
+	if f, ok := s.files[collection]; ok {
+		if err := f.Close(); err != nil {
+			return fmt.Errorf("store: replace %q: close old handle: %w", collection, err)
+		}
+		delete(s.files, collection)
+	}
+	tmp := live + ".tmp"
+	if err := s.writeRows(tmp, rows); err != nil {
+		os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, live); err != nil {
+		// Windows sharing violation (another process holds the file) or any
+		// other rename failure: rewrite the live file in place instead.
+		if werr := s.writeRows(live, rows); werr != nil {
+			os.Remove(tmp)
+			return fmt.Errorf("store: replace %q: rename: %v (in-place fallback: %w)", collection, err, werr)
+		}
+		os.Remove(tmp)
+	}
+	return nil
+}
+
+// writeRows writes rows as JSONL to path (created/truncated). Callers hold
+// s.mu (or operate on a private tmp path).
+func (s *Store) writeRows(path string, rows []any) error {
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("store: open %s: %w", path, err)
+	}
+	bw := bufio.NewWriter(f)
+	for _, rec := range rows {
+		row, err := json.Marshal(rec)
+		if err != nil {
+			f.Close()
+			return fmt.Errorf("store: marshal: %w", err)
+		}
+		bw.Write(row)
+		bw.WriteByte('\n')
+	}
+	if err := bw.Flush(); err != nil {
+		f.Close()
+		return fmt.Errorf("store: flush %s: %w", path, err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("store: close %s: %w", path, err)
+	}
+	return nil
+}
+
 // Scan streams every row of collection to fn as raw bytes (without the
 // trailing newline). Scan uses its own read-only handle, so it is safe to
 // call while Appends are in flight. A missing collection yields no rows and

@@ -1,6 +1,8 @@
 package httpclient
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -274,4 +276,53 @@ func TestPropertyEchoRoundTrip(t *testing.T) {
 		},
 	}
 	testkit.Run(t, 20250101, 25, []testkit.Prop{prop})
+}
+
+// TestDoGzipAnswerToManualAcceptEncoding: a caller-declared Accept-Encoding
+// (the browser header sets merge one under xhs/ks requests) makes Go's
+// transport pass it verbatim WITHOUT transparent decompression — gzip-answering
+// surfaces (xhs/ks corpus truth) then return Content-Encoding: gzip bytes.
+// Do must decompress exactly that case so callers always see plain JSON.
+func TestDoGzipAnswerToManualAcceptEncoding(t *testing.T) {
+	const payload = `{"status_code":0,"comments":[{"cid":"c1"}]}`
+	var sawOffer, sawEncoding string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sawOffer = r.Header.Get("Accept-Encoding")
+		w.Header().Set("Content-Type", "application/json")
+		if strings.Contains(sawOffer, "gzip") {
+			sawEncoding = "gzip"
+			w.Header().Set("Content-Encoding", "gzip")
+			var buf bytes.Buffer
+			zw := gzip.NewWriter(&buf)
+			_, _ = zw.Write([]byte(payload))
+			_ = zw.Close()
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write(buf.Bytes())
+			return
+		}
+		sawEncoding = "identity"
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(payload))
+	}))
+	defer srv.Close()
+
+	c := New(Config{Timeout: 2 * time.Second})
+	status, body, err := c.Do(context.Background(), http.MethodGet, srv.URL,
+		map[string]string{"Accept-Encoding": "gzip, deflate"}, nil)
+	if err != nil {
+		t.Fatalf("Do: %v", err)
+	}
+	if status != http.StatusOK || string(body) != payload {
+		t.Fatalf("gzip answer must come back decompressed: status=%d body=%q", status, body)
+	}
+	if sawEncoding != "gzip" {
+		t.Fatalf("server did not answer gzip to offer %q (encoding=%s)", sawOffer, sawEncoding)
+	}
+
+	// Without the manual header the transport auto-negotiates and
+	// auto-decompresses; the path stays plain either way.
+	status, body, err = c.Do(context.Background(), http.MethodGet, srv.URL, nil, nil)
+	if err != nil || status != http.StatusOK || string(body) != payload {
+		t.Fatalf("plain path broken: %v status=%d body=%q", err, status, body)
+	}
 }

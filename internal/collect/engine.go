@@ -8,11 +8,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Cloudbird-Software/Media-Monitor/internal/accounts"
 	"github.com/Cloudbird-Software/Media-Monitor/internal/contracts"
@@ -43,34 +46,65 @@ type Context struct {
 	Accounts *accounts.Pool
 	// AccountID selects the account to act as; "" means platform defaults.
 	AccountID string
+	// Pacing overrides the inter-page think-time config (nil = env/defaults,
+	// see pacing.go). The zero Context keeps pacing ON with defaults.
+	Pacing *PacingConfig
+	// BrowserHeaders carries per-platform browser-grade default header sets
+	// (see internal/platforms/<platform>.BrowserHeaders). Merged UNDER the
+	// contract transport.headers; empty map = engine sends no browser
+	// defaults (legacy behavior).
+	BrowserHeaders map[string]map[string]string
+	// UAPool supplies the session-pinned User-Agents (one UA per cookie
+	// lifetime; nil = a deterministic real-Chrome fallback). Wire with
+	// accounts.LoadUAPoolDefault (MEDIAMON_UA_POOL override).
+	UAPool *accounts.UAPool
 }
 
 // Engine executes contracts. Safe for concurrent use once built.
 type Engine struct {
-	reg        *contracts.Registry
-	hc         *httpclient.Client
-	obs        *obs.CounterMap
-	signers    map[string]httpclient.Signer
-	cookies    map[string]string
-	names      map[string]map[string]string
-	accounts   *accounts.Pool
-	accountID  string
-	autoBase   *Engine // non-nil while rotating in auto mode
-	proxyMu    sync.Mutex
-	proxyCache map[string]*httpclient.Client // proxy url -> dedicated client
+	reg         *contracts.Registry
+	hc          *httpclient.Client
+	obs         *obs.CounterMap
+	signers     map[string]httpclient.Signer
+	cookies     map[string]string
+	names       map[string]map[string]string
+	accounts    *accounts.Pool
+	accountID   string
+	autoBase    *Engine // non-nil while rotating in auto mode
+	proxyMu     sync.Mutex
+	proxyCache  map[string]*httpclient.Client // proxy url -> dedicated client
+	pacing      PacingConfig                  // inter-page think time (pacing.go)
+	pacingMu    sync.Mutex
+	pacingRand  *rand.Rand
+	sleepHook   func() time.Duration         // test seam: replaces the random sample
+	browserHdrs map[string]map[string]string // platform -> browser default headers
+	sess        *sessionCache                // cookie-jar clients per identity (shared across clones)
+	uaPool      *accounts.UAPool             // session-pinned UA source (browserhdr.go)
+	uaMu        sync.Mutex
+	uaByPlat    map[string]string // sessionKey -> pinned session UA (binding: 1 UA per cookie lifetime)
 }
 
 // New builds an Engine from its wiring context.
 func New(ctx Context) *Engine {
+	pacing := PacingFromEnv()
+	if ctx.Pacing != nil {
+		pacing = *ctx.Pacing
+	}
 	e := &Engine{
-		reg:        ctx.Registry,
-		obs:        ctx.Obs,
-		signers:    ctx.Signers,
-		cookies:    ctx.Cookies,
-		names:      ctx.Names,
-		accounts:   ctx.Accounts,
-		accountID:  ctx.AccountID,
-		proxyCache: map[string]*httpclient.Client{},
+		reg:         ctx.Registry,
+		obs:         ctx.Obs,
+		signers:     ctx.Signers,
+		cookies:     ctx.Cookies,
+		names:       ctx.Names,
+		accounts:    ctx.Accounts,
+		accountID:   ctx.AccountID,
+		proxyCache:  map[string]*httpclient.Client{},
+		pacing:      pacing,
+		pacingRand:  newPacingRand(),
+		browserHdrs: ctx.BrowserHeaders,
+		sess:        newSessionCache(),
+		uaPool:      ctx.UAPool,
+		uaByPlat:    map[string]string{},
 	}
 	if ctx.HTTP != nil {
 		e.hc = ctx.HTTP
@@ -112,7 +146,10 @@ func (e *Engine) clientFor(proxy string) *httpclient.Client {
 }
 
 // categorySuffix maps collect category names to the conventional
-// "<platform>-<suffix>" contract naming fallback.
+// "<platform>-<suffix>" contract naming fallback. Categories whose contract
+// names differ per platform (suggest: douyin-suggest-words vs
+// xhs-search-recommend) are wired explicitly through the platform Names
+// maps and deliberately carry no fallback suffix.
 var categorySuffix = map[string]string{
 	"search":          "search",
 	"comments":        "comments",
@@ -125,6 +162,12 @@ var categorySuffix = map[string]string{
 	"collects_videos": "collects-videos",
 	"im_unread":       "im-unread",
 	"user_posts":      "user-posts",
+	"profile":         "profile",
+	"user_search":     "user-search",
+	"related":         "related",
+	"multi_detail":    "multi-detail",
+	"mix":             "mix",
+	"series":          "series",
 }
 
 // resolveName finds the contract name for a platform collect category,
@@ -210,7 +253,33 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		params[k] = v
 	}
 	var body []byte
-	if c.Transport.Method == http.MethodPost {
+	formCT := strings.EqualFold(c.Transport.ContentType, "application/x-www-form-urlencoded")
+	if c.Transport.Method == http.MethodPost && formCT {
+		// Form body (ADR of real-site truth 2026-09-06: douyin multi/aweme/detail
+		// carries aweme_ids in the form body, never the query). Body keys =
+		// transport.body ∪ caller-query keys declared in transport.body; those
+		// keys are removed from the URL query (the real request has them only
+		// in the body, and the signer must cover the query the page would sign).
+		m := map[string]any{}
+		for k, v := range c.Transport.Body {
+			if vv, ok := query[k]; ok {
+				m[k] = vv
+			} else {
+				m[k] = v
+			}
+		}
+		for k, v := range leftover {
+			m[k] = v
+		}
+		for k := range m {
+			delete(params, k)
+		}
+		fv := url.Values{}
+		for k, v := range m {
+			fv.Set(k, fmt.Sprintf("%v", v))
+		}
+		body = []byte(fv.Encode())
+	} else if c.Transport.Method == http.MethodPost {
 		m := map[string]any{}
 		for k, v := range c.Transport.Body {
 			m[k] = v
@@ -240,7 +309,20 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		if len(q) > 0 {
 			pre += "?" + q.Encode()
 		}
-		sig, serr := signer.Sign(ctx, c.Name, pre, params)
+		// POST signatures cover the body on douyin (a_bogus POST form signs
+		// query+body; real-site truth 2026-09-06: multi/aweme/detail). The
+		// optional BodySigner extension passes the built body through.
+		var sig map[string]string
+		var serr error
+		if os.Getenv("MEDIAMON_SIGN_DEBUG") != "" {
+			fmt.Fprintf(os.Stderr, "[sign-debug] contract=%s method=%s formCT=%v bodyLen=%d isBodySigner=%v\n",
+				c.Name, c.Transport.Method, formCT, len(body), func() bool { _, ok := signer.(httpclient.BodySigner); return ok }())
+		}
+		if bs, ok := signer.(httpclient.BodySigner); ok && c.Transport.Method == http.MethodPost && len(body) > 0 {
+			sig, serr = bs.SignWithBody(ctx, c.Name, pre, params, body)
+		} else {
+			sig, serr = signer.Sign(ctx, c.Name, pre, params)
+		}
 		if serr != nil {
 			return "", nil, nil, fmt.Errorf("collect %s: sign: %w", c.Name, serr)
 		}
@@ -273,6 +355,12 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		full += "?" + q.Encode()
 	}
 	headers := map[string]string{}
+	// Precedence (low → high): platform browser defaults < signer output
+	// riding headers < contract static headers < UA-consistent client hints
+	// < per-identity Cookie/User-Agent set below.
+	for k, v := range e.browserHeadersFor(c.Platform) {
+		headers[k] = v
+	}
 	for k, v := range sigHeaders {
 		headers[k] = v
 	}
@@ -280,7 +368,11 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		headers[k] = v
 	}
 	if len(body) > 0 {
-		headers["Content-Type"] = "application/json"
+		if formCT {
+			headers["Content-Type"] = "application/x-www-form-urlencoded"
+		} else {
+			headers["Content-Type"] = "application/json"
+		}
 	}
 	// Cookie priority: account cookie (per-identity) overrides the
 	// platform-level default. The fail-closed required-cookie check below
@@ -294,9 +386,17 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 	if ck != "" {
 		headers["Cookie"] = ck
 	}
-	// UA priority: the account's pinned UA overrides the client's rotating
-	// pool (the shared pool UA applies when no account is selected).
+	// UA priority: the account's pinned UA overrides the engine's
+	// session-pinned UA (which itself overrides the client's rotating pool).
+	if ua == "" {
+		ua = e.resolveUA(c.Platform)
+	}
 	if ua != "" {
+		// Client hints must match the UA being sent (sec-ch-ua family
+		// derived from the same string — report B1/B2).
+		for k, v := range deriveClientHints(ua) {
+			headers[k] = v
+		}
 		headers["User-Agent"] = ua
 	}
 	if len(c.Cookie.Required) > 0 {
@@ -347,9 +447,10 @@ func (e *Engine) Fetch(ctx context.Context, name string, pathParams, query map[s
 		return nil, err
 	}
 	// Route through the account's proxy client when an account is selected;
-	// otherwise use the shared client.
+	// every fetch rides the session-bound (cookie-jar) client so Set-Cookie
+	// rotations persist within one identity (report B1/B3).
 	_, proxy, _, _ := e.accountContext(c.Platform)
-	hc := e.clientFor(proxy)
+	hc := e.fetchClient(c.Platform, proxy)
 	status, resp, err := hc.WithContract(name).Do(ctx, c.Transport.Method, full, headers, body)
 	if err != nil {
 		e.fetchErr()
@@ -408,7 +509,11 @@ func mainBindingRaw(c *contracts.Contract) (kind, raw string) {
 }
 
 // checkBindings fails closed when the contract's primary binding is missing
-// or resolves to an empty list.
+// or resolves to a non-list value. A JSON null binding (douyin's zero-comment
+// shape, `{"comments": null}`) and an empty list are both VALID zero-record
+// pages: the walk ends cleanly instead of surfacing ErrEmptyPage — that error
+// is a rotation trigger under auto account mode, and a genuinely comment-less
+// item must never burn accounts (report G3).
 func checkBindings(c *contracts.Contract, doc map[string]any) error {
 	kind, raw := mainBindingRaw(c)
 	if raw == "" {
@@ -422,8 +527,17 @@ func checkBindings(c *contracts.Contract, doc map[string]any) error {
 	if len(vs) == 0 {
 		return fmt.Errorf("%s binding %q missing from response", kind, raw)
 	}
+	if vs[0] == nil {
+		return nil // explicit null = clean empty page (zero comments/items)
+	}
 	if _, ok := vs[0].([]any); !ok {
-		return fmt.Errorf("%s binding %q is not a list", kind, raw)
+		// Single object = one-record page, allowed ONLY for the users
+		// binding (real-site truth 2026-09-06: douyin user/profile/other
+		// answers {user:{...}}, not a list; selectRecords already wraps an
+		// object as a single record). Item/comment faces stay fail-closed.
+		if _, isObj := vs[0].(map[string]any); !(isObj && kind == "users") {
+			return fmt.Errorf("%s binding %q is not a list", kind, raw)
+		}
 	}
 	// Empty list = valid zero-record page; missing path / non-list stays an error.
 	return nil
@@ -472,10 +586,29 @@ func (e *Engine) nextCursor(c *contracts.Contract, doc map[string]any, cur model
 					nxt.Source = map[string]any{}
 				}
 				nxt.Source["cursor"] = v
+				// Sentinel (report item 11): platforms terminate cursored
+				// walks with an explicit end marker (kuaishou "no_more").
+				// The old code only stopped because the numeric-string
+				// coincidence made asBool false — recognize the sentinel
+				// explicitly instead of relying on the accident.
+				if s, ok := v.(string); ok && isCursorSentinel(s) {
+					nxt.HasMore = false
+				}
 			}
 		}
 	}
 	return nxt
+}
+
+// cursorSentinels are the explicit end-of-list markers platforms embed in
+// the next-cursor field (case-insensitive).
+var cursorSentinels = map[string]bool{
+	"no_more": true,
+}
+
+// isCursorSentinel reports whether a cursor value is an explicit end marker.
+func isCursorSentinel(v string) bool {
+	return cursorSentinels[strings.ToLower(strings.TrimSpace(v))]
 }
 
 // fetchPages runs the pagination loop for one contract: cursor and count
@@ -507,14 +640,46 @@ func (e *Engine) SearchItems(ctx context.Context, platform, keyword, filter stri
 	if filter != "" {
 		query["type"] = filter
 	}
-	recs, nxt, err := e.fetchPages(ctx, name, pathParams, query, cur, limit)
-	if err != nil {
-		return nil, nxt, err
+	// Real-site first page (2026-09-06): douyin keyword search prefers the
+	// stream face (NDJSON frames; extra.logid → search_id chain) — a bare
+	// single call returns empty in most session states (corpus R5A + live).
+	// Falls back to the single-contract walk when the stream face is absent
+	// (synth) or fails.
+	if platform == "douyin" && cur.Page == 0 && len(cur.Source) == 0 {
+		if streamName, ok := e.names["douyin"]["search_stream"]; ok && streamName != "" {
+			if items, nxt, ok2 := e.searchFirstPageStream(ctx, streamName, keyword, filter, limit); ok2 {
+				remain := limit - len(items)
+				if remain <= 0 || !nxt.HasMore {
+					return applyMediaFilter(items, filter), nxt, nil
+				}
+				query["search_id"] = asStr(nxt.Source["search_id"])
+				recs, c2, err := e.fetchPages(ctx, name, pathParams, query, nxt, remain)
+				sc, _ := e.reg.Get(streamName)
+				for _, r := range recs {
+					items = append(items, bindItem(sc, r))
+				}
+				if err != nil {
+					return applyMediaFilter(items, filter), c2, err
+				}
+				if c2.Source == nil {
+					c2.Source = map[string]any{}
+				}
+				c2.Source["search_id"] = nxt.Source["search_id"]
+				return applyMediaFilter(items, filter), c2, nil
+			}
+		}
 	}
+	recs, nxt, err := e.fetchPages(ctx, name, pathParams, query, cur, limit)
 	c, _ := e.reg.Get(name)
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	// Partial-data semantics (report t03): a late-page failure still returns
+	// the records already collected alongside the error — callers flush them
+	// to disk before exiting.
+	if err != nil {
+		return items, nxt, err
 	}
 	if filter != "" {
 		f := items[:0]
@@ -548,20 +713,25 @@ func (e *Engine) ItemComments(ctx context.Context, platform, itemID string, cur 
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "item_id"): itemID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	cmts := make([]model.Comment, 0, len(recs))
 	for _, r := range recs {
 		cmts = append(cmts, bindComment(c, r))
 	}
+	if err != nil {
+		return cmts, nxt, err // partial data + error (flush-before-exit)
+	}
+	// Payload + user-enrich combination (capability #2): complete each
+	// unique author's twelve-field profile through the platform user face.
+	e.enrichCommenters(ctx, platform, cmts)
 	return cmts, nxt, nil
 }
 
 // CommentReplies collects the replies of one top-level comment, paginated.
-// The comment id travels as the contract's primary placeholder (comment_id);
-// the item id is forwarded as a static query param (aweme_id) when the
-// contract declares it.
+// The comment id travels as the contract's first declared placeholder — the
+// reply-target parameter name is contract data, so each platform carries its
+// real-world name (douyin "comment_id", xhs "root_comment_id" per the A-line
+// corpus verdict 64/64); the "comment_id" fallback only covers contracts
+// that declare no placeholders at all.
 func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid string, cur model.Cursor, limit int) ([]model.Comment, model.Cursor, error) {
 	name, err := e.resolveName(platform, "replies")
 	if err != nil {
@@ -572,13 +742,15 @@ func (e *Engine) CommentReplies(ctx context.Context, platform, itemID, cid strin
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "comment_id"): cid}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	cmts := make([]model.Comment, 0, len(recs))
 	for _, r := range recs {
 		cmts = append(cmts, bindComment(c, r))
 	}
+	if err != nil {
+		return cmts, nxt, err // partial data + error (flush-before-exit)
+	}
+	// Replies carry the same twelve-field author contract as comments.
+	e.enrichCommenters(ctx, platform, cmts)
 	return cmts, nxt, nil
 }
 
@@ -614,12 +786,12 @@ func (e *Engine) GroupMembers(ctx context.Context, platform, groupID string, cur
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholder(c, "group_id"): groupID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	members := make([]model.GroupMember, 0, len(recs))
 	for _, r := range recs {
 		members = append(members, bindMember(c, r, groupID))
+	}
+	if err != nil {
+		return members, nxt, err // partial data + error (flush-before-exit)
 	}
 	return members, nxt, nil
 }
@@ -767,12 +939,12 @@ func (e *Engine) CollectFolders(ctx context.Context, platform string, cur model.
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, nil, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	if err != nil {
+		return items, nxt, err // partial data + error (flush-before-exit)
 	}
 	return items, nxt, nil
 }
@@ -788,12 +960,12 @@ func (e *Engine) CollectVideos(ctx context.Context, platform, collectsID string,
 		return nil, cur, fmt.Errorf("collect: contract %q not registered", name)
 	}
 	recs, nxt, err := e.fetchPages(ctx, name, map[string]string{firstPlaceholderFrom(e.reg, name, "collects_id"): collectsID}, nil, cur, limit)
-	if err != nil {
-		return nil, nxt, err
-	}
 	items := make([]model.Item, 0, len(recs))
 	for _, r := range recs {
 		items = append(items, bindItem(c, r))
+	}
+	if err != nil {
+		return items, nxt, err // partial data + error (flush-before-exit)
 	}
 	return items, nxt, nil
 }

@@ -40,11 +40,19 @@ type Transport struct {
 	Method       string            `json:"method"`
 	Query        map[string]string `json:"query,omitempty"` // static query params
 	Headers      map[string]string `json:"headers,omitempty"`
-	Body         map[string]any    `json:"body,omitempty"`         // static JSON body fields
+	Body         map[string]any    `json:"body,omitempty"`         // static body fields (JSON or form per ContentType)
+	// ContentType selects the POST body encoding when Body is present:
+	// empty/"json" = JSON (default), "application/x-www-form-urlencoded" =
+	// form (real-site truth for douyin multi/aweme/detail, 2026-09-06).
+	ContentType string `json:"content_type,omitempty"`
 	Placeholders []string          `json:"placeholders,omitempty"` // required path placeholders, e.g. ["aweme_id"]
 	// AltHosts lists additional accepted hosts for URL validation (e.g. live
 	// room URL aliases); the base_url host is always accepted.
 	AltHosts []string `json:"alt_hosts,omitempty"`
+	// (silent-scraping TODO-C resolved 2026-09: the A-line corpus verdict
+	// named the xhs reply-target parameter root_comment_id, 64/64 — the
+	// transitional transport.reply_target_param override was removed; the
+	// parameter name now rides Placeholders[0] as plain contract data.)
 }
 
 type Signature struct {
@@ -82,6 +90,10 @@ type Paging struct {
 	CountDefault   int    `json:"count_default,omitempty"`
 	HasMorePath    string `json:"has_more_path,omitempty"`
 	NextCursorPath string `json:"next_cursor_path,omitempty"`
+	// PageSleepMS overrides the engine's inter-page think-time median for
+	// this contract (silent-scraping pacing): 0 = inherit the global config,
+	// -1 = pacing off for this contract, >0 = median in milliseconds.
+	PageSleepMS int `json:"page_sleep_ms,omitempty"`
 }
 
 type CookieSpec struct {

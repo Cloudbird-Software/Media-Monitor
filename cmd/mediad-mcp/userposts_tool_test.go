@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -149,14 +151,57 @@ func TestUserPostsToolBacktrackPassthrough(t *testing.T) {
 
 // TestUserPostsToolFailClosedPlatform: kuaishou declares no user_posts
 // contract — the tool surfaces the engine's explicit not-declared error.
-func TestUserPostsToolFailClosedPlatform(t *testing.T) {
-	t.Setenv("MEDIAMON_ADAPT_DIR", writeAdaptDir(t))
+// TestUserPostsToolKuaishouLeg: capability batch 1 declared the ks user_posts
+// face (kuaishou-profile-feed), so the old "kuaishou not-declared" fail-closed
+// premise is stale. The ks leg now gets positive coverage: the profile/feed
+// shape (POST body userId/pcursor, photo-carrying feeds, "no_more" sentinel)
+// must bind through the tool. The undeclared fail-closed extreme itself stays
+// covered by cmd/mediactl's fc-up-shipinhao-not-declared matrix row.
+func TestUserPostsToolKuaishouLeg(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var b map[string]any
+		_ = json.Unmarshal(body, &b)
+		w.Header().Set("Content-Type", "application/json")
+		if b["pcursor"] == "no_more" || (fmt.Sprint(b["userId"]) == "") {
+			fmt.Fprint(w, `{"result":1,"pcursor":"no_more","feeds":[]}`)
+			return
+		}
+		fmt.Fprint(w, `{"result":1,"pcursor":"no_more","feeds":[
+			{"type":1,"tags":[],"author":{"id":"3xk","name":"快手作者","headerUrl":"http://h/1"},
+			 "photo":{"id":"p1","timestamp":1780000000000,"like_count":42},"comment":{"us_c":0}},
+			{"type":1,"tags":[],"author":{"id":"3xk","name":"快手作者","headerUrl":"http://h/1"},
+			 "photo":{"id":"p2","timestamp":1779999000000,"like_count":7},"comment":{"us_c":0}}]}`)
+	}))
+	defer srv.Close()
+	dir := t.TempDir()
+	cdir := filepath.Join(dir, "contracts")
+	if err := os.MkdirAll(cdir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	contract := fmt.Sprintf(`{
+	  "name": "kuaishou-profile-feed", "platform": "kuaishou", "category": "user_posts", "version": "1",
+	  "transport": {"base_url": %q, "path": "/rest/v/profile/feed", "method": "POST", "body": {"kpn": "PC_WEB"}, "placeholders": ["userId"]},
+	  "binding": {"items": "$.feeds",
+	    "fields": {"id": "$.feeds[].photo.id", "create_time": "$.feeds[].photo.timestamp", "stats.digg": "$.feeds[].photo.like_count", "author.avatar_url": "$.feeds[].author.headerUrl"}},
+	  "paging": {"cursor_param": "pcursor", "has_more_path": "$.pcursor", "next_cursor_path": "$.pcursor"}
+	}`, srv.URL)
+	if err := os.WriteFile(filepath.Join(cdir, "kuaishou-profile-feed.json"), []byte(contract), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("MEDIAMON_ADAPT_DIR", dir)
 	t.Setenv("MEDIAMON_DATA_DIR", filepath.Join(t.TempDir(), "data"))
 	t.Setenv("MEDIAMON_SIGNER_URL", "")
+	t.Setenv("MEDIAMON_KUAISHOU_COOKIES", "did=test-did")
 	c := startServer(t)
-	msg := c.callToolErr(t, "get_user_posts", map[string]any{"platform": "kuaishou", "sec_uid": "s"})
-	if !strings.Contains(msg, "not declared") {
-		t.Fatalf("err = %q, want explicit not-declared", msg)
+	res := c.callTool(t, "get_user_posts", map[string]any{"platform": "kuaishou", "sec_uid": "3xk"})
+	items, ok := res["items"].([]any)
+	if !ok || len(items) != 2 {
+		t.Fatalf("ks user posts items = %v", res["items"])
+	}
+	first := items[0].(map[string]any)
+	if first["id"] != "p1" {
+		t.Fatalf("ks item id = %v (photo.id binding)", first["id"])
 	}
 }
 

@@ -1,0 +1,30 @@
+{
+  "name": "xhs-search-recommend",
+  "platform": "xhs",
+  "category": "suggest",
+  "version": "1",
+  "doc": "search discovery words (capability D SuggestWords on xhs). Evidence: corpus 111 req GET /api/sns/web/v1/search/recommend?keyword=... -> {success, msg, code:1000, data{word_request_id, sug_items[10x{highlight_flags, search_type:\"notes\", type:\"top_note\", text}], search_cpl_id}}; words = input prefix + category-suffixed completions (first word always an extension word; suffix pools category-partitioned), highlight_flags true for the first len(keyword) chars. Real-site signing rides the edith x-s header family (same face as search); the synth oracle accepts unsigned calls. Empty keyword returns the static hot-word pool (10).",
+  "transport": {
+    "base_url": "https://www.xiaohongshu.com",
+    "path": "/api/sns/web/v1/search/recommend",
+    "method": "GET",
+    "query": {
+      "keyword": ""
+    },
+    "placeholders": []
+  },
+  "cookie": {
+    "required": [
+      "web_session"
+    ],
+    "source": "browser profile import or env MEDIAMON_XHS_COOKIES"
+  },
+  "binding": {
+    "items": "$.data.sug_items",
+    "fields": {
+      "extra.word_text": "$.text",
+      "extra.search_type": "$.search_type",
+      "extra.sug_type": "$.type"
+    }
+  }
+}
