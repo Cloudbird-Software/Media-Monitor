@@ -159,6 +159,12 @@ export MEDIAMON_REAL_KW=海南瑾公子呀
 go test ./internal/collect -run TestRealLiveDouyin -v -count=1
 ```
 
+**预期基线**（2026-09-06 三轮验证）：
+- 稳定 PASS：user_profile / comments / replies
+- 随机门控（等几秒重试即过）：user_posts / related
+- 确定性受限（已知，非回归）：suggest / multi_detail / dossier_A / video_download / collects
+- SKIP：search_stream_chain（部署侧 a_bogus 代际限制）
+
 ### F. 桥采集（签名阻拦时的备选路径）
 
 ```bash
@@ -174,3 +180,5 @@ D:/Projects/temp2/oracle/env/Scripts/python.exe \
 | search 0 条 | 检查 MEDIAMON_ADAPT_DIR 是否指向合成站端口 |
 | 真站 403 Argus | 正常随机门控（~50%），等几秒重试 |
 | go test 卡住 | netstat -ano \| grep 875 查端口占用 |
+| bind: Only one usage | 9701 已有 signsvc 在跑：复用即可（确认进程命令行同配置） |
+| 同一子测试连续 2+ 轮同错误 | 非随机门控，转 bug 排查（不是「等几秒」能解决的） |
