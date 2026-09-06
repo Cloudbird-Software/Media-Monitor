@@ -100,7 +100,8 @@ D:/Projects/temp2/oracle/env/Scripts/python.exe \
 sleep 35
 # 验证
 # 端口映射：8751=douyin  8752=xhs  8753=kuaishou
-for p in 8751 8752 8753; do curl -fsS http://127.0.0.1:/_synth/health; echo; done
+for p in 8751 8752 8753; do curl -fsS http://127.0.0.1:$p/_synth/health; echo; done
+# 期望响应：{"site":"douyin","records":100000,...}（三站各一条）
 
 # 2. 运行全量 A–H e2e（10 个子测试）
 MEDIAMON_SYNTH_PORTS=8751,8752,8753 \
