@@ -24,7 +24,6 @@ package collect
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -110,7 +109,6 @@ func (e *Engine) BatchDetails(ctx context.Context, platform string, ids []string
 	if err != nil {
 		return out, err
 	}
-	slot := querySlotParam(c)
 	size := resolveBatchSize(opt.MaxPerBatch)
 	paging := pacingFor(e.pacing, c.Paging.PageSleepMS)
 	out.Requested = len(uniq)
@@ -126,11 +124,9 @@ func (e *Engine) BatchDetails(ctx context.Context, platform string, ids []string
 		if out.Batches > 0 {
 			e.pageThink(ctx, paging)
 		}
-		payload, merr := json.Marshal(batch)
-		if merr != nil {
-			return out, merr
-		}
-		doc, ferr := e.Fetch(ctx, name, nil, map[string]string{slot: string(payload)})
+		// 真站形态（2026-09-06 捕获）：数值数组、无引号、逗号分隔
+		payload := "[" + strings.Join(uniq[start:end], ",") + "]"
+		doc, ferr := e.Fetch(ctx, name, nil, map[string]string{"aweme_ids": payload})
 		if ferr != nil {
 			// Partial-data semantics: keep the batches already collected.
 			return out, ferr

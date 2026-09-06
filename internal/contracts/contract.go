@@ -40,7 +40,11 @@ type Transport struct {
 	Method       string            `json:"method"`
 	Query        map[string]string `json:"query,omitempty"` // static query params
 	Headers      map[string]string `json:"headers,omitempty"`
-	Body         map[string]any    `json:"body,omitempty"`         // static JSON body fields
+	Body         map[string]any    `json:"body,omitempty"`         // static body fields (JSON or form per ContentType)
+	// ContentType selects the POST body encoding when Body is present:
+	// empty/"json" = JSON (default), "application/x-www-form-urlencoded" =
+	// form (real-site truth for douyin multi/aweme/detail, 2026-09-06).
+	ContentType string `json:"content_type,omitempty"`
 	Placeholders []string          `json:"placeholders,omitempty"` // required path placeholders, e.g. ["aweme_id"]
 	// AltHosts lists additional accepted hosts for URL validation (e.g. live
 	// room URL aliases); the base_url host is always accepted.

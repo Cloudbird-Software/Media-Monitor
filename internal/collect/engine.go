@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -252,7 +253,33 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		params[k] = v
 	}
 	var body []byte
-	if c.Transport.Method == http.MethodPost {
+	formCT := strings.EqualFold(c.Transport.ContentType, "application/x-www-form-urlencoded")
+	if c.Transport.Method == http.MethodPost && formCT {
+		// Form body (ADR of real-site truth 2026-09-06: douyin multi/aweme/detail
+		// carries aweme_ids in the form body, never the query). Body keys =
+		// transport.body ∪ caller-query keys declared in transport.body; those
+		// keys are removed from the URL query (the real request has them only
+		// in the body, and the signer must cover the query the page would sign).
+		m := map[string]any{}
+		for k, v := range c.Transport.Body {
+			if vv, ok := query[k]; ok {
+				m[k] = vv
+			} else {
+				m[k] = v
+			}
+		}
+		for k, v := range leftover {
+			m[k] = v
+		}
+		for k := range m {
+			delete(params, k)
+		}
+		fv := url.Values{}
+		for k, v := range m {
+			fv.Set(k, fmt.Sprintf("%v", v))
+		}
+		body = []byte(fv.Encode())
+	} else if c.Transport.Method == http.MethodPost {
 		m := map[string]any{}
 		for k, v := range c.Transport.Body {
 			m[k] = v
@@ -282,7 +309,20 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		if len(q) > 0 {
 			pre += "?" + q.Encode()
 		}
-		sig, serr := signer.Sign(ctx, c.Name, pre, params)
+		// POST signatures cover the body on douyin (a_bogus POST form signs
+		// query+body; real-site truth 2026-09-06: multi/aweme/detail). The
+		// optional BodySigner extension passes the built body through.
+		var sig map[string]string
+		var serr error
+		if os.Getenv("MEDIAMON_SIGN_DEBUG") != "" {
+			fmt.Fprintf(os.Stderr, "[sign-debug] contract=%s method=%s formCT=%v bodyLen=%d isBodySigner=%v\n",
+				c.Name, c.Transport.Method, formCT, len(body), func() bool { _, ok := signer.(httpclient.BodySigner); return ok }())
+		}
+		if bs, ok := signer.(httpclient.BodySigner); ok && c.Transport.Method == http.MethodPost && len(body) > 0 {
+			sig, serr = bs.SignWithBody(ctx, c.Name, pre, params, body)
+		} else {
+			sig, serr = signer.Sign(ctx, c.Name, pre, params)
+		}
 		if serr != nil {
 			return "", nil, nil, fmt.Errorf("collect %s: sign: %w", c.Name, serr)
 		}
@@ -328,7 +368,11 @@ func (e *Engine) buildURL(ctx context.Context, c *contracts.Contract, pathParams
 		headers[k] = v
 	}
 	if len(body) > 0 {
-		headers["Content-Type"] = "application/json"
+		if formCT {
+			headers["Content-Type"] = "application/x-www-form-urlencoded"
+		} else {
+			headers["Content-Type"] = "application/json"
+		}
 	}
 	// Cookie priority: account cookie (per-identity) overrides the
 	// platform-level default. The fail-closed required-cookie check below

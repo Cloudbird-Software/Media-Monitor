@@ -8,14 +8,38 @@
     "base_url": "https://www.douyin.com",
     "path": "/aweme/v1/web/multi/aweme/detail/",
     "method": "POST",
-    "body": {"origin_type": "unicode"},
+    "body": {
+      "aweme_ids": "",
+      "origin_type": "discover_page",
+      "request_source": "600"
+    },
     "placeholders": [],
-    "query": {"aweme_ids": ""}
+    "query": {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web"
+    },
+    "content_type": "application/x-www-form-urlencoded"
   },
-  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
-  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "signature": {
+    "params": [
+      "a_bogus",
+      "msToken"
+    ],
+    "required": [
+      "a_bogus"
+    ]
+  },
+  "cookie": {
+    "required": [
+      "ttwid"
+    ],
+    "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"
+  },
   "binding": {
     "items": "$.aweme_details",
-    "fields": {"extra.play": "$.statistics.play_count"}
+    "fields": {
+      "extra.play": "$.statistics.play_count"
+    }
   }
 }

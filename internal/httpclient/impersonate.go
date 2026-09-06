@@ -30,6 +30,12 @@ type (
 	fhttpResponse = fhttp.Response
 )
 
+// BodySigner is the optional ADR-0100-era extension for POST signatures that
+// cover the request body (douyin a_bogus POST form: the page signs query+body).
+type BodySigner interface {
+	SignWithBody(ctx context.Context, contractName, url string, params map[string]string, body []byte) (map[string]string, error)
+}
+
 // parseSignURL parses the raw URL, enforces the scheme, and runs the
 // contract signer over the existing query params (shared by stdlib and
 // impersonation paths) — the merged query is what gets sent.
