@@ -8,22 +8,41 @@
     "base_url": "https://www.douyin.com",
     "path": "/aweme/v1/web/user/profile/other/",
     "method": "GET",
-    "query": {"device_platform": "webapp", "aid": "6383", "channel": "channel_pc_web"},
-    "placeholders": ["sec_uid"]
+    "query": {
+      "device_platform": "webapp",
+      "aid": "6383",
+      "channel": "channel_pc_web"
+    },
+    "placeholders": [
+      "sec_uid"
+    ]
   },
-  "signature": {"params": ["a_bogus", "msToken"], "required": ["a_bogus"]},
-  "cookie": {"required": ["ttwid"], "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"},
+  "signature": {
+    "params": [
+      "a_bogus",
+      "msToken"
+    ],
+    "required": [
+      "a_bogus"
+    ]
+  },
+  "cookie": {
+    "required": [
+      "ttwid"
+    ],
+    "source": "browser profile import or env MEDIAMON_DOUYIN_COOKIES"
+  },
   "binding": {
-    "users": "$.user_list",
+    "users": "$.user",
     "fields": {
-      "uid": "$.user_list[].uid",
-      "sec_uid": "$.user_list[].sec_uid",
-      "nickname": "$.user_list[].nickname",
-      "signature": "$.user_list[].signature",
-      "follower_count": "$.user_list[].follower_count",
-      "following_count": "$.user_list[].following_count",
-      "aweme_count": "$.user_list[].aweme_count",
-      "total_favorited": "$.user_list[].total_favorited"
+      "uid": "$.user.uid",
+      "sec_uid": "$.user.sec_uid",
+      "nickname": "$.user.nickname",
+      "signature": "$.user.signature",
+      "follower_count": "$.user.follower_count",
+      "following_count": "$.user.following_count",
+      "aweme_count": "$.user.aweme_count",
+      "total_favorited": "$.user.total_favorited"
     }
   }
 }

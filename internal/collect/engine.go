@@ -487,7 +487,13 @@ func checkBindings(c *contracts.Contract, doc map[string]any) error {
 		return nil // explicit null = clean empty page (zero comments/items)
 	}
 	if _, ok := vs[0].([]any); !ok {
-		return fmt.Errorf("%s binding %q is not a list", kind, raw)
+		// Single object = one-record page, allowed ONLY for the users
+		// binding (real-site truth 2026-09-06: douyin user/profile/other
+		// answers {user:{...}}, not a list; selectRecords already wraps an
+		// object as a single record). Item/comment faces stay fail-closed.
+		if _, isObj := vs[0].(map[string]any); !(isObj && kind == "users") {
+			return fmt.Errorf("%s binding %q is not a list", kind, raw)
+		}
 	}
 	// Empty list = valid zero-record page; missing path / non-list stays an error.
 	return nil
