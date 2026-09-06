@@ -99,14 +99,15 @@ D:/Projects/temp2/oracle/env/Scripts/python.exe \
     D:/Projects/temp2/oracle/replay/synth_api.py --site all --base-port 8751 --preload &
 sleep 35
 # 验证
-curl -fsS http://127.0.0.1:8751/_synth/health && echo READY
+# 端口映射：8751=douyin  8752=xhs  8753=kuaishou
+for p in 8751 8752 8753; do curl -fsS http://127.0.0.1:/_synth/health; echo; done
 
 # 2. 运行全量 A–H e2e（10 个子测试）
 MEDIAMON_SYNTH_PORTS=8751,8752,8753 \
     go test ./internal/collect -run TestSynthE2ENewCapabilities -v -count=1
 # 预期：全部 PASS（~170s）
 
-# 3. 也可用 CLI 直连测试（需先建指向合成站的契约副本）
+# 3. （可选）CLI 直连测试——与 e2e 验收无强绑定（需先建指向合成站的契约副本）
 D:/Projects/temp2/oracle/env/Scripts/python.exe -c "
 import json, pathlib
 src = pathlib.Path('adapt/contracts')
@@ -141,7 +142,7 @@ taskkill //PID <PID> //F              # 杀掉
 go test ./internal/collect ./internal/httpclient ./internal/contracts -count=1
 ```
 
-### D. 真站测试（需登录态 + 签名器）
+### E. 真站测试（需登录态 + 签名器）
 
 ```bash
 # 启动签名器
@@ -157,14 +158,14 @@ export MEDIAMON_REAL_KW=海南瑾公子呀
 go test ./internal/collect -run TestRealLiveDouyin -v -count=1
 ```
 
-### E. 桥采集（签名阻拦时的备选路径）
+### F. 桥采集（签名阻拦时的备选路径）
 
 ```bash
 D:/Projects/temp2/oracle/env/Scripts/python.exe \
     D:/Projects/temp2/oracle/mediamonitor/signer_live/bridge_adapter.py
 ```
 
-### F. 排查
+### G. 排查
 
 | 症状 | 解法 |
 |---|---|
