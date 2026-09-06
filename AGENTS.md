@@ -13,6 +13,7 @@ Agents working in this repository must read this file first. It is machine-enfor
 4. 开工：`make card-test CARD=<n>`（读卡 AC、测试先行）→ `make gates-pr`（本地复现 CI 关卡）
 5. 提 PR：body 必带一行卡元数据 `Card: <owner>/<repo>#<n>`（`bash ghcb card-meta <n>` 生成；缺失=后续关卡 exit 3）
 6. front-desk 命令（卡 issue 评论，conductor 转介 arbiter 处理）：/claim 认领 · /release 释放租约 · /retry 隔离回流
+7. 分歧必须申报；未经 owner 指令不得向共识收敛（ADR-0107，DGA-A N-8）。
 
 <!-- /entry-protocol -->
 
