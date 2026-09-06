@@ -596,6 +596,35 @@ func (e *Engine) SearchItems(ctx context.Context, platform, keyword, filter stri
 	if filter != "" {
 		query["type"] = filter
 	}
+	// Real-site first page (2026-09-06): douyin keyword search prefers the
+	// stream face (NDJSON frames; extra.logid → search_id chain) — a bare
+	// single call returns empty in most session states (corpus R5A + live).
+	// Falls back to the single-contract walk when the stream face is absent
+	// (synth) or fails.
+	if platform == "douyin" && cur.Page == 0 && len(cur.Source) == 0 {
+		if streamName, ok := e.names["douyin"]["search_stream"]; ok && streamName != "" {
+			if items, nxt, ok2 := e.searchFirstPageStream(ctx, streamName, keyword, filter, limit); ok2 {
+				remain := limit - len(items)
+				if remain <= 0 || !nxt.HasMore {
+					return applyMediaFilter(items, filter), nxt, nil
+				}
+				query["search_id"] = asStr(nxt.Source["search_id"])
+				recs, c2, err := e.fetchPages(ctx, name, pathParams, query, nxt, remain)
+				sc, _ := e.reg.Get(streamName)
+				for _, r := range recs {
+					items = append(items, bindItem(sc, r))
+				}
+				if err != nil {
+					return applyMediaFilter(items, filter), c2, err
+				}
+				if c2.Source == nil {
+					c2.Source = map[string]any{}
+				}
+				c2.Source["search_id"] = nxt.Source["search_id"]
+				return applyMediaFilter(items, filter), c2, nil
+			}
+		}
+	}
 	recs, nxt, err := e.fetchPages(ctx, name, pathParams, query, cur, limit)
 	c, _ := e.reg.Get(name)
 	items := make([]model.Item, 0, len(recs))

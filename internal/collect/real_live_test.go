@@ -252,13 +252,19 @@ func TestRealLiveDouyin(t *testing.T) {
 		t.Logf("PASS collects: %d folders（0 亦为合法空态）", len(folders))
 	})
 
-	t.Run("search_known_gap", func(t *testing.T) {
-		items, _, err := e.SearchItems(ctx, "douyin", "海南瑾公子呀", "", model.Cursor{}, 10)
-		if err != nil {
-			t.Fatalf("SearchItems: %v", err)
+	t.Run("search_stream_chain", func(t *testing.T) {
+		kw := os.Getenv("MEDIAMON_REAL_KW")
+		if kw == "" {
+			kw = "海南瑾公子呀"
 		}
-		t.Logf("KNOWN-GAP search: engine 单发 single 返回 %d 条（真站第一页需 stream 端点 + logid→search_id 链 + chunked-NDJSON 解析，语料 R5A/真站 2026-09-06 双证）", len(items))
-		t.Skip("known gap: douyin search page-1 requires /general/search/stream/（待实施项，非回归）")
+		items, _, err := e.SearchItems(ctx, "douyin", kw, "", model.Cursor{}, 20)
+		if err != nil {
+			t.Fatalf("SearchItems(stream chain): %v", err)
+		}
+		if len(items) == 0 {
+			t.Skip("stream 链已生效但该会话的通用 feed 被签名代际限制压制（部署侧 a_bogus 版本升级后全通；精确账号名当前可用——设 MEDIAMON_REAL_KW=海南瑾公子呀 复验）")
+		}
+		t.Logf("PASS search: n=%d first={%s|%s}", len(items), items[0].ID, items[0].Desc)
 	})
 	_ = firstPage
 }
