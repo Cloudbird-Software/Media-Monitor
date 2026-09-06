@@ -43,6 +43,10 @@ type Config struct {
 	// Proxy is an optional proxy URL (e.g. "http://user:pass@host:port",
 	// "socks5://host:port"). When set, every request is routed through it.
 	Proxy string
+	// Impersonate enables the ADR-0100 TLS/HTTP2 fingerprint transport
+	// ("chrome152" = utls Chrome_152 + fhttp; empty = stdlib). Env
+	// MEDIAMON_TLS_IMPERSONATE wins when set.
+	Impersonate string
 }
 
 // Signer computes per-contract request signature values. params holds the
@@ -94,6 +98,8 @@ type Client struct {
 	contract string // contract name forwarded to the signer
 	uaPool   []string
 	uaIdx    atomic.Uint64
+
+	impersonateName string // ADR-0100: empty = stdlib path
 }
 
 // New builds a Client; defaulting Timeout and the UA pool where needed.
@@ -110,8 +116,14 @@ func New(cfg Config) *Client {
 			hc.Transport = &http.Transport{Proxy: http.ProxyURL(u)}
 		}
 	}
+	if cfg.Impersonate == "" {
+		if v := strings.TrimSpace(os.Getenv("MEDIAMON_TLS_IMPERSONATE")); v != "" {
+			cfg.Impersonate = v
+		}
+	}
 	return &Client{
-		cfg:    cfg,
+		cfg:             cfg,
+		impersonateName: cfg.Impersonate,
 		hc:     hc,
 		uaPool: cfg.UserAgents,
 	}
@@ -169,6 +181,11 @@ func (c *Client) Do(ctx context.Context, method, rawURL string, headers map[stri
 	}
 	if method == "" {
 		method = http.MethodGet
+	}
+	if c.impersonateName != "" {
+		// ADR-0100: TLS/H2 指纹拟态路径（重试/退避语义与 stdlib 一致）
+		status, rb, _, err := c.impersonateDo(ctx, method, rawURL, headers, body)
+		return status, rb, err
 	}
 	attempts := c.cfg.MaxRetries + 1
 	if attempts < 1 {
