@@ -77,3 +77,87 @@ ADR-XXXX (<reason>)        (required when C1 paths touched)
 ## Docs (read on demand)
 
 docs/ARCHITECTURE.md · docs/HARNESS.md · docs/CANARY.md · docs/UPSTREAM.md · docs/HARDENING.md · docs/TESTING.md · docs/OPERATIONS.md
+<!-- synth-test-guide v1 (2026-09-06) -->
+
+## 合成站测试指南（冷上下文 agent 按此操作）
+
+### A. 环境准备（一次性）
+
+```bash
+cd D:/Projects/temp2/oracle/mediamonitor/Media-Monitor
+go build -o bin/mediactl.exe ./cmd/mediactl
+go build -o bin/signsvc.exe ./cmd/signsvc
+```
+
+Python venv 已在 `D:/Projects/temp2/oracle/env/`。Chrome 已装。
+
+### B. 启动合成站并跑原子能力
+
+```bash
+# 1. 启动合成站（三站，预载数据 ~30s）
+D:/Projects/temp2/oracle/env/Scripts/python.exe \
+    D:/Projects/temp2/oracle/replay/synth_api.py --site all --base-port 8751 --preload &
+sleep 35
+# 验证
+curl -s http://127.0.0.1:8751/_synth/health | grep -q ok && echo READY
+
+# 2. 运行全量 A–H e2e（10 个子测试）
+MEDIAMON_SYNTH_PORTS=8751,8752,8753 \
+    go test ./internal/collect -run TestSynthE2ENewCapabilities -v -count=1
+# 预期：全部 PASS（~170s）
+
+# 3. 也可用 CLI 直连测试（需先建指向合成站的契约副本）
+python3 -c "
+import json, pathlib
+src = pathlib.Path('adapt/contracts')
+dst = pathlib.Path('/tmp/adapt_synth'); dst.mkdir(parents=True, exist_ok=True)
+for f in src.glob('*.json'):
+    c = json.load(open(f))
+    t = c.get('transport') or {}
+    if 'douyin' in t.get('base_url',''): t['base_url'] = 'http://127.0.0.1:8751'
+    if 'kuaishou' in t.get('base_url',''): t['base_url'] = 'http://127.0.0.1:8753'
+    if 'xiaohongshu' in t.get('base_url',''): t['base_url'] = 'http://127.0.0.1:8752'
+    json.dump(c, open(dst/f.name, 'w'), ensure_ascii=False)
+"
+export MEDIAMON_ADAPT_DIR=/tmp/adapt_synth
+printf 'ttwid=test' > /tmp/ck.txt
+./bin/mediactl.exe collect search --platform douyin --keyword "美食" --limit 20 --cookies /tmp/ck.txt
+```
+
+### C. 离线回归（不需要网络/合成站）
+
+```bash
+go test ./internal/collect ./internal/httpclient ./internal/contracts -count=1
+```
+
+### D. 真站测试（需登录态 + 签名器）
+
+```bash
+# 启动签名器
+DY_SIGN_PY=D:/Projects/temp2/oracle/env/Scripts/python.exe \
+    ./bin/signsvc.exe --addr 127.0.0.1:9701 --provider node \
+    --node-js D:/Projects/temp2/oracle/mediamonitor/signer_live/sign_dy.js &
+
+# 跑真站原子测试
+export MEDIAMON_REAL_LIVE=1
+export MEDIAMON_ACCOUNTS_DIR=D:/Projects/temp2/oracle/mediamonitor/signer_live/accounts_dir
+export MEDIAMON_TLS_IMPERSONATE=chrome152
+export MEDIAMON_REAL_KW=海南瑾公子呀
+go test ./internal/collect -run TestRealLiveDouyin -v -count=1
+```
+
+### E. 桥采集（签名阻拦时的备选路径）
+
+```bash
+D:/Projects/temp2/oracle/env/Scripts/python.exe \
+    D:/Projects/temp2/oracle/mediamonitor/signer_live/bridge_adapter.py
+```
+
+### F. 排查
+
+| 症状 | 解法 |
+|---|---|
+| 合成站 curl 000 | 等 35s 预载；日志看 "dataset ready" |
+| search 0 条 | 检查 MEDIAMON_ADAPT_DIR 是否指向合成站端口 |
+| 真站 403 Argus | 正常随机门控（~50%），等几秒重试 |
+| go test 卡住 | netstat -ano \| grep 875 查端口占用 |
