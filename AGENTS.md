@@ -99,7 +99,7 @@ D:/Projects/temp2/oracle/env/Scripts/python.exe \
     D:/Projects/temp2/oracle/replay/synth_api.py --site all --base-port 8751 --preload &
 sleep 35
 # 验证
-curl -s http://127.0.0.1:8751/_synth/health | grep -q ok && echo READY
+curl -fsS http://127.0.0.1:8751/_synth/health && echo READY
 
 # 2. 运行全量 A–H e2e（10 个子测试）
 MEDIAMON_SYNTH_PORTS=8751,8752,8753 \
@@ -107,7 +107,7 @@ MEDIAMON_SYNTH_PORTS=8751,8752,8753 \
 # 预期：全部 PASS（~170s）
 
 # 3. 也可用 CLI 直连测试（需先建指向合成站的契约副本）
-python3 -c "
+D:/Projects/temp2/oracle/env/Scripts/python.exe -c "
 import json, pathlib
 src = pathlib.Path('adapt/contracts')
 dst = pathlib.Path('/tmp/adapt_synth'); dst.mkdir(parents=True, exist_ok=True)
@@ -124,7 +124,18 @@ printf 'ttwid=test' > /tmp/ck.txt
 ./bin/mediactl.exe collect search --platform douyin --keyword "美食" --limit 20 --cookies /tmp/ck.txt
 ```
 
-### C. 离线回归（不需要网络/合成站）
+### C. 测试完成后停止合成站（可选但推荐）
+
+```bash
+# Windows: 杀掉 synth_api 进程
+netstat -ano | grep 8751 | head -1   # 找到 PID（最后一列）
+taskkill //PID <PID> //F              # 杀掉
+# 或者用 PowerShell（一行）：
+# powershell -Command "Get-Process python | Stop-Process -Force"
+# （注意：这会杀掉所有 python 进程，如果有其他 python 在跑需用上面的 PID 方式）
+```
+
+### D. 离线回归（不需要网络/合成站）
 
 ```bash
 go test ./internal/collect ./internal/httpclient ./internal/contracts -count=1
