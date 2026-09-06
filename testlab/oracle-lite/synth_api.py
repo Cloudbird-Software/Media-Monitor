@@ -744,11 +744,26 @@ def dy_search_stream(state: SiteState, params: dict) -> dict:
     start = _dy_abs_start(state, keyword, offset)
     if start >= n_total:  # 超末页 → 空集 + cursor 原样回显（不回绕）
         return synth_render.render_douyin_search_empty(keyword, offset, stream=True)
-    resp = _json_body(synth_render.render_douyin_stream(
-        state.dataset(), 1, count, keyword, start=start))
-    # 游标为「keyword 窗口内的相对 offset」（契约实证：首屏 offset=0，cursor=下页 offset）
     resp["cursor"] = offset + count
-    return resp
+    # 真站帧化（2026-09-06 真站实证）：hex 长度+CRLF 多文档 NDJSON 字节流
+    import json as _json
+    rows = resp.get("data") or []
+    frames = []
+    if len(rows) > 8:
+        f1 = dict(resp)
+        f1["data"] = rows[: len(rows) // 2]
+        f2 = {"status_code": resp.get("status_code", 0), "data": rows[len(rows) // 2:],
+              "cursor": resp.get("cursor"), "has_more": resp.get("has_more", 0)}
+        if "extra" in resp:
+            f2["extra"] = resp["extra"]
+        frames = [f1, f2]
+    else:
+        frames = [resp]
+    payload = "".join(
+        f"{len(part):x}\r\n{part}\r\n"
+        for part in (_json.dumps(f, ensure_ascii=False, separators=(",", ":")) for f in frames)
+    ).encode("utf-8")
+    return ("__raw__", payload, "application/json")
 
 
 def dy_search_single(state: SiteState, params: dict) -> dict:
@@ -2776,7 +2791,10 @@ class SynthHandler(BaseHTTPRequestHandler):
                 return self._send(200, synth_cover(merged), "image/svg+xml; charset=utf-8")
             fn = API_ROUTES[self.site].get(("GET", path))
             if fn:
-                return self._json(200, fn(state, params), api=True)
+                out = fn(state, params)
+                if isinstance(out, tuple) and len(out) == 3 and out[0] == "__raw__":
+                    return self._send(200, out[1], out[2])
+                return self._json(200, out, api=True)
             alias = self._page_alias(path, params)
             if alias is not None:
                 return alias
